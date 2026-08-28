@@ -58,8 +58,9 @@ type Bundle struct {
 // 路径语义:BookStyleDir 绑定书目录(outputDir)而非 cwd——文风随书走,换目录
 // 恢复同一本书加载同一份文风。注意与 rules 层不同(rules 的项目级绑定 cwd)。
 type LoadOptions struct {
-	BookStyleDir string // <outputDir>/style
-	HomeStyleDir string // ~/.ainovel/style
+	BookStyleDir  string // <outputDir>/style
+	HomeStyleDir  string // ~/.ainovel/style
+	StoryLanguage string // vi, en, zh
 }
 
 // DefaultLoadOptions 根据书目录构造生产环境的覆盖来源。
@@ -77,9 +78,13 @@ func DefaultLoadOptions(outputDir string) LoadOptions {
 // Load 返回指定风格对应的资源集合。文风资产(voice / anti-ai-tone / styles /
 // 题材 style-references)按 opts 做三层覆盖:内置 < 全局 < 本书。
 func Load(style string, opts LoadOptions) Bundle {
+	prompts := loadPrompts()
+	if opts.StoryLanguage == "vi" {
+		prompts = applyVietnameseStoryDirectives(prompts)
+	}
 	return Bundle{
 		References: loadReferences(style, opts),
-		Prompts:    loadPrompts(),
+		Prompts:    prompts,
 		Styles:     loadStyles(opts),
 		Voice:      resolveAppendable(mustRead(voiceFS, "voice.md"), "voice.md", opts),
 	}
@@ -236,6 +241,20 @@ const simulationGuidance = `## 仿写画像
 当 novel_context 的 planning_memory 或 working_memory 中存在 simulation_profile 时，必须把它视为当前作品的仿写方向约束。{{role}} 应读取其中的 style、lexicon、plot_design、hook_design、pacing_density、reader_engagement 和 role_guidance。
 
 使用原则：借鉴结构、节奏、钩子、信息释放和吸引读者的手法；不要复制原文句子、人物、地名、专有设定或固定桥段。若 simulation_profile 与用户显式要求冲突，优先服从用户要求。`
+const viStoryLanguageDirective = `## Ngôn ngữ sáng tác (Story Language: Tiếng Việt)
+- **Tiếng Việt tự nhiên**: Tất cả nội dung sáng tác (tên sách, giới thiệu, tiền đề, nhân vật, thế giới quan, đại cương, nội dung các chương, lời thoại, bình duyệt và tóm tắt) PHẢI được viết hoàn toàn bằng tiếng Việt tự nhiên, chuẩn văn phong tiếng Việt mượt mà, giàu hình tượng và đúng ngữ cảnh thể loại.
+- **Tránh dịch thô / convert**: Tuyệt đối không sử dụng câu từ dịch máy thô cứng hay lạm dụng từ Hán Việt quá đà. Đối thoại tự nhiên, biểu cảm chân thực.`
+
+func applyVietnameseStoryDirectives(p Prompts) Prompts {
+	p.ArchitectShort += "\n\n" + viStoryLanguageDirective
+	p.ArchitectLong += "\n\n" + viStoryLanguageDirective
+	p.Writer += "\n\n" + viStoryLanguageDirective
+	p.Editor += "\n\n" + viStoryLanguageDirective
+	p.ImportSynthesize += "\n\n" + viStoryLanguageDirective
+	p.SimulationMerge += "\n\n" + viStoryLanguageDirective
+	p.RevisionAnalyze += "\n\n" + viStoryLanguageDirective
+	return p
+}
 
 // loadStyles 枚举内置风格预设,再按 全局 → 本书 顺序叠加覆盖目录下 styles/*.md
 // (同名整文件替换,新文件名即新增风格;风格是整体声音,不做合并)。

@@ -12,6 +12,7 @@ import (
 	"github.com/muesli/termenv"
 	"github.com/voocel/ainovel-cli/internal/bootstrap"
 	"github.com/voocel/ainovel-cli/internal/host"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 func hubFieldIDs(fields []hubField) []string {
@@ -480,15 +481,18 @@ func TestProviderMenuIsTwoLevel(t *testing.T) {
 	}}
 	state.buildProviderMenus()
 
-	// 一级 = 2 个编辑 + 1 个新增入口；末项是“新增”，且没有别的 add/preset 混入。
-	if len(state.providerChoices) != 3 {
-		t.Fatalf("一级菜单应为 2 编辑 + 1 新增，得到 %d 项", len(state.providerChoices))
+	// 一级 = 2 个编辑 + 1 个新增入口 + 1 个语言设置入口
+	if len(state.providerChoices) != 4 {
+		t.Fatalf("一级菜单应为 2 编辑 + 1 新增 + 1 语言设置，得到 %d 项: %#v", len(state.providerChoices), state.providerChoices)
 	}
-	if !state.providerChoices[len(state.providerChoices)-1].add {
-		t.Fatal("一级菜单末项应是“新增 Provider…”入口")
+	if !state.providerChoices[2].add {
+		t.Fatal("一级菜单第3项应是“新增 Provider…”入口")
+	}
+	if !state.providerChoices[3].language {
+		t.Fatal("一级菜单第4项应是语言设置入口")
 	}
 	for i, c := range state.providerChoices[:2] {
-		if c.existing == nil || c.add {
+		if c.existing == nil || c.add || c.language {
 			t.Fatalf("一级菜单第 %d 项应为编辑已有 Provider，得到 %#v", i, c)
 		}
 	}
@@ -506,4 +510,55 @@ func TestProviderMenuIsTwoLevel(t *testing.T) {
 			t.Fatalf("新增目录不应包含已配置的 %q", c.preset.Name)
 		}
 	}
+}
+
+func TestSettingCommandAlias(t *testing.T) {
+	spec, ok := commandRegistryInstance().Find("setting")
+	if !ok {
+		t.Fatal("/setting alias is not registered")
+	}
+	if spec.Name != "config" {
+		t.Fatalf("expected /setting to resolve to 'config' command, got %q", spec.Name)
+	}
+
+	specPlural, ok := commandRegistryInstance().Find("settings")
+	if !ok {
+		t.Fatal("/settings alias is not registered")
+	}
+	if specPlural.Name != "config" {
+		t.Fatalf("expected /settings to resolve to 'config' command, got %q", specPlural.Name)
+	}
+}
+
+func TestConfigLanguageSwitching(t *testing.T) {
+	i18n.SetLanguage("vi")
+	state := &modelConfigState{
+		step: configStepProvider,
+		providerChoices: []configProviderChoice{
+			{label: "🌐 UI Language", language: true},
+		},
+	}
+	m := Model{modelConfig: state}
+
+	// Select language option (Enter)
+	updated, _ := m.handleModelConfigKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(Model)
+	if m.modelConfig.step != configStepLanguage {
+		t.Fatalf("expected step to be configStepLanguage, got %v", m.modelConfig.step)
+	}
+
+	// Choose English (index 1: vi=0, en=1, zh=2)
+	m.modelConfig.cursor = 1
+	updated, _ = m.handleModelConfigKey(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(Model)
+
+	if i18n.CurrentLanguage() != "en" {
+		t.Fatalf("expected i18n language to be 'en', got %q", i18n.CurrentLanguage())
+	}
+	if m.modelConfig.step != configStepProvider {
+		t.Fatalf("expected step to return to configStepProvider, got %v", m.modelConfig.step)
+	}
+
+	// Reset back to Vietnamese
+	i18n.SetLanguage("vi")
 }

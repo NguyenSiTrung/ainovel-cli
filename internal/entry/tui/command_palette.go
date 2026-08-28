@@ -4,8 +4,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-
 	"github.com/charmbracelet/lipgloss"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 type commandPaletteItem struct {
@@ -203,7 +203,7 @@ func renderCommandPalette(width int, items []commandPaletteItem, cursor int) str
 	body = append(body, usageLine+strings.Repeat(" ", max(0, contentW-lipgloss.Width(usageLine))))
 	body = append(body, hint+strings.Repeat(" ", max(0, contentW-lipgloss.Width(hint))))
 
-	return renderPaddedModalFrame(boxW, len(body)+2, "命令", "", body)
+	return renderPaddedModalFrame(boxW, len(body)+2, i18n.T("tui.palette.title"), "", body)
 }
 
 func commandPaletteWindow(total, cursor, limit int) (start, end int) {

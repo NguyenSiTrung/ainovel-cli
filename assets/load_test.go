@@ -170,3 +170,17 @@ func TestOverrideVoice_SharesAssemblyPath(t *testing.T) {
 		t.Fatal("协议模板不得被 voice 覆盖破坏")
 	}
 }
+
+func TestLoad_StoryLanguageVietnamese(t *testing.T) {
+	b := Load("default", LoadOptions{StoryLanguage: "vi"})
+	for role, prompt := range map[string]string{
+		"ArchitectShort": b.Prompts.ArchitectShort,
+		"ArchitectLong":  b.Prompts.ArchitectLong,
+		"Writer":         b.Prompts.Writer,
+		"Editor":         b.Prompts.Editor,
+	} {
+		if !strings.Contains(prompt, "Story Language: Tiếng Việt") {
+			t.Errorf("role %s prompt should contain Vietnamese story language directive", role)
+		}
+	}
+}

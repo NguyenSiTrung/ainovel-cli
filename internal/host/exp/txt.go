@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
 	"github.com/voocel/ainovel-cli/internal/domain"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 // chapterTitleIndex 给定章号查标题，缺失返回空串。
@@ -56,9 +56,8 @@ func buildLocations(volumes []domain.VolumeOutline) map[int]chapterLocation {
 	return locs
 }
 
-// chapterHeaderRe 匹配带章号的 Markdown 标题首行（# 第N章 / ## 第 12 章 ...）。
-var chapterHeaderRe = regexp.MustCompile(`^#+\s+第.+?章`)
-
+// chapterHeaderRe 匹配带章号的 Markdown 标题首行（# 第N章 / ## 第 12 章 / # Chương 1 / ## Chapter 1 ...）。
+var chapterHeaderRe = regexp.MustCompile(`^#+\s+(第.+?章|Chương\s+\d+|Chapter\s+\d+)`)
 // atxTitleRe 提取 ATX 标题（# 标题）的文字部分。
 var atxTitleRe = regexp.MustCompile(`^#{1,6}\s+(.+?)\s*$`)
 
@@ -114,18 +113,17 @@ func renderTXT(
 		if useLayered {
 			if loc, ok := locations[ch]; ok && loc.IsFirstOfVolume {
 				b.WriteString("\n═══════════════════════════════════════════\n")
-				fmt.Fprintf(&b, "           第 %d 卷  %s\n", loc.VolumeIdx, strings.TrimSpace(loc.VolumeTitle))
+				fmt.Fprintf(&b, "           %s  %s\n", i18n.T("tui.status.volume", loc.VolumeIdx), strings.TrimSpace(loc.VolumeTitle))
 				b.WriteString("═══════════════════════════════════════════\n\n")
 			}
 		}
 
 		title := strings.TrimSpace(titleIdx[ch])
 		if title != "" {
-			fmt.Fprintf(&b, "第 %d 章  %s\n\n", ch, title)
+			fmt.Fprintf(&b, "%s  %s\n\n", i18n.T("tui.status.chapter_num", ch), title)
 		} else {
-			fmt.Fprintf(&b, "第 %d 章\n\n", ch)
+			fmt.Fprintf(&b, "%s\n\n", i18n.T("tui.status.chapter_num", ch))
 		}
-
 		body := stripChapterTitleHeader(strings.TrimSpace(bodies[ch]), title)
 		b.WriteString(body)
 		b.WriteString("\n")

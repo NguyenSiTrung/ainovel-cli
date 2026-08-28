@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/voocel/ainovel-cli/internal/host"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 func TestRenderTopBarShowsVersion(t *testing.T) {
@@ -22,8 +23,9 @@ func TestRenderTopBarShowsVersion(t *testing.T) {
 }
 
 func TestRenderDetailContentShowsSynopsis(t *testing.T) {
+	i18n.SetLanguage("vi")
 	out := ansi.Strip(renderDetailContent(host.UISnapshot{Synopsis: "少年在永夜中寻找黎明。"}, 40))
-	if !strings.Contains(out, "简介") || !strings.Contains(out, "少年在永夜中寻找黎明。") {
+	if !strings.Contains(out, i18n.T("tui.sidebar.synopsis")) || !strings.Contains(out, "少年在永夜中寻找黎明。") {
 		t.Fatalf("detail panel missing synopsis: %q", out)
 	}
 }

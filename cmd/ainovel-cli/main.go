@@ -13,6 +13,7 @@ import (
 	"github.com/voocel/ainovel-cli/internal/entry/startup"
 	"github.com/voocel/ainovel-cli/internal/entry/tui"
 	"github.com/voocel/ainovel-cli/internal/eval"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 	"github.com/voocel/ainovel-cli/internal/rules"
 	buildversion "github.com/voocel/ainovel-cli/internal/version"
 )
@@ -27,6 +28,9 @@ var (
 var headlessMode bool
 
 func main() {
+	// Initialize system locale detection early
+	i18n.SetLanguage(i18n.DetectSystemLanguage())
+
 	// 子命令在常规 flag 解析之前拦截：eval 是离线评测 harness，参数体系独立。
 	if len(os.Args) > 1 && os.Args[1] == "eval" {
 		os.Exit(eval.Command(os.Args[2:]))
@@ -35,6 +39,9 @@ func main() {
 	opts, args, err := parseCLIOptions(os.Args[1:])
 	if err != nil {
 		die("flags: %v", err)
+	}
+	if opts.Language != "" {
+		i18n.SetLanguage(opts.Language)
 	}
 	if opts.Version {
 		buildversion.Print(os.Stdout, versionInfo())
@@ -52,7 +59,7 @@ func main() {
 	// 首次引导
 	if bootstrap.NeedsSetup() {
 		if opts.Headless {
-			die("error: headless 模式不支持首次引导，请先运行一次 TUI 完成配置")
+			die("error: headless mode does not support initial setup wizard, please run TUI mode first to configure")
 		}
 		setupCfg, err := bootstrap.RunSetup()
 		if err != nil {
@@ -79,10 +86,10 @@ func die(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	fmt.Fprintln(os.Stderr, msg)
 	if path := bootstrap.WriteStartupError(msg); path != "" {
-		fmt.Fprintf(os.Stderr, "（详细错误已记录到 %s）\n", path)
+		fmt.Fprintf(os.Stderr, "(%s)\n", fmt.Sprintf(i18n.T("errors.last_error_log"), path))
 	}
 	if !headlessMode && stdinIsTerminal() {
-		fmt.Fprint(os.Stderr, "\n按回车键退出...")
+		fmt.Fprint(os.Stderr, "\n"+i18n.T("errors.pause_exit_prompt"))
 		fmt.Fscanln(os.Stdin)
 	}
 	os.Exit(1)
@@ -102,13 +109,23 @@ func runWithConfig(cfg bootstrap.Config, opts cliOptions, args []string) {
 	rules.EnsureHomeRulesDir()
 
 	if len(args) > 0 {
-		die("error: 不再支持命令行直接传入小说需求，请启动后在 TUI 输入框中输入")
+		die("error: Không hỗ trợ truyền yêu cầu tiểu thuyết trực tiếp qua dòng lệnh, vui lòng nhập trong giao diện TUI")
 	}
 
-	// FillDefaults 必须先于资产加载:OutputDir 是运行时字段,默认值在此归一——
-	// 否则默认配置下 <书目录>/style/ 的本书级文风覆盖永远不会被加载。
+	if opts.Language != "" {
+		cfg.Language = opts.Language
+	}
+	if opts.StoryLanguage != "" {
+		cfg.StoryLanguage = opts.StoryLanguage
+	}
+
+	// FillDefaults 必须先于资产加载:OutputDir 是运行时字段,默认值在此归一
 	cfg.FillDefaults()
-	bundle := assets.Load(cfg.Style, assets.DefaultLoadOptions(cfg.OutputDir))
+	i18n.SetLanguage(cfg.Language)
+
+	loadOpts := assets.DefaultLoadOptions(cfg.OutputDir)
+	loadOpts.StoryLanguage = cfg.StoryLanguage
+	bundle := assets.Load(cfg.Style, loadOpts)
 	if opts.Headless {
 		prompt, err := loadPrompt(opts)
 		if err != nil {
@@ -120,7 +137,7 @@ func runWithConfig(cfg bootstrap.Config, opts cliOptions, args []string) {
 		return
 	}
 	if opts.Prompt != "" || opts.PromptFile != "" {
-		die("error: --prompt/--prompt-file 仅能在 --headless 模式下使用")
+		die("error: --prompt/--prompt-file chỉ có thể sử dụng ở chế độ --headless")
 	}
 	if err := tui.Run(cfg, bundle, versionInfo()); err != nil {
 		die("error: %v", err)
@@ -131,6 +148,8 @@ type cliOptions struct {
 	Headless      bool
 	Prompt        string
 	PromptFile    string
+	Language      string
+	StoryLanguage string
 	Version       bool
 	Update        bool
 	UpdateVersion string
@@ -142,6 +161,18 @@ func parseCLIOptions(argv []string) (cliOptions, []string, error) {
 	var args []string
 	for i := 0; i < len(argv); i++ {
 		switch argv[i] {
+		case "--lang", "-l":
+			if i+1 >= len(argv) {
+				return opts, nil, fmt.Errorf("--lang / -l thiếu giá trị ngôn ngữ (vi, en, zh)")
+			}
+			opts.Language = i18n.NormalizeLanguage(argv[i+1])
+			i++
+		case "--story-lang":
+			if i+1 >= len(argv) {
+				return opts, nil, fmt.Errorf("--story-lang thiếu giá trị ngôn ngữ (vi, en, zh)")
+			}
+			opts.StoryLanguage = i18n.NormalizeLanguage(argv[i+1])
+			i++
 		case "--version", "-v":
 			opts.Version = true
 		case "version":
@@ -168,13 +199,13 @@ func parseCLIOptions(argv []string) (cliOptions, []string, error) {
 			opts.Headless = true
 		case "--prompt":
 			if i+1 >= len(argv) {
-				return opts, nil, fmt.Errorf("--prompt 缺少值")
+				return opts, nil, fmt.Errorf("--prompt thiếu giá trị")
 			}
 			opts.Prompt = argv[i+1]
 			i++
 		case "--prompt-file":
 			if i+1 >= len(argv) {
-				return opts, nil, fmt.Errorf("--prompt-file 缺少值")
+				return opts, nil, fmt.Errorf("--prompt-file thiếu giá trị")
 			}
 			opts.PromptFile = argv[i+1]
 			i++

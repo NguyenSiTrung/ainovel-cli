@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/voocel/ainovel-cli/internal/host"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 	"github.com/voocel/ainovel-cli/internal/utils"
 )
 
@@ -545,7 +546,7 @@ func (m *Model) outputDir() string {
 }
 
 func defaultSteerPlaceholder() string {
-	return "输入剧情干预，例如：把感情线提前到第4章"
+	return i18n.T("tui.status.steer_placeholder")
 }
 
 func (m *Model) syncRuntimePlaceholder() {
@@ -553,26 +554,26 @@ func (m *Model) syncRuntimePlaceholder() {
 		return
 	}
 	if m.starting {
-		m.textarea.Placeholder = "正在初始化创作..."
+		m.textarea.Placeholder = i18n.T("tui.status.starting_placeholder")
 		return
 	}
 	switch m.snapshot.RuntimeState {
 	case "completed":
-		m.textarea.Placeholder = donePlaceholder
+		m.textarea.Placeholder = donePlaceholder()
 	case "pausing":
-		m.textarea.Placeholder = "正在暂停创作..."
+		m.textarea.Placeholder = i18n.T("tui.status.pausing_placeholder")
 	case "paused":
 		if m.snapshot.AdvanceMode == "review" && m.snapshot.Phase == "writing" {
-			m.textarea.Placeholder = "逐章验收等待中：输入修改意见，或 /next 放行下一章"
+			m.textarea.Placeholder = i18n.T("tui.status.review_wait_placeholder")
 		} else {
-			m.textarea.Placeholder = "创作已暂停，输入任意内容继续创作"
+			m.textarea.Placeholder = i18n.T("tui.status.paused_placeholder")
 		}
 	default:
 		if !m.snapshot.IsRunning {
 			if m.snapshot.AdvanceMode == "review" && m.snapshot.Phase == "writing" {
-				m.textarea.Placeholder = "逐章验收等待中：输入修改意见，或 /next 放行下一章"
+				m.textarea.Placeholder = i18n.T("tui.status.review_wait_placeholder")
 			} else {
-				m.textarea.Placeholder = "运行中断，输入任意内容恢复创作"
+				m.textarea.Placeholder = i18n.T("tui.status.interrupted_placeholder")
 			}
 		} else {
 			m.textarea.Placeholder = defaultSteerPlaceholder()

@@ -10,6 +10,7 @@ import (
 
 	"github.com/voocel/ainovel-cli/internal/host"
 	"github.com/voocel/ainovel-cli/internal/host/exp"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 // exportDoneMsg 是 /export 命令的最终结果。
@@ -77,9 +78,12 @@ func parseExportArgs(args []string) (exp.Options, error) {
 // formatExportSuccess 把 Result 渲染成事件 Summary。
 func formatExportSuccess(res *exp.Result) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "✓ 已导出 %d 章 / %s 到 %s", res.Chapters, humanBytes(res.Bytes), res.Path)
+	b.WriteString("✓ ")
+	b.WriteString(i18n.T("tui.export.exported", res.Chapters, humanBytes(res.Bytes), res.Path))
 	if n := len(res.Skipped); n > 0 {
-		fmt.Fprintf(&b, "（跳过 %d 章未完成：%s）", n, briefIntList(res.Skipped, 5))
+		b.WriteString(" (")
+		b.WriteString(i18n.T("tui.export.skipped", n, briefIntList(res.Skipped, 5)))
+		b.WriteString(")")
 	}
 	return b.String()
 }

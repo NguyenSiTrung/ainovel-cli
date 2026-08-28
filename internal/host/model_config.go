@@ -35,6 +35,8 @@ type ModelConfigurationSnapshot struct {
 	Providers       []ProviderSnapshot
 	DefaultProvider string
 	DefaultModel    string
+	Language        string
+	StoryLanguage   string
 	ConfigPath      string
 	References      map[string][]string
 }
@@ -119,6 +121,7 @@ func (h *Host) ModelConfiguration() ModelConfigurationSnapshot {
 
 	return ModelConfigurationSnapshot{
 		Providers: providers, DefaultProvider: h.cfg.Provider, DefaultModel: h.cfg.ModelName,
+		Language: h.cfg.Language, StoryLanguage: h.cfg.StoryLanguage,
 		ConfigPath: h.configPath, References: refs,
 	}
 }
@@ -417,4 +420,25 @@ func (h *Host) modelReferencesLocked(provider, model string) []string {
 	}
 	sort.Strings(refs)
 	return refs
+}
+
+// ConfigureLanguage updates UI language and story language in Host config and saves to config file.
+func (h *Host) ConfigureLanguage(uiLang, storyLang string) error {
+	if h == nil {
+		return nil
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if uiLang != "" {
+		h.cfg.Language = uiLang
+	}
+	if storyLang != "" {
+		h.cfg.StoryLanguage = storyLang
+	}
+
+	if h.configPath == "" {
+		return nil
+	}
+	return bootstrap.SaveConfig(h.configPath, h.cfg)
 }

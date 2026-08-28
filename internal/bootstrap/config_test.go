@@ -132,3 +132,28 @@ func TestValidateBaseRejectsBadStreamIdleTimeout(t *testing.T) {
 		t.Fatalf("非法 stream_idle_timeout 应拒绝并包装 ErrConfig，得到: %v", err)
 	}
 }
+
+func TestConfigLanguageFields(t *testing.T) {
+	var cfg Config
+	cfg.FillDefaults()
+
+	if cfg.Language == "" {
+		t.Errorf("expected Language to be defaulted, got %q", cfg.Language)
+	}
+	if cfg.StoryLanguage == "" {
+		t.Errorf("expected StoryLanguage to be defaulted, got %q", cfg.StoryLanguage)
+	}
+
+	// Test explicit values
+	cfgCustom := Config{
+		Language:      "en",
+		StoryLanguage: "vi",
+	}
+	cfgCustom.FillDefaults()
+	if cfgCustom.Language != "en" {
+		t.Errorf("expected Language to be 'en', got %q", cfgCustom.Language)
+	}
+	if cfgCustom.StoryLanguage != "vi" {
+		t.Errorf("expected StoryLanguage to be 'vi', got %q", cfgCustom.StoryLanguage)
+	}
+}

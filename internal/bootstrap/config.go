@@ -10,11 +10,11 @@ import (
 
 	"github.com/voocel/agentcore/llm"
 	"github.com/voocel/ainovel-cli/internal/errs"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 	"github.com/voocel/ainovel-cli/internal/models"
 	"github.com/voocel/ainovel-cli/internal/notify"
 	"github.com/voocel/ainovel-cli/internal/utils"
 )
-
 // DefaultContextWindow 模型未在 registry 登记时的兜底窗口大小。
 const DefaultContextWindow = 200000
 
@@ -214,9 +214,10 @@ type Config struct {
 	// 角色级模型覆盖
 	Roles map[string]RoleConfig `json:"roles,omitempty"`
 
-	// 创作参数
-	Style string `json:"style,omitempty"`
-
+	// 创作与界面语言参数
+	Language      string `json:"language,omitempty"`       // 界面语言 (vi, en, zh)
+	StoryLanguage string `json:"story_language,omitempty"` // 小说创作语言 (vi, en, zh)
+	Style         string `json:"style,omitempty"`
 	// ContextWindow 是旧版全局上下文窗口，保留为模型专属 context_window 之后的
 	// 兼容回退。仅影响压缩阈值，不改变 LLM API 实际请求长度。
 	ContextWindow int `json:"context_window,omitempty"`
@@ -348,6 +349,13 @@ func (c *Config) ValidateBase() error {
 		}
 	}
 
+	if err := validateConfigText("language", c.Language); err != nil {
+		return err
+	}
+	if err := validateConfigText("story_language", c.StoryLanguage); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -420,6 +428,16 @@ func (c *Config) FillDefaults() {
 	if c.Roles == nil {
 		c.Roles = make(map[string]RoleConfig)
 	}
+	if c.Language == "" {
+		c.Language = i18n.DetectSystemLanguage()
+	} else {
+		c.Language = i18n.NormalizeLanguage(c.Language)
+	}
+	if c.StoryLanguage == "" {
+		c.StoryLanguage = c.Language
+	} else {
+		c.StoryLanguage = i18n.NormalizeLanguage(c.StoryLanguage)
+	}
 	if c.Style == "" {
 		c.Style = "default"
 	}
@@ -427,7 +445,6 @@ func (c *Config) FillDefaults() {
 		c.Budget.WarnRatio = 0.8
 	}
 }
-
 // ContextWindowSource 标记窗口取值的来源，供日志/诊断使用。
 type ContextWindowSource string
 

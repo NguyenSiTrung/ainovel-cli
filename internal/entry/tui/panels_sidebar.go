@@ -5,9 +5,9 @@ import (
 	"slices"
 	"sort"
 	"strings"
-
 	"github.com/charmbracelet/lipgloss"
 	"github.com/voocel/ainovel-cli/internal/host"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 // renderStateContent 生成状态侧栏的纯内容(不含边框/外框)，供 stateVP.SetContent 使用。
@@ -23,46 +23,43 @@ func renderStateContent(snap host.UISnapshot, contentW int) string {
 	}
 
 	var overview strings.Builder
-	overview.WriteString(renderField("运行态", snapshotRuntimeStateLabel(snap.RuntimeState)))
-	overview.WriteString(renderField("阶段", snapshotPhaseLabel(snap.Phase)))
-	overview.WriteString(renderField("流程", snapshotFlowLabel(snap.Flow)))
+	overview.WriteString(renderField(i18n.T("tui.sidebar.state"), snapshotRuntimeStateLabel(snap.RuntimeState)))
+	overview.WriteString(renderField(i18n.T("tui.sidebar.phase"), snapshotPhaseLabel(snap.Phase)))
+	overview.WriteString(renderField(i18n.T("tui.sidebar.flow"), snapshotFlowLabel(snap.Flow)))
 	if snap.AdvanceMode == "review" {
-		advance := "逐章验收"
+		advance := i18n.T("tui.sidebar.advance_review")
 		if snap.AdvancePermitChapter > 0 {
-			advance = fmt.Sprintf("已放行第 %d 章", snap.AdvancePermitChapter)
+			advance = fmt.Sprintf(i18n.T("tui.sidebar.advance_permit"), snap.AdvancePermitChapter)
 		}
-		overview.WriteString(renderField("推进", advance))
+		overview.WriteString(renderField(i18n.T("tui.sidebar.advance"), advance))
 	} else if snap.AdvanceMode == "auto" {
-		overview.WriteString(renderField("推进", "自动"))
+		overview.WriteString(renderField(i18n.T("tui.sidebar.advance"), i18n.T("tui.sidebar.advance_auto")))
 	}
 	if snap.Layered {
-		overview.WriteString(renderField("已完成", fmt.Sprintf("%d 章", snap.CompletedCount)))
-		// 分层动态规划：右栏只展示当前弧已展开的章节，"已规划"也用同一个口径，
-		// 否则会把骨架弧 EstimatedChapters 的粗估算（如 92）混进来，与可见大纲对不上。
-		// progress.TotalChapters 那个值仅用于内部 ContextProfile 决策，不要泄漏到 UI。
+		overview.WriteString(renderField(i18n.T("tui.sidebar.completed"), fmt.Sprintf(i18n.T("tui.sidebar.chapters_count"), snap.CompletedCount)))
 		if planned := len(snap.Outline); planned > 0 {
-			overview.WriteString(renderField("已规划", fmt.Sprintf("%d 章", planned)))
+			overview.WriteString(renderField(i18n.T("tui.sidebar.planned"), fmt.Sprintf(i18n.T("tui.sidebar.chapters_count"), planned)))
 		}
 	} else {
 		switch {
 		case snap.TotalChapters > 0:
-			overview.WriteString(renderField("进度", fmt.Sprintf("%d / %d 章", snap.CompletedCount, snap.TotalChapters)))
+			overview.WriteString(renderField(i18n.T("tui.sidebar.progress"), fmt.Sprintf("%d / %d", snap.CompletedCount, snap.TotalChapters)))
 		default:
-			overview.WriteString(renderField("已完成", fmt.Sprintf("%d 章", snap.CompletedCount)))
+			overview.WriteString(renderField(i18n.T("tui.sidebar.completed"), fmt.Sprintf(i18n.T("tui.sidebar.chapters_count"), snap.CompletedCount)))
 		}
 	}
-	overview.WriteString(renderField("字数", formatNumber(snap.TotalWordCount)))
+	overview.WriteString(renderField(i18n.T("tui.sidebar.words"), formatNumber(snap.TotalWordCount)))
 	if label, ch := inProgressDisplay(snap); label != "" {
-		overview.WriteString(renderField(label, fmt.Sprintf("第 %d 章", ch)))
+		overview.WriteString(renderField(label, fmt.Sprintf(i18n.T("tui.status.chapter"), ch, "")))
 	}
 	if headline := snapshotHeadline(snap); headline != "" {
-		label := "当前"
+		label := "Hiện tại"
 		if !snap.IsRunning {
-			label = "待恢复"
+			label = "Chờ tiếp tục"
 		}
 		overview.WriteString(renderHighlightField(label, truncate(headline, contentW-10)))
 	}
-	sections = append(sections, renderSidebarSection("概览", overview.String(), contentW))
+	sections = append(sections, renderSidebarSection(i18n.T("tui.sidebar.overview"), overview.String(), contentW))
 
 	if len(agents) > 0 {
 		var agentBody strings.Builder
@@ -71,38 +68,37 @@ func renderStateContent(snap host.UISnapshot, contentW int) string {
 			agentBody.WriteString("\n")
 		}
 		if len(idleAgents) > 0 {
-			agentBody.WriteString(lipgloss.NewStyle().Foreground(colorDim).Render("待命: " + truncate(strings.Join(idleAgents, " · "), max(8, contentW-2))))
+			agentBody.WriteString(lipgloss.NewStyle().Foreground(colorDim).Render(i18n.T("tui.sidebar.standby") + ": " + truncate(strings.Join(idleAgents, " · "), max(8, contentW-2))))
 			agentBody.WriteString("\n")
 		}
-		sections = append(sections, renderSidebarSection("运行角色", agentBody.String(), contentW))
+		sections = append(sections, renderSidebarSection(i18n.T("tui.sidebar.running_roles"), agentBody.String(), contentW))
 	}
 
 	if len(snap.PendingRewrites) > 0 {
 		var rewrite strings.Builder
-		rewrite.WriteString(renderHighlightField("队列", fmt.Sprintf("%v", snap.PendingRewrites)))
+		rewrite.WriteString(renderHighlightField("Hàng đợi", fmt.Sprintf("%v", snap.PendingRewrites)))
 		if snap.RewriteReason != "" {
-			rewrite.WriteString(renderField("原因", truncate(snap.RewriteReason, contentW-10)))
+			rewrite.WriteString(renderField(i18n.T("tui.sidebar.reason"), truncate(snap.RewriteReason, contentW-10)))
 		}
-		sections = append(sections, renderSidebarSection("返工", rewrite.String(), contentW))
+		sections = append(sections, renderSidebarSection(i18n.T("tui.sidebar.rework"), rewrite.String(), contentW))
 	}
 
 	if snap.PendingSteer != "" {
-		sections = append(sections, renderSidebarSection("干预",
-			renderHighlightField("待处理", truncate(snap.PendingSteer, contentW-10)), contentW))
+		sections = append(sections, renderSidebarSection(i18n.T("tui.sidebar.steer"),
+			renderHighlightField("Chờ xử lý", truncate(snap.PendingSteer, contentW-10)), contentW))
 	}
 	if snap.HasAdvanceHold {
-		sections = append(sections, renderSidebarSection("验收停靠",
-			renderHighlightField("等待", truncate(snap.AdvanceHoldReason, contentW-10)), contentW))
+		sections = append(sections, renderSidebarSection(i18n.T("tui.sidebar.gate_hold"),
+			renderHighlightField(i18n.T("tui.sidebar.waiting"), truncate(snap.AdvanceHoldReason, contentW-10)), contentW))
 	}
 
 	if body := renderUsageSidebar(snap, contentW); body != "" {
-		sections = append(sections, renderSidebarSection("用量", body, contentW))
+		sections = append(sections, renderSidebarSection(i18n.T("tui.sidebar.usage"), body, contentW))
 	}
 
 	if body := renderCacheSidebar(snap, contentW); body != "" {
-		sections = append(sections, renderSidebarSection("缓存", body, contentW))
+		sections = append(sections, renderSidebarSection(i18n.T("tui.sidebar.cache"), body, contentW))
 	}
-
 	return strings.Join(sections, "\n\n")
 }
 
@@ -239,57 +235,38 @@ func snapshotHeadline(snap host.UISnapshot) string {
 }
 
 func snapshotPhaseLabel(phase string) string {
-	switch phase {
-	case "premise":
-		return "前提"
-	case "outline":
-		return "大纲"
-	case "writing":
-		return "写作"
-	case "complete":
-		return "完成"
-	case "init":
-		return "初始化"
-	default:
-		if phase == "" {
-			return "-"
-		}
-		return phase
+	if i18n.Has("phase." + phase) {
+		return i18n.T("phase." + phase)
 	}
+	if phase == "" {
+		return "-"
+	}
+	return phase
 }
 
 func snapshotRuntimeStateLabel(state string) string {
 	switch state {
 	case "running":
-		return "运行中"
+		return i18n.T("tui.status.running")
 	case "pausing":
-		return "暂停中"
+		return i18n.T("tui.status.paused")
 	case "paused":
-		return "已暂停"
+		return i18n.T("tui.status.paused")
 	case "completed":
-		return "已完成"
+		return i18n.T("tui.status.completed")
 	default:
-		return "空闲"
+		return i18n.T("tui.status.idle")
 	}
 }
 
 func snapshotFlowLabel(flow string) string {
-	switch flow {
-	case "":
+	if flow == "" {
 		return "-"
-	case "writing":
-		return "写作"
-	case "reviewing":
-		return "评审"
-	case "rewriting":
-		return "重写"
-	case "polishing":
-		return "打磨"
-	case "steering":
-		return "干预"
-	default:
-		return flow
 	}
+	if i18n.Has("flow." + flow) {
+		return i18n.T("flow." + flow)
+	}
+	return flow
 }
 
 func renderUsageSidebar(snap host.UISnapshot, width int) string {

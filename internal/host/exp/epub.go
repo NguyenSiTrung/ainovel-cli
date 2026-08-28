@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/voocel/ainovel-cli/internal/domain"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 // renderEPUB 把章节集合打包成 EPUB 3 字节流。
@@ -123,26 +124,25 @@ p { text-indent: 2em; margin: 0.5em 0; }
 
 func renderChapterXHTML(ch int, title string, loc chapterLocation, hasLoc bool, body string) string {
 	var b strings.Builder
-	displayTitle := fmt.Sprintf("第 %d 章", ch)
+	displayTitle := fmt.Sprintf("%s", i18n.T("tui.status.chapter_num", ch))
 	if title != "" {
-		displayTitle = fmt.Sprintf("第 %d 章 %s", ch, title)
+		displayTitle = fmt.Sprintf("%s %s", i18n.T("tui.status.chapter_num", ch), title)
 	}
 
 	fmt.Fprintf(&b, `<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh-CN">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="%s">
 <head>
   <title>%s</title>
   <link rel="stylesheet" type="text/css" href="style.css"/>
 </head>
 <body>
-`, html.EscapeString(displayTitle))
+`, i18n.CurrentLanguage(), html.EscapeString(displayTitle))
 
 	if hasLoc && loc.IsFirstOfVolume {
-		fmt.Fprintf(&b, "  <div class=\"volume-divider\">第 %d 卷 %s</div>\n",
-			loc.VolumeIdx, html.EscapeString(strings.TrimSpace(loc.VolumeTitle)))
+		fmt.Fprintf(&b, "  <div class=\"volume-divider\">%s %s</div>\n",
+			i18n.T("tui.status.volume", loc.VolumeIdx), html.EscapeString(strings.TrimSpace(loc.VolumeTitle)))
 	}
-
 	fmt.Fprintf(&b, "  <h1 class=\"chapter-title\">%s</h1>\n", html.EscapeString(displayTitle))
 	for _, para := range splitParagraphs(body) {
 		fmt.Fprintf(&b, "  <p>%s</p>\n", html.EscapeString(para))
@@ -193,34 +193,34 @@ func renderCoverXHTML(novelName string) string {
 
 func renderNavXHTML(hasCover bool, chapters []int, titleIdx chapterTitleIndex) string {
 	var b strings.Builder
-	b.WriteString(`<?xml version="1.0" encoding="utf-8"?>
+	tocTitle := i18n.T("tui.export.toc")
+	b.WriteString(fmt.Sprintf(`<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="zh-CN">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="%s">
 <head>
-  <title>目录</title>
+  <title>%s</title>
   <link rel="stylesheet" type="text/css" href="style.css"/>
 </head>
 <body>
   <nav epub:type="toc">
-    <h1>目录</h1>
+    <h1>%s</h1>
     <ol>
-`)
+`, i18n.CurrentLanguage(), html.EscapeString(tocTitle), html.EscapeString(tocTitle)))
 	if hasCover {
-		b.WriteString("      <li><a href=\"cover.xhtml\">封面</a></li>\n")
+		b.WriteString(fmt.Sprintf("      <li><a href=\"cover.xhtml\">%s</a></li>\n", html.EscapeString(i18n.T("tui.export.cover"))))
 	}
 
 	// 平铺章节列表。卷/弧分组在阅读器里反而不如单层目录清爽（阅读器自己会折叠），
 	// 而且 EPUB 3 nav 嵌套 ol 在某些阅读器上渲染怪。保持简单。
 	for _, ch := range chapters {
 		title := strings.TrimSpace(titleIdx[ch])
-		display := fmt.Sprintf("第 %d 章", ch)
+		display := fmt.Sprintf("%s", i18n.T("tui.status.chapter_num", ch))
 		if title != "" {
-			display = fmt.Sprintf("第 %d 章 %s", ch, title)
+			display = fmt.Sprintf("%s %s", i18n.T("tui.status.chapter_num", ch), title)
 		}
 		fmt.Fprintf(&b, "      <li><a href=\"%s\">%s</a></li>\n",
 			chapterFileName(ch), html.EscapeString(display))
 	}
-
 	b.WriteString(`    </ol>
   </nav>
 </body>

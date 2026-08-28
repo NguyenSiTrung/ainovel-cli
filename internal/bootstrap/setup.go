@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 	"github.com/voocel/ainovel-cli/internal/rules"
 	"github.com/voocel/ainovel-cli/internal/utils"
 )
@@ -79,12 +80,18 @@ func ProviderPresets() []ProviderPreset {
 func RunSetup() (Config, error) {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("99")).
-		Render("未检测到配置文件，开始初始化设置..."))
-	fmt.Fprintf(os.Stderr, "  配置文件路径：%s\n", lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render(DefaultConfigPath()))
-	fmt.Fprintf(os.Stderr, "  完成后可随时编辑该文件调整高级设置。\n")
+		Render(i18n.T("setup.welcome")+" - "+i18n.T("setup.subtitle")))
+	fmt.Fprintf(os.Stderr, "  %s: %s\n", i18n.T("cli.flag_config"), lipgloss.NewStyle().Foreground(lipgloss.Color("245")).Render(DefaultConfigPath()))
 	fmt.Fprintln(os.Stderr)
 
-	// Step 1: 选择 Provider
+	// Step 1: Chọn ngôn ngữ (Language selection)
+	selectedLang, err := runLanguageSelect()
+	if err != nil {
+		return Config{}, err
+	}
+	printStepDone(i18n.T("config.ui_language"), i18n.LanguageName(selectedLang))
+
+	// Step 2: Chọn Provider (Provider selection)
 	sp, err := runProviderSelect()
 	if err != nil {
 		return Config{}, err
@@ -96,7 +103,7 @@ func RunSetup() (Config, error) {
 
 	// 自定义代理：额外问名称和 API 协议类型
 	if sp.needType {
-		providerName, err = runTextInput("Provider 名称", "my-proxy")
+		providerName, err = runTextInput("Provider Name / Tên Provider", "my-proxy")
 		if err != nil {
 			return Config{}, err
 		}
@@ -107,30 +114,30 @@ func RunSetup() (Config, error) {
 		pc.Type = providerType
 	}
 
-	// Step 2: 输入 API Key
+	// Step 3: API Key
 	var apiKey string
 	if sp.apiKeyOptional {
-		apiKey, err = runOptionalTextInput("[2/4] API Key（可留空）", "留空表示不使用 API Key")
+		apiKey, err = runOptionalTextInput("[3/5] "+i18n.T("setup.api_key_prompt")+" (tùy chọn / optional)", "Để trống nếu không dùng / Leave empty if unused")
 	} else {
-		apiKey, err = runTextInput("[2/4] API Key", "sk-xxx")
+		apiKey, err = runTextInput("[3/5] "+i18n.T("setup.api_key_prompt"), "sk-xxx")
 	}
 	if err != nil {
 		return Config{}, err
 	}
 	pc.APIKey = apiKey
 	if apiKey == "" {
-		printStepDone("API Key", "未设置")
+		printStepDone("API Key", "(trống / not set)")
 	} else {
 		printStepDone("API Key", maskKey(apiKey))
 	}
 
-	// Step 3: Base URL（直接回车使用官方默认地址）
+	// Step 4: Base URL
 	baseDefault := sp.baseURL
-	baseHint := "留空使用官方地址"
+	baseHint := "Mặc định / Default"
 	if baseDefault != "" {
 		baseHint = baseDefault
 	}
-	baseURL, err := runTextInputWithDefault("[3/4] Base URL（直接回车使用默认，代理用户填写代理地址）", baseHint, baseDefault)
+	baseURL, err := runTextInputWithDefault("[4/5] "+i18n.T("setup.base_url_prompt"), baseHint, baseDefault)
 	if err != nil {
 		return Config{}, err
 	}
@@ -138,11 +145,11 @@ func RunSetup() (Config, error) {
 	if baseURL != "" {
 		printStepDone("Base URL", baseURL)
 	} else {
-		printStepDone("Base URL", "默认")
+		printStepDone("Base URL", "Mặc định / Default")
 	}
 
-	// Step 4: 模型名（必填）
-	modelName, err := runTextInput("[4/4] 模型名称", "例如：gpt-4o / claude-sonnet-4 / gemini-2.5-pro")
+	// Step 5: Model name
+	modelName, err := runTextInput("[5/5] "+i18n.T("setup.model_prompt"), "VD / e.g.: gpt-4o / claude-sonnet-4 / gemini-2.5-pro")
 	if err != nil {
 		return Config{}, err
 	}
@@ -150,32 +157,33 @@ func RunSetup() (Config, error) {
 	pc.Models = []ModelConfig{{Name: modelName}}
 
 	cfg := Config{
-		Provider:  providerName,
-		ModelName: modelName,
-		Providers: map[string]ProviderConfig{providerName: pc},
-		Roles:     map[string]RoleConfig{},
-		Style:     "default",
+		Provider:      providerName,
+		ModelName:     modelName,
+		Providers:     map[string]ProviderConfig{providerName: pc},
+		Roles:         map[string]RoleConfig{},
+		Language:      selectedLang,
+		StoryLanguage: selectedLang,
+		Style:         "default",
 	}
 
-	// 保存
+	// Lưu cấu hình
 	path := DefaultConfigPath()
 	if err := SaveConfig(path, cfg); err != nil {
 		return cfg, fmt.Errorf("save config: %w", err)
 	}
 
-	// 生成注释模板
+	// Ghi file mẫu chú thích
 	saveExampleConfig()
 
-	// 全局偏好目录由启动流程（runWithConfig）统一创建，这里仅取路径用于提示
 	rulesDir := rules.DefaultHomeRulesDir()
 
 	fmt.Fprintln(os.Stderr)
-	fmt.Fprintf(os.Stderr, "%s 配置已保存到 %s\n",
-		lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Render("✓"), path)
-	fmt.Fprintf(os.Stderr, "  默认模型：%s\n", modelName)
-	fmt.Fprintln(os.Stderr, "  如需按角色配置不同模型，编辑配置文件即可。")
+	fmt.Fprintf(os.Stderr, "%s %s\n",
+		lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Render("✓"),
+		fmt.Sprintf(i18n.T("setup.save_success"), path))
+	fmt.Fprintf(os.Stderr, "  %s: %s\n", i18n.T("config.main_model"), modelName)
 	if rulesDir != "" {
-		fmt.Fprintf(os.Stderr, "  全局写作偏好可放 %s 下的 .md 文件（见其中 README.txt）\n", rulesDir)
+		fmt.Fprintf(os.Stderr, "  Rules: %s\n", rulesDir)
 	}
 	fmt.Fprintln(os.Stderr)
 
@@ -207,9 +215,48 @@ func maskKey(key string) string {
 
 // ---------- TUI 组件 ----------
 
+var languageSelectionOptions = []setupProvider{
+	{name: "vi", label: "Tiếng Việt (Vietnamese)"},
+	{name: "en", label: "English"},
+	{name: "zh", label: "中文 (Chinese)"},
+}
+
+func languageOptions() []setupProvider {
+	return languageSelectionOptions
+}
+
+func runLanguageSelect() (string, error) {
+	detected := i18n.DetectSystemLanguage()
+	initialCursor := 0
+	for i, opt := range languageSelectionOptions {
+		if opt.name == detected {
+			initialCursor = i
+			break
+		}
+	}
+
+	m := setupSelectModel{
+		title:  "[1/5] Chọn ngôn ngữ giao diện (Select UI Language)",
+		items:  languageSelectionOptions,
+		cursor: initialCursor,
+	}
+	p := tea.NewProgram(m, tea.WithOutput(os.Stderr))
+	final, err := p.Run()
+	if err != nil {
+		return "", err
+	}
+	result := final.(setupSelectModel)
+	if result.cancelled {
+		return "", fmt.Errorf("setup cancelled")
+	}
+	selected := result.items[result.cursor].name
+	i18n.SetLanguage(selected)
+	return selected, nil
+}
+
 func runProviderSelect() (setupProvider, error) {
 	m := setupSelectModel{
-		title: "[1/4] 选择 Provider",
+		title: "[2/5] " + i18n.T("setup.provider_select"),
 		items: setupProviders,
 	}
 	p := tea.NewProgram(m, tea.WithOutput(os.Stderr))

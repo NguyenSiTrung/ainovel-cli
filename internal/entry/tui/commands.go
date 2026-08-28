@@ -9,6 +9,7 @@ import (
 	"github.com/voocel/ainovel-cli/internal/domain"
 	"github.com/voocel/ainovel-cli/internal/entry/startup"
 	"github.com/voocel/ainovel-cli/internal/host"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 type slashCommandSpec struct {
@@ -91,13 +92,14 @@ func commandRegistryInstance() commandRegistry {
 		},
 		{
 			Name:        "config",
+			Aliases:     []string{"setting", "settings"},
 			Group:       "system",
 			Usage:       "/config",
-			Description: "新增或编辑 Provider、模型与上下文窗口",
+			Description: "Cài đặt ngôn ngữ, Provider, mô hình và thông số hệ thống",
 			AutoExecute: true,
 			Run: func(m Model, args []string) (tea.Model, tea.Cmd) {
 				if len(args) != 0 {
-					m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: "用法：/config", Level: "error"})
+					m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: i18n.T("cli.usage") + ": /config", Level: "error"})
 					m.refreshEventViewport()
 					return m, nil
 				}

@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/voocel/agentcore"
 	"github.com/voocel/ainovel-cli/internal/host"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 type modelRuntime interface {
@@ -311,16 +312,16 @@ func renderModelSwitchBar(width int, state *modelSwitchState) string {
 	title := lipgloss.NewStyle().
 		Foreground(colorMuted).
 		Bold(true).
-		Render("/model 切换模型")
+		Render("/model " + i18n.T("tui.modals.model_title"))
 
-	row1 := renderModelField("角色", state.roleLabel(), state.focus == modelFocusRole)
+	row1 := renderModelField("Vai trò (Role)", state.roleLabel(), state.focus == modelFocusRole)
 	row2 := renderModelField("Provider", state.provider(), state.focus == modelFocusProvider)
-	row3 := renderModelField("模型", state.modelLabel(), state.focus == modelFocusModel)
-	row4 := renderModelField("推理强度", state.thinkingLabel(), state.focus == modelFocusThinking)
+	row3 := renderModelField("Mô hình (Model)", state.modelLabel(), state.focus == modelFocusModel)
+	row4 := renderModelField("Độ suy luận (Thinking)", state.thinkingLabel(), state.focus == modelFocusThinking)
 	hint := lipgloss.NewStyle().
 		Foreground(colorDim).
 		Italic(true).
-		Render("Tab 切字段   ←→ 切选项   Enter 应用   Esc 取消")
+		Render("Tab Chuyển ô   ←→ Chọn   Enter Áp dụng   Esc Hủy")
 	lines := []string{
 		row1,
 		row2,

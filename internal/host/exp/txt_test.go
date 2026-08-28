@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/voocel/ainovel-cli/internal/domain"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 func TestStripChapterTitleHeader(t *testing.T) {
@@ -96,7 +97,7 @@ func TestRenderTXT_TitleAndChapter(t *testing.T) {
 		t.Errorf("missing book title at start:\n%s", got)
 	}
 	// premise 不进导出：书名后应直接是章节，不夹任何前情提要
-	if !strings.Contains(got, "第 1 章  雨夜归人") {
+	if !strings.Contains(got, i18n.T("tui.status.chapter_num", 1)+"  雨夜归人") {
 		t.Errorf("missing ch1 header")
 	}
 	if !strings.Contains(got, "他望着窗外。") {
@@ -105,7 +106,7 @@ func TestRenderTXT_TitleAndChapter(t *testing.T) {
 	if strings.Contains(got, "# 第 1 章") {
 		t.Errorf("body markdown header not stripped:\n%s", got)
 	}
-	if !strings.Contains(got, "第 2 章  破晓") {
+	if !strings.Contains(got, i18n.T("tui.status.chapter_num", 2)+"  破晓") {
 		t.Errorf("missing ch2 header")
 	}
 }
@@ -121,7 +122,7 @@ func TestRenderTXT_EmptyBookTitleNoTitleLine(t *testing.T) {
 	if strings.Contains(got, "《") {
 		t.Errorf("should not contain book title brackets: %s", got)
 	}
-	if !strings.HasPrefix(got, "第 1 章  雨夜归人") {
+	if !strings.HasPrefix(got, i18n.T("tui.status.chapter_num", 1)+"  雨夜归人") {
 		t.Errorf("expect chapter header at very start: %s", got)
 	}
 }
@@ -139,14 +140,14 @@ func TestRenderTXT_LayeredVolume(t *testing.T) {
 		locs,
 		map[int]string{1: "正文一。", 2: "正文二。"},
 	)
-	if !strings.Contains(got, "第 1 卷  起源") {
+	if !strings.Contains(got, i18n.T("tui.status.volume", 1)+"  起源") {
 		t.Errorf("missing volume header: %s", got)
 	}
 	if strings.Contains(got, "弧") {
 		t.Errorf("arc divider should never appear: %s", got)
 	}
 	// 卷标题只在第一章前出现一次
-	if strings.Count(got, "第 1 卷") != 1 {
+	if strings.Count(got, i18n.T("tui.status.volume", 1)) != 1 {
 		t.Errorf("volume header should appear exactly once: %s", got)
 	}
 }
@@ -158,7 +159,7 @@ func TestRenderTXT_ChapterWithoutTitleFallsBackToNumberOnly(t *testing.T) {
 		nil,
 		map[int]string{5: "正文。"},
 	)
-	if !strings.Contains(got, "第 5 章\n\n") {
-		t.Errorf("expect 'first 5 章' fallback header: %s", got)
+	if !strings.Contains(got, i18n.T("tui.status.chapter_num", 5)+"\n\n") {
+		t.Errorf("expect chapter 5 fallback header: %s", got)
 	}
 }

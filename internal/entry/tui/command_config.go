@@ -13,12 +13,14 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/voocel/ainovel-cli/internal/bootstrap"
 	"github.com/voocel/ainovel-cli/internal/host"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 type configStep int
 
 const (
 	configStepProvider configStep = iota
+	configStepLanguage
 	configStepAddPicker
 	configStepCustomName
 	configStepHub // Provider 详情：列出各项当前值，挑一项进子编辑器，保存也在此
@@ -38,6 +40,7 @@ type configProviderChoice struct {
 	preset   *bootstrap.ProviderPreset
 	custom   bool
 	add      bool // 一级菜单的“新增 Provider…”入口，选中后进入新增目录
+	language bool // 一级菜单的“语言设置”入口
 }
 
 type modelConfigBaseline struct {
@@ -90,6 +93,9 @@ func newModelConfigState(rt *host.Host) *modelConfigState {
 // “新增”入口，避免一进来就把整份内置 Provider 目录铺满屏幕；二级菜单（选“新增”后
 // 展示）才是可新增的内置 Provider 目录 + 自定义代理。
 func (s *modelConfigState) buildProviderMenus() {
+	s.providerChoices = nil
+	s.presetChoices = nil
+
 	configured := make(map[string]bool, len(s.snapshot.Providers))
 	for i := range s.snapshot.Providers {
 		provider := s.snapshot.Providers[i]
@@ -100,7 +106,14 @@ func (s *modelConfigState) buildProviderMenus() {
 		})
 	}
 	s.providerChoices = append(s.providerChoices, configProviderChoice{
-		label: "+ 新增 Provider…", add: true,
+		label: "+ " + i18n.T("setup.provider_select") + "…", add: true,
+	})
+
+	// Language settings option
+	currentLangName := i18n.LanguageName(i18n.CurrentLanguage())
+	s.providerChoices = append(s.providerChoices, configProviderChoice{
+		label:    fmt.Sprintf("🌐 %s: %s", i18n.T("config.ui_language"), currentLangName),
+		language: true,
 	})
 
 	for _, presetValue := range bootstrap.ProviderPresets() {
@@ -376,7 +389,7 @@ func (s *modelConfigState) finishInlineEdit() bool {
 // 模型名和窗口直接在模型列表内编辑，不再增加详情层级。
 func (s *modelConfigState) escapeBack() (configStep, bool) {
 	switch s.step {
-	case configStepAddPicker, configStepHub:
+	case configStepLanguage, configStepAddPicker, configStepHub:
 		return configStepProvider, true
 	case configStepCustomName:
 		return configStepAddPicker, true
@@ -593,13 +606,31 @@ func (m Model) handleModelConfigKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		moveConfigCursor(state, msg, len(state.providerChoices))
 		if msg.Type == tea.KeyEnter && state.cursor >= 0 && state.cursor < len(state.providerChoices) {
 			choice := state.providerChoices[state.cursor]
-			if choice.add {
+			if choice.language {
+				state.step = configStepLanguage
+				state.cursor = 0
+				state.message = ""
+			} else if choice.add {
 				state.step = configStepAddPicker
 				state.cursor = 0
 				state.message = ""
 			} else {
 				state.applyProviderChoice(choice)
 			}
+		}
+	case configStepLanguage:
+		supported := i18n.SupportedLanguages()
+		moveConfigCursor(state, msg, len(supported))
+		if msg.Type == tea.KeyEnter && state.cursor >= 0 && state.cursor < len(supported) {
+			selected := supported[state.cursor]
+			i18n.SetLanguage(selected)
+			if m.runtime != nil {
+				_ = m.runtime.ConfigureLanguage(selected, selected)
+			}
+			state.buildProviderMenus()
+			state.step = configStepProvider
+			state.cursor = 0
+			state.message = i18n.T("config.saved_notice")
 		}
 	case configStepAddPicker:
 		moveConfigCursor(state, msg, len(state.presetChoices))
@@ -802,10 +833,22 @@ func renderModelConfigModal(width int, state *modelConfigState) string {
 
 	switch state.step {
 	case configStepProvider:
-		lines = append(lines, configHeading("选择要编辑的 Provider，或新增一个"))
+		lines = append(lines, configHeading(i18n.T("config.title")))
 		lines = append(lines, renderConfigChoices(labelsForProviderChoices(state.providerChoices), state.cursor, contentW, 12)...)
+	case configStepLanguage:
+		lines = append(lines, configHeading(i18n.T("config.ui_language")))
+		supported := i18n.SupportedLanguages()
+		labels := make([]string, len(supported))
+		for i, lang := range supported {
+			prefix := "  "
+			if lang == i18n.CurrentLanguage() {
+				prefix = "✓ "
+			}
+			labels[i] = prefix + i18n.LanguageName(lang) + " (" + lang + ")"
+		}
+		lines = append(lines, renderConfigChoices(labels, state.cursor, contentW, 10)...)
 	case configStepAddPicker:
-		lines = append(lines, configHeading("选择要新增的 Provider"))
+		lines = append(lines, configHeading(i18n.T("setup.provider_select")))
 		lines = append(lines, renderConfigChoices(labelsForProviderChoices(state.presetChoices), state.cursor, contentW, 12)...)
 	case configStepCustomName:
 		lines = append(lines, configHeading("自定义 Provider 名称"), renderConfigTextInput(&state.input, contentW))
