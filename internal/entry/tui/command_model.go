@@ -45,16 +45,36 @@ var modelRoleOptions = []modelRoleOption{
 
 type thinkingOption struct{ Key, Label string }
 
-var allThinkingOptions = []thinkingOption{
-	{"", "默认(继承)"},
-	{"off", "关闭"},
-	{"low", "低"},
-	{"medium", "中"},
-	{"high", "高"},
-	{"xhigh", "极高"},
-	{"max", "最高"},
+func thinkingLabelFor(key string) string {
+	switch key {
+	case "":
+		return i18n.T("tui.model.thinking_default")
+	case "off":
+		return i18n.T("tui.model.thinking_off")
+	case "low":
+		return i18n.T("tui.model.thinking_low")
+	case "medium":
+		return i18n.T("tui.model.thinking_medium")
+	case "high":
+		return i18n.T("tui.model.thinking_high")
+	case "xhigh":
+		return i18n.T("tui.model.thinking_xhigh")
+	case "max":
+		return i18n.T("tui.model.thinking_max")
+	default:
+		return key
+	}
 }
 
+var allThinkingOptions = []thinkingOption{
+	{"", "default"},
+	{"off", "off"},
+	{"low", "low"},
+	{"medium", "medium"},
+	{"high", "high"},
+	{"xhigh", "xhigh"},
+	{"max", "max"},
+}
 func thinkingOptionsFor(rt modelRuntime, role string) []thinkingOption {
 	levels := rt.AvailableThinking(role)
 	if len(levels) == 0 {
@@ -136,6 +156,10 @@ func (s *modelSwitchState) role() string {
 }
 
 func (s *modelSwitchState) roleLabel() string {
+	key := modelRoleOptions[s.roleIdx].Key
+	if key == "default" {
+		return i18n.T("tui.model.role_default")
+	}
 	return modelRoleOptions[s.roleIdx].Label
 }
 
@@ -173,9 +197,9 @@ func (s *modelSwitchState) thinkingKey() string {
 
 func (s *modelSwitchState) thinkingLabel() string {
 	if s.thinkingIdx < 0 || s.thinkingIdx >= len(s.thinking) {
-		return allThinkingOptions[0].Label
+		return thinkingLabelFor("")
 	}
-	return s.thinking[s.thinkingIdx].Label
+	return thinkingLabelFor(s.thinking[s.thinkingIdx].Key)
 }
 
 func (s *modelSwitchState) moveFocus(delta int) {
@@ -314,14 +338,14 @@ func renderModelSwitchBar(width int, state *modelSwitchState) string {
 		Bold(true).
 		Render("/model " + i18n.T("tui.modals.model_title"))
 
-	row1 := renderModelField("Vai trò (Role)", state.roleLabel(), state.focus == modelFocusRole)
-	row2 := renderModelField("Provider", state.provider(), state.focus == modelFocusProvider)
-	row3 := renderModelField("Mô hình (Model)", state.modelLabel(), state.focus == modelFocusModel)
-	row4 := renderModelField("Độ suy luận (Thinking)", state.thinkingLabel(), state.focus == modelFocusThinking)
+	row1 := renderModelField(i18n.T("tui.model.role"), state.roleLabel(), state.focus == modelFocusRole)
+	row2 := renderModelField(i18n.T("tui.model.provider"), state.provider(), state.focus == modelFocusProvider)
+	row3 := renderModelField(i18n.T("tui.model.model"), state.modelLabel(), state.focus == modelFocusModel)
+	row4 := renderModelField(i18n.T("tui.model.thinking"), state.thinkingLabel(), state.focus == modelFocusThinking)
 	hint := lipgloss.NewStyle().
 		Foreground(colorDim).
 		Italic(true).
-		Render("Tab Chuyển ô   ←→ Chọn   Enter Áp dụng   Esc Hủy")
+		Render(i18n.T("tui.model.switch_hint"))
 	lines := []string{
 		row1,
 		row2,
@@ -372,7 +396,7 @@ func renderModelSwitchBar(width int, state *modelSwitchState) string {
 
 func renderModelField(label, value string, focused bool) string {
 	if strings.TrimSpace(value) == "" {
-		value = "未设置"
+		value = i18n.T("tui.model.not_set")
 	}
 	labelText := lipgloss.NewStyle().
 		Foreground(colorMuted).

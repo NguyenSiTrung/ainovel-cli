@@ -107,3 +107,36 @@ func TestConcurrentAccess(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestKeySymmetryAcrossLanguages(t *testing.T) {
+	essentialKeys := []string{
+		"tui.phase.init",
+		"tui.phase.writing",
+		"tui.phase.complete",
+		"tui.flow.writing",
+		"tui.flow.reviewing",
+		"tui.flow.rewriting",
+		"tui.welcome.title",
+		"tui.welcome.feature_multi_agent",
+		"tui.cocreate.title",
+		"tui.cocreate.mode_quick",
+		"tui.sidebar.in_progress_writing",
+		"tui.sidebar.cache_overall_hit",
+		"tui.modals.config_models_title",
+		"setup.api_type_title",
+		"cli.update_success",
+	}
+
+	for _, lang := range []string{"vi", "en", "zh"} {
+		i18n.SetLanguage(lang)
+		for _, key := range essentialKeys {
+			if !i18n.Has(key) {
+				t.Errorf("language %q is missing key %q", lang, key)
+			}
+			val := i18n.T(key)
+			if val == key {
+				t.Errorf("language %q returned key itself for %q", lang, key)
+			}
+		}
+	}
+}

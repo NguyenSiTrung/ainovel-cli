@@ -1,7 +1,10 @@
 package tui
 
-import "strings"
+import (
+	"strings"
 
+	"github.com/voocel/ainovel-cli/internal/i18n"
+)
 type commandRegistry struct {
 	specs []slashCommandSpec
 }
@@ -33,6 +36,18 @@ func (r commandRegistry) Find(name string) (slashCommandSpec, bool) {
 	return slashCommandSpec{}, false
 }
 
+func (s slashCommandSpec) LocalizedDescription() string {
+	key := "tui.cmd." + s.Name + ".desc"
+	if i18n.Has(key) {
+		return i18n.T(key)
+	}
+	key2 := "tui.commands." + s.Name + ".desc"
+	if i18n.Has(key2) {
+		return i18n.T(key2)
+	}
+	return s.Description
+}
+
 func (r commandRegistry) PaletteItems() []commandPaletteItem {
 	var items []commandPaletteItem
 	for _, spec := range r.Visible() {
@@ -40,7 +55,7 @@ func (r commandRegistry) PaletteItems() []commandPaletteItem {
 			Name:        spec.Name,
 			Aliases:     append([]string(nil), spec.Aliases...),
 			Usage:       spec.Usage,
-			Description: spec.Description,
+			Description: spec.LocalizedDescription(),
 			AutoExecute: spec.AutoExecute,
 		})
 	}

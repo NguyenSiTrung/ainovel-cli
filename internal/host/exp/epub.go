@@ -171,17 +171,36 @@ func splitParagraphs(body string) []string {
 
 // 封面 ────────────────────────────────────────────────
 
+func epubLanguageTag() string {
+	lang := i18n.CurrentLanguage()
+	switch lang {
+	case "vi":
+		return "vi"
+	case "en":
+		return "en"
+	case "zh":
+		return "zh-CN"
+	default:
+		if lang != "" {
+			return lang
+		}
+		return "vi"
+	}
+}
+
 func renderCoverXHTML(novelName string) string {
 	var b strings.Builder
-	b.WriteString(`<?xml version="1.0" encoding="utf-8"?>
+	lang := epubLanguageTag()
+	coverTitle := i18n.T("tui.export.cover")
+	b.WriteString(fmt.Sprintf(`<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh-CN">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="%s">
 <head>
-  <title>封面</title>
+  <title>%s</title>
   <link rel="stylesheet" type="text/css" href="style.css"/>
 </head>
 <body>
-`)
+`, lang, html.EscapeString(coverTitle)))
 	if name := strings.TrimSpace(novelName); name != "" {
 		fmt.Fprintf(&b, "  <h1 class=\"book-title\">%s</h1>\n", html.EscapeString(name))
 	}
@@ -237,16 +256,17 @@ func renderOPF(book domain.BookMetadata, hasCover bool, chapters []int) string {
 
 	title := strings.TrimSpace(book.Title)
 	if title == "" {
-		title = "Untitled"
+		title = i18n.T("tui.welcome.untitled")
 	}
+	lang := epubLanguageTag()
 
 	var b strings.Builder
 	fmt.Fprintf(&b, `<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="zh-CN">
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="%s">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
     <dc:identifier id="bookid">%s</dc:identifier>
     <dc:title>%s</dc:title>
-    <dc:language>zh-CN</dc:language>
+    <dc:language>%s</dc:language>
     <dc:creator>ainovel-cli</dc:creator>
     <dc:description>%s</dc:description>
     <meta property="dcterms:modified">%s</meta>
@@ -254,7 +274,7 @@ func renderOPF(book domain.BookMetadata, hasCover bool, chapters []int) string {
   <manifest>
     <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
     <item id="css" href="style.css" media-type="text/css"/>
-`, html.EscapeString(bookID), html.EscapeString(title), html.EscapeString(book.Synopsis), modified)
+`, lang, html.EscapeString(bookID), html.EscapeString(title), lang, html.EscapeString(book.Synopsis), modified)
 
 	if hasCover {
 		b.WriteString(`    <item id="cover" href="cover.xhtml" media-type="application/xhtml+xml"/>` + "\n")

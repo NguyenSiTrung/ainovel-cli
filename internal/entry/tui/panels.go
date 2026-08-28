@@ -1,11 +1,13 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/voocel/ainovel-cli/internal/host"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 // renderTopBar 渲染顶部状态栏。
@@ -13,9 +15,8 @@ import (
 func renderTopBar(snap host.UISnapshot, width int, spinnerFrame, version string) string {
 	bookTitle := snap.BookTitle
 	if bookTitle == "" {
-		bookTitle = "未定书名"
+		bookTitle = i18n.T("tui.welcome.untitled")
 	}
-
 	var infoParts []string
 	if version != "" {
 		infoParts = append(infoParts, "ainovel-cli "+version)
@@ -43,24 +44,16 @@ func renderTopBar(snap host.UISnapshot, width int, spinnerFrame, version string)
 	if !ok {
 		color = colorDim
 	}
-	disp, ok := statusDisplay[label]
-	if !ok {
-		disp = struct {
-			icon  string
-			label string
-		}{"○", strings.ToLower(label)}
-	}
-	icon := disp.icon
+	icon, labelText := statusDisplayFor(label)
 	if snap.IsRunning && spinnerFrame != "" {
 		icon = spinnerFrame
 	}
 	var status string
 	if icon != "" {
-		status = statusIconStyle.Foreground(color).Render(icon) + " " + statusLabelStyle.Render(disp.label)
+		status = statusIconStyle.Foreground(color).Render(icon) + " " + statusLabelStyle.Render(labelText)
 	} else {
-		status = statusLabelStyle.Render(disp.label)
+		status = statusLabelStyle.Render(labelText)
 	}
-
 	innerW := max(12, width-2)
 	titleText := truncate(bookTitle, max(8, innerW/3))
 	centerW := max(16, lipgloss.Width(titleText)+6)
@@ -146,13 +139,13 @@ func renderWelcome(width, height int, errMsg string, mode startupMode, importHin
 	title := lipgloss.NewStyle().
 		Foreground(colorAccent).
 		Bold(true).
-		Render("A I N O V E L")
+		Render(i18n.T("tui.welcome.title"))
 
 	// 副标题
 	subtitle := lipgloss.NewStyle().
 		Foreground(colorMuted).
 		Italic(true).
-		Render("AI-Powered Novel Creation Engine")
+		Render(i18n.T("tui.welcome.subtitle"))
 
 	// 分隔线
 	divW := 44
@@ -164,10 +157,10 @@ func renderWelcome(width, height int, errMsg string, mode startupMode, importHin
 
 	// 功能亮点
 	features := []struct{ icon, label, desc string }{
-		{">>", "多模型协作", "Architect 规划 / Writer 创作 / Editor 审阅"},
-		{"::", "断点恢复", "崩溃或中断后从上次进度自动续写"},
-		{"<>", "实时干预", "创作过程中随时调整剧情走向"},
-		{"##", "分层长篇", "支持卷-弧-章分层结构的长篇创作"},
+		{">>", i18n.T("tui.welcome.feature_multi_agent"), i18n.T("tui.welcome.feature_multi_agent_desc")},
+		{"::", i18n.T("tui.welcome.feature_recovery"), i18n.T("tui.welcome.feature_recovery_desc")},
+		{"<>", i18n.T("tui.welcome.feature_steer"), i18n.T("tui.welcome.feature_steer_desc")},
+		{"##", i18n.T("tui.welcome.feature_longform"), i18n.T("tui.welcome.feature_longform_desc")},
 	}
 	iconStyle := lipgloss.NewStyle().Foreground(colorAccent2).Bold(true)
 	featLabelStyle := lipgloss.NewStyle().Foreground(bodyTextColor)
@@ -182,17 +175,17 @@ func renderWelcome(width, height int, errMsg string, mode startupMode, importHin
 	feats := strings.Join(featLines, "\n")
 
 	// 输入提示
-	prompt := lipgloss.NewStyle().Foreground(bodyTextColor).Render("在下方输入你的小说需求开始创作")
+	prompt := lipgloss.NewStyle().Foreground(bodyTextColor).Render(i18n.T("tui.welcome.input_prompt"))
 
 	modeLine := lipgloss.NewStyle().
 		Foreground(colorMuted).
-		Render("当前模式：" + mode.label() + " · " + mode.subtitle())
+		Render(fmt.Sprintf(i18n.T("tui.welcome.mode_current"), mode.label(), mode.subtitle()))
 
 	// 示例
 	examples := []string{
-		"写一部 12 章都市悬疑小说，主角是一名女法医",
-		"创作一部仙侠长篇，主角从凡人修炼至飞升",
-		"写一个科幻短篇，讲述 AI 觉醒后的伦理困境",
+		i18n.T("tui.welcome.ex1"),
+		i18n.T("tui.welcome.ex2"),
+		i18n.T("tui.welcome.ex3"),
 	}
 	exStyle := lipgloss.NewStyle().Foreground(colorAccent)
 	dotStyle := lipgloss.NewStyle().Foreground(colorDim)
@@ -227,11 +220,11 @@ func renderWelcome(width, height int, errMsg string, mode startupMode, importHin
 			Render("! " + importHint))
 	} else {
 		b.WriteString(lipgloss.NewStyle().Foreground(colorDim).
-			Render("已有设定/大纲？/start <文件路径> 创建新书 · 已有小说存稿？/import <文件路径> 导入续写"))
+			Render(i18n.T("tui.welcome.import_hint")))
 	}
 	b.WriteString("\n\n")
 	b.WriteString(lipgloss.NewStyle().Foreground(colorDim).Italic(true).
-		Render("Tab 切换模式 · 快速开始下 Enter 直接创作 · 共创规划下 Enter 进入对话"))
+		Render(i18n.T("tui.welcome.mode_switch_hint")))
 
 	if errMsg != "" {
 		b.WriteString("\n\n")

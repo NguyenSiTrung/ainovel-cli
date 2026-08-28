@@ -53,9 +53,9 @@ func renderStateContent(snap host.UISnapshot, contentW int) string {
 		overview.WriteString(renderField(label, fmt.Sprintf(i18n.T("tui.status.chapter"), ch, "")))
 	}
 	if headline := snapshotHeadline(snap); headline != "" {
-		label := "Hiện tại"
+		label := i18n.T("tui.sidebar.current_status")
 		if !snap.IsRunning {
-			label = "Chờ tiếp tục"
+			label = i18n.T("tui.sidebar.pending_resume")
 		}
 		overview.WriteString(renderHighlightField(label, truncate(headline, contentW-10)))
 	}
@@ -76,7 +76,7 @@ func renderStateContent(snap host.UISnapshot, contentW int) string {
 
 	if len(snap.PendingRewrites) > 0 {
 		var rewrite strings.Builder
-		rewrite.WriteString(renderHighlightField("Hàng đợi", fmt.Sprintf("%v", snap.PendingRewrites)))
+		rewrite.WriteString(renderHighlightField(i18n.T("tui.sidebar.queue"), fmt.Sprintf("%v", snap.PendingRewrites)))
 		if snap.RewriteReason != "" {
 			rewrite.WriteString(renderField(i18n.T("tui.sidebar.reason"), truncate(snap.RewriteReason, contentW-10)))
 		}
@@ -85,7 +85,7 @@ func renderStateContent(snap host.UISnapshot, contentW int) string {
 
 	if snap.PendingSteer != "" {
 		sections = append(sections, renderSidebarSection(i18n.T("tui.sidebar.steer"),
-			renderHighlightField("Chờ xử lý", truncate(snap.PendingSteer, contentW-10)), contentW))
+			renderHighlightField(i18n.T("tui.sidebar.pending"), truncate(snap.PendingSteer, contentW-10)), contentW))
 	}
 	if snap.HasAdvanceHold {
 		sections = append(sections, renderSidebarSection(i18n.T("tui.sidebar.gate_hold"),
@@ -118,7 +118,7 @@ func renderAgentLine(agent host.AgentSnapshot, width int) string {
 	if agent.Tool != "" {
 		detail = agent.Tool
 	}
-	if agent.State == "idle" && detail == "待命" {
+	if agent.State == "idle" && (detail == "待命" || detail == i18n.T("tui.sidebar.standby")) {
 		detail = ""
 	}
 	if detail != "" && detail != taskLine {
@@ -185,9 +185,6 @@ func sidebarIdleAgents(agents []host.AgentSnapshot) []string {
 }
 
 // inProgressDisplay 计算"进行中"字段的标签和章节号。
-// 根据 flow 选择动词（打磨/重写/写作）；in_progress_chapter 与 flow 不匹配时视为 stale：
-//   - polishing/rewriting 模式下章节不在 pending_rewrites 中 → 回退到队列首章
-//   - 字段为 0 时不渲染
 func inProgressDisplay(snap host.UISnapshot) (label string, chapter int) {
 	ch := snap.InProgressChapter
 	switch snap.Flow {
@@ -198,7 +195,7 @@ func inProgressDisplay(snap host.UISnapshot) (label string, chapter int) {
 			}
 			ch = snap.PendingRewrites[0]
 		}
-		return "打磨中", ch
+		return i18n.T("tui.sidebar.in_progress_polishing"), ch
 	case "rewriting":
 		if ch <= 0 || !slices.Contains(snap.PendingRewrites, ch) {
 			if len(snap.PendingRewrites) == 0 {
@@ -206,37 +203,37 @@ func inProgressDisplay(snap host.UISnapshot) (label string, chapter int) {
 			}
 			ch = snap.PendingRewrites[0]
 		}
-		return "重写中", ch
+		return i18n.T("tui.sidebar.in_progress_rewriting"), ch
 	default:
 		if ch <= 0 {
 			return "", 0
 		}
-		return "写作中", ch
+		return i18n.T("tui.sidebar.in_progress_writing"), ch
 	}
 }
 
 func snapshotHeadline(snap host.UISnapshot) string {
 	if snap.PendingSteer != "" {
 		if !snap.IsRunning {
-			return "待恢复：处理用户干预"
+			return i18n.T("tui.sidebar.pending_steer_resume")
 		}
-		return "等待处理用户干预"
+		return i18n.T("tui.sidebar.pending_steer_wait")
 	}
 	if len(snap.PendingRewrites) > 0 {
 		if !snap.IsRunning {
-			return "待恢复：返工处理"
+			return i18n.T("tui.sidebar.pending_rewrite_resume")
 		}
-		return "等待返工处理"
+		return i18n.T("tui.sidebar.pending_rewrite_wait")
 	}
 	if snap.AdvanceMode == "review" && !snap.IsRunning && snap.Phase == "writing" {
-		return "逐章验收：等待放行下一章"
+		return i18n.T("tui.sidebar.review_gate_wait")
 	}
 	return ""
 }
 
 func snapshotPhaseLabel(phase string) string {
-	if i18n.Has("phase." + phase) {
-		return i18n.T("phase." + phase)
+	if i18n.Has("tui.phase." + phase) {
+		return i18n.T("tui.phase." + phase)
 	}
 	if phase == "" {
 		return "-"
@@ -263,8 +260,8 @@ func snapshotFlowLabel(flow string) string {
 	if flow == "" {
 		return "-"
 	}
-	if i18n.Has("flow." + flow) {
-		return i18n.T("flow." + flow)
+	if i18n.Has("tui.flow." + flow) {
+		return i18n.T("tui.flow." + flow)
 	}
 	return flow
 }
@@ -274,22 +271,22 @@ func renderUsageSidebar(snap host.UISnapshot, width int) string {
 		return ""
 	}
 	var b strings.Builder
-	b.WriteString(renderField("输入", formatTokensCompact(snap.TotalInputTokens)))
-	b.WriteString(renderField("输出", formatTokensCompact(snap.TotalOutputTokens)))
+	b.WriteString(renderField(i18n.T("tui.sidebar.input_tokens"), formatTokensCompact(snap.TotalInputTokens)))
+	b.WriteString(renderField(i18n.T("tui.sidebar.output_tokens"), formatTokensCompact(snap.TotalOutputTokens)))
 	if cost := formatCostUSD(snap.TotalCostUSD); cost != "" {
-		b.WriteString(renderField("费用", cost))
+		b.WriteString(renderField(i18n.T("tui.sidebar.cost_label"), cost))
 	}
 	if saved := formatCostUSD(snap.TotalSavedUSD); saved != "" {
-		b.WriteString(renderField("节省", saved))
+		b.WriteString(renderField(i18n.T("tui.sidebar.saved_label"), saved))
 	}
 	if snap.BudgetLimitUSD > 0 {
 		pct := snap.TotalCostUSD / snap.BudgetLimitUSD * 100
-		b.WriteString(renderField("预算", fmt.Sprintf("$%.2f/$%.2f (%.0f%%)", snap.TotalCostUSD, snap.BudgetLimitUSD, pct)))
+		b.WriteString(renderField(i18n.T("tui.sidebar.budget_label"), fmt.Sprintf("$%.2f/$%.2f (%.0f%%)", snap.TotalCostUSD, snap.BudgetLimitUSD, pct)))
 	}
 
 	agentStats := usageStatsByCost(snap.CachePerAgent)
 	if len(agentStats) > 0 {
-		b.WriteString(renderUsageGroupHeader("角色", width))
+		b.WriteString(renderUsageGroupHeader(i18n.T("tui.sidebar.group_roles"), width))
 		limit := min(len(agentStats), 4)
 		for i := 0; i < limit; i++ {
 			a := agentStats[i]
@@ -299,7 +296,7 @@ func renderUsageSidebar(snap host.UISnapshot, width int) string {
 	}
 	modelStats := usageStatsByCost(snap.CachePerModel)
 	if len(modelStats) > 0 {
-		b.WriteString(renderUsageGroupHeader("模型", width))
+		b.WriteString(renderUsageGroupHeader(i18n.T("tui.sidebar.group_models"), width))
 		limit := min(len(modelStats), 4)
 		for i := 0; i < limit; i++ {
 			a := modelStats[i]
@@ -309,6 +306,7 @@ func renderUsageSidebar(snap host.UISnapshot, width int) string {
 	}
 	return b.String()
 }
+
 
 func usageStatsByCost(in []host.AgentCacheStat) []host.AgentCacheStat {
 	out := append([]host.AgentCacheStat(nil), in...)
@@ -369,14 +367,11 @@ func modelDisplayName(model string) string {
 // per-role 行 capable 时显示"累计/近10%"双数字；不 capable 时显示"未启用"。
 // 通过累计 vs 近 N 次的对比可以识别"前期拖累"vs"稳态低命中"。
 func renderCacheSidebar(snap host.UISnapshot, width int) string {
-	// 上游 streaming 没发 OpenAI 的 final usage chunk —— 累计数据全为 0，
-	// 但这不是"没启用 cache"也不是"用量太低被门控藏起来"，必须显式提示，
-	// 否则用户会一直以为左栏写了缓存代码却显示不出来。优先级最高。
 	if snap.MissingAssistantUsage > 0 && snap.TotalInputTokens <= 0 {
 		warn := lipgloss.NewStyle().Foreground(colorError).Bold(true).
-			Render(fmt.Sprintf("⚠ 上游未返 usage（%d 次）", snap.MissingAssistantUsage))
+			Render(fmt.Sprintf(i18n.T("tui.sidebar.cache_missing_usage"), snap.MissingAssistantUsage))
 		hint := lipgloss.NewStyle().Foreground(colorDim).Italic(true).
-			Render(truncate("检查 provider stream_options.include_usage", max(8, width-2)))
+			Render(truncate(i18n.T("tui.sidebar.cache_check_hint"), max(8, width-2)))
 		return warn + "\n" + hint + "\n"
 	}
 
@@ -387,42 +382,34 @@ func renderCacheSidebar(snap host.UISnapshot, width int) string {
 	// 全程未启用 → 显示一行解释，避免用户误判为"0% 命中需要排查"
 	if !snap.OverallCacheCapable && snap.TotalCacheReadTokens == 0 && snap.TotalCacheWriteTokens == 0 {
 		return lipgloss.NewStyle().Foreground(colorDim).Italic(true).
-			Render(truncate("当前模型未启用 prompt cache", max(8, width-2))) + "\n"
+			Render(truncate(i18n.T("tui.sidebar.cache_not_enabled"), max(8, width-2))) + "\n"
 	}
 
 	var b strings.Builder
 
-	// 顶部综合指标：累计 + 近 N 各占一行，标签明示，避免 "X% · 近N Y%" 这种
-	// 三种分隔符（百分号 / 中点 / 文字）混杂导致语义不清。
+	// 顶部综合指标：累计 + 近 N 各占一行，标签明示
 	overallHit := cacheHitRate(snap.TotalCacheReadTokens, snap.TotalInputTokens)
-	b.WriteString(renderField("累计命中", colorPercent(overallHit)))
+	b.WriteString(renderField(i18n.T("tui.sidebar.cache_overall_hit"), colorPercent(overallHit)))
 	if snap.OverallRecentSamples > 0 && snap.OverallRecentInput > 0 {
 		recent := cacheHitRate(snap.OverallRecentCacheRead, snap.OverallRecentInput)
-		b.WriteString(renderField(fmt.Sprintf("近%d命中", snap.OverallRecentSamples), colorPercent(recent)))
+		b.WriteString(renderField(fmt.Sprintf(i18n.T("tui.sidebar.cache_recent_hit"), snap.OverallRecentSamples), colorPercent(recent)))
 	}
 
 	if savedStr := formatCostUSD(snap.TotalSavedUSD); savedStr != "" {
-		b.WriteString(renderField("节省", savedStr))
+		b.WriteString(renderField(i18n.T("tui.sidebar.saved_label"), savedStr))
 	}
 
-	// 读/写量分两行。写量为 0 在 OpenAI / Gemini 系协议是常态——
-	// 这两家是自动透明 caching，cache 写入完全免费（首次未命中按正常输入价，
-	// 建立 cache 不收任何溢价），所以协议本身不暴露 cache_creation 字段，没必要。
-	// 只有 Anthropic / Bedrock 系才报写量，因为他们写要加价（5m +25%/1h +100%），
-	// 必须把这个量给用户用于计费。
-	b.WriteString(renderField("缓存读量", formatTokensCompact(snap.TotalCacheReadTokens)))
+	b.WriteString(renderField(i18n.T("tui.sidebar.cache_read"), formatTokensCompact(snap.TotalCacheReadTokens)))
 	if snap.TotalCacheWriteTokens > 0 {
-		b.WriteString(renderField("缓存写量", formatTokensCompact(snap.TotalCacheWriteTokens)))
+		b.WriteString(renderField(i18n.T("tui.sidebar.cache_write"), formatTokensCompact(snap.TotalCacheWriteTokens)))
 	} else if snap.TotalCacheReadTokens > 0 {
-		hint := lipgloss.NewStyle().Foreground(colorDim).Italic(true).Render("(自动缓存无溢价)")
-		b.WriteString(renderField("缓存写量", "0 "+hint))
+		hint := lipgloss.NewStyle().Foreground(colorDim).Italic(true).Render(i18n.T("tui.sidebar.cache_auto_hint"))
+		b.WriteString(renderField(i18n.T("tui.sidebar.cache_write"), "0 "+hint))
 	}
 
-	// 断裂 = 前缀未缩短而命中骤降（合法下降如换章/压缩已豁免）。次数多通常
-	// 指向服务端逐出或中转轮询上游，详情看 tui.log 的"缓存链断裂"warn。
 	if snap.TotalCacheBreaks > 0 {
-		v := lipgloss.NewStyle().Foreground(colorReview).Render(fmt.Sprintf("%d 次", snap.TotalCacheBreaks))
-		b.WriteString(renderField("链路断裂", v))
+		v := lipgloss.NewStyle().Foreground(colorReview).Render(fmt.Sprintf(i18n.T("tui.sidebar.cache_count"), snap.TotalCacheBreaks))
+		b.WriteString(renderField(i18n.T("tui.sidebar.cache_breaks"), v))
 	}
 
 	// Arbiter 按设计不参与 prompt cache（KB 级一次性裁定，无稳定前缀可复用），
@@ -473,7 +460,7 @@ func renderCacheAgentLine(a host.AgentCacheStat, width int) string {
 	if !a.CacheCapable {
 		dim := lipgloss.NewStyle().Foreground(colorDim).Italic(true)
 		_ = width
-		return role + dim.Render("未启用")
+		return role + dim.Render(i18n.T("tui.sidebar.cache_not_enabled"))
 	}
 
 	// 稳态命中率优先；窗内无样本时回落到累计。

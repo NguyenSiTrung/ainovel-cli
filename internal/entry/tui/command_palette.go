@@ -1,9 +1,10 @@
 package tui
 
 import (
+	"fmt"
 	"slices"
-	"strconv"
 	"strings"
+
 	"github.com/charmbracelet/lipgloss"
 	"github.com/voocel/ainovel-cli/internal/i18n"
 )
@@ -194,10 +195,10 @@ func renderCommandPalette(width int, items []commandPaletteItem, cursor int) str
 	if selectedIdx < 0 || selectedIdx >= len(visible) {
 		selectedIdx = 0
 	}
-	hint := mutedStyle.Render("↑↓ 选择 · Tab/Enter 接受 · Esc 关闭")
+	hint := mutedStyle.Render(i18n.T("tui.palette.hint"))
 	usage := "Usage: " + visible[selectedIdx].Usage
 	if remaining > 0 {
-		usage = usage + " · 还有 " + strconv.Itoa(remaining) + " 个命令"
+		usage = usage + " · " + fmt.Sprintf(i18n.T("tui.palette.more_commands"), remaining)
 	}
 	usageLine := mutedStyle.Render(truncateWidth(usage, contentW))
 	body = append(body, usageLine+strings.Repeat(" ", max(0, contentW-lipgloss.Width(usageLine))))

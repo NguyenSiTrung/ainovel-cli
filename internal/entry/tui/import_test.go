@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/voocel/ainovel-cli/internal/host/imp"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 // TestImportHistoryCoalescesRetryLines 守护重试行原地更新：同 Key 连续事件只占一行
@@ -166,6 +167,7 @@ func TestImportEscResumeGate(t *testing.T) {
 // TestRetryCountdown 守护倒计时渲染契约（事件面板与导入面板共用）：
 // 未设截止或已到点返回空（请求已在途）；剩余时间向上取整到秒，逐秒递减且不出现 0s。
 func TestRetryCountdown(t *testing.T) {
+	i18n.SetLanguage("zh")
 	now := time.Now()
 	if got := retryCountdown(time.Time{}, now); got != "" {
 		t.Fatalf("零值截止应返回空，得 %q", got)

@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/voocel/ainovel-cli/internal/entry/startup"
 	"github.com/voocel/ainovel-cli/internal/host"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 type startupMode int
@@ -20,27 +21,27 @@ const (
 func (m startupMode) label() string {
 	switch m {
 	case startupModeCoCreate:
-		return "Đồng sáng tác (Co-create)"
+		return i18n.T("tui.cocreate.mode_cocreate")
 	default:
-		return "Bắt đầu nhanh (Quick Start)"
+		return i18n.T("tui.cocreate.mode_quick")
 	}
 }
 
 func (m startupMode) subtitle() string {
 	switch m {
 	case startupModeCoCreate:
-		return "Trò chuyện và làm rõ ý tưởng cùng AI trước khi viết"
+		return i18n.T("tui.cocreate.mode_cocreate_sub")
 	default:
-		return "Nhập một câu ý tưởng và bắt đầu viết ngay"
+		return i18n.T("tui.cocreate.mode_quick_sub")
 	}
 }
 
 func placeholderForNewMode(mode startupMode) string {
 	switch mode {
 	case startupModeCoCreate:
-		return "Nhập ý tưởng cốt lõi của bạn, nhấn Enter để bắt đầu cùng AI"
+		return i18n.T("tui.cocreate.input_placeholder_cocreate")
 	default:
-		return "Nhập yêu cầu sáng tác tiểu thuyết, nhấn Enter để bắt đầu"
+		return i18n.T("tui.cocreate.input_placeholder_quick")
 	}
 }
 
@@ -50,14 +51,14 @@ func placeholderForCoCreate(state *cocreateState) string {
 	}
 	switch {
 	case state.awaiting:
-		return "AI đang sắp xếp và xử lý yêu cầu của bạn..."
+		return i18n.T("tui.cocreate.hint_awaiting")
 	case state.canStart():
 		if state.stage {
-			return "Tiếp tục bổ sung, hoặc nhấn Ctrl+S để áp dụng và tiếp tục sáng tác"
+			return i18n.T("tui.cocreate.hint_stage_ready")
 		}
-		return "Tiếp tục bổ sung, hoặc nhấn Ctrl+S để bắt đầu sáng tác"
+		return i18n.T("tui.cocreate.hint_start_ready")
 	default:
-		return "Tiếp tục bổ sung yêu cầu của bạn, nhấn Enter để gửi cho AI"
+		return i18n.T("tui.cocreate.hint_default")
 	}
 }
 
@@ -448,13 +449,12 @@ func renderCoCreateConversationPanel(width, height int, state *cocreateState, er
 	}
 	wrapW := max(12, contentW-4)
 
-	userRole := lipgloss.NewStyle().Foreground(colorAccent2).Bold(true).Render("你")
-	aiRole := lipgloss.NewStyle().Foreground(colorAccent).Bold(true).Render("AI")
+	userRole := lipgloss.NewStyle().Foreground(colorAccent2).Bold(true).Render(i18n.T("tui.cocreate.role_user"))
+	aiRole := lipgloss.NewStyle().Foreground(colorAccent).Bold(true).Render(i18n.T("tui.cocreate.role_ai"))
 	userBody := lipgloss.NewStyle().Foreground(colorAccent2)
 	aiBody := lipgloss.NewStyle().Foreground(bodyTextColor)
 	thinkingStyle := lipgloss.NewStyle().Foreground(colorDim).Italic(true)
-	thinkingTag := lipgloss.NewStyle().Foreground(colorDim).Bold(true).Render("AI 思考")
-
+	thinkingTag := lipgloss.NewStyle().Foreground(colorDim).Bold(true).Render(i18n.T("tui.cocreate.ai_thinking"))
 	sysStyle := lipgloss.NewStyle().Foreground(colorDim).Italic(true)
 
 	var lines []string
@@ -463,7 +463,11 @@ func renderCoCreateConversationPanel(width, height int, state *cocreateState, er
 		// 阶段共创的合成开场（恒为 history[0] 的 user 消息）以中性系统行显示，
 		// 不伪装成用户输入；它仍作为 kickoff user 轮次发给 LLM。
 		if isUser && state.stage && i == 0 {
-			for j, line := range wrapStreamText(stageCoCreateSystemLine, wrapW) {
+			sysLine := i18n.T("tui.cocreate.stage_sys_line")
+			if sysLine == "tui.cocreate.stage_sys_line" {
+				sysLine = stageCoCreateSystemLine
+			}
+			for j, line := range wrapStreamText(sysLine, wrapW) {
 				prefix := "· "
 				if j > 0 {
 					prefix = "  "
@@ -533,20 +537,20 @@ func renderCoCreateConversationPanel(width, height int, state *cocreateState, er
 		Width(contentW).
 		Height(height).
 		Padding(0, 1)
-	return style.Render(panelTitleStyle.Render(":: 共创对话") + "\n" + state.convVP.View())
+	return style.Render(panelTitleStyle.Render(":: " + i18n.T("tui.cocreate.dialog_title")) + "\n" + state.convVP.View())
 }
 
 func renderCoCreatePromptPanel(width, height int, state *cocreateState) string {
-	readyLabel := "已可开始创作"
+	readyLabel := i18n.T("tui.cocreate.status_ready_start")
 	if state.stage {
-		readyLabel = "已可应用并继续"
+		readyLabel = i18n.T("tui.cocreate.status_ready_apply")
 	}
-	status := lipgloss.NewStyle().Foreground(colorDim).Render("继续对话中")
+	status := lipgloss.NewStyle().Foreground(colorDim).Render(i18n.T("tui.cocreate.status_chatting"))
 	if state.ready() {
 		status = lipgloss.NewStyle().Foreground(colorAccent).Render(readyLabel)
 	}
 	if state.awaiting {
-		status = lipgloss.NewStyle().Foreground(colorMuted).Italic(true).Render("AI 整理中")
+		status = lipgloss.NewStyle().Foreground(colorMuted).Italic(true).Render(i18n.T("tui.cocreate.status_synthesizing"))
 	}
 
 	// 内容宽 = 列总宽 - 2（padding 0,1 占用 2 列，无 border）。
@@ -555,11 +559,11 @@ func renderCoCreatePromptPanel(width, height int, state *cocreateState) string {
 		contentW = 8
 	}
 
-	emptyHint := "AI 会在这里持续整理出一段可直接进入创作的最终指令。"
-	panelTitle := ":: 当前创作指令"
+	emptyHint := i18n.T("tui.cocreate.empty_hint_create")
+	panelTitle := ":: " + i18n.T("tui.cocreate.panel_title_brief")
 	if state.stage {
-		emptyHint = "AI 会在这里持续整理出后续阶段的方向 brief。"
-		panelTitle = ":: 后续方向"
+		emptyHint = i18n.T("tui.cocreate.empty_hint_stage")
+		panelTitle = ":: " + i18n.T("tui.cocreate.panel_title_direction")
 	}
 	text := strings.TrimSpace(state.draftPrompt())
 	if text == "" {

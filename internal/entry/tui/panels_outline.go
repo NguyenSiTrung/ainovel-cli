@@ -46,9 +46,8 @@ func renderOutlineList(snap host.UISnapshot, contentW int) string {
 		title := truncate(e.Title, contentW-6)
 		line := marker + chStyle + " " + titleStyle.Render(title)
 		if snap.InProgressChapter == e.Chapter {
-			line += lipgloss.NewStyle().Foreground(colorAccent).Italic(true).Render(" 进行中")
+			line += lipgloss.NewStyle().Foreground(colorAccent).Italic(true).Render(" " + i18n.T("tui.outline.in_progress_badge"))
 		}
-		b.WriteString(line)
 		b.WriteString("\n")
 	}
 	return b.String()

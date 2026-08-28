@@ -45,21 +45,21 @@ func renderHelpText(width int) string {
 		b.WriteString("\n")
 		b.WriteString(usageStyle.Render("Usage: " + spec.Usage))
 		b.WriteString("\n")
-		b.WriteString(descStyle.Render(wrapText(spec.Description, width)))
+		b.WriteString(descStyle.Render(wrapText(spec.LocalizedDescription(), width)))
 		b.WriteString("\n")
 	}
 
 	b.WriteString("\n")
-	b.WriteString(titleStyle.Render("Phím tắt (Shortcuts)"))
+	b.WriteString(titleStyle.Render(i18n.T("tui.help.shortcuts_title")))
 	b.WriteString("\n\n")
-	for _, line := range []string{
-		"Nhập / để tìm kiếm lệnh",
-		"↑↓ Di chuyển và chọn lệnh",
-		"Tab / Enter Chấp nhận lệnh",
-		"Esc Đóng bảng hiện tại",
-		"Ctrl+R Chuyển đổi chế độ sao chép chuột",
+	for _, key := range []string{
+		"tui.help.shortcut_search",
+		"tui.help.shortcut_navigate",
+		"tui.help.shortcut_accept",
+		"tui.help.shortcut_close",
+		"tui.help.shortcut_copy",
 	} {
-		b.WriteString(hintStyle.Render(line))
+		b.WriteString(hintStyle.Render(i18n.T(key)))
 		b.WriteString("\n")
 	}
 	return b.String()

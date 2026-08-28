@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -177,35 +178,35 @@ func parseCLIOptions(argv []string) (cliOptions, []string, error) {
 			opts.Version = true
 		case "version":
 			if i+1 < len(argv) {
-				return opts, nil, fmt.Errorf("version 不接受参数")
+				return opts, nil, errors.New("version " + i18n.T("cli.err_no_args"))
 			}
 			opts.Version = true
 		case "update":
 			if opts.Update {
-				return opts, nil, fmt.Errorf("update 只能指定一次")
+				return opts, nil, errors.New("update " + i18n.T("cli.err_single_spec"))
 			}
 			opts.Update = true
 			if i+1 < len(argv) {
 				if strings.HasPrefix(argv[i+1], "-") {
-					return opts, nil, fmt.Errorf("update 只接受一个可选版本参数")
+					return opts, nil, errors.New("update " + i18n.T("cli.err_optional_version"))
 				}
 				opts.UpdateVersion = argv[i+1]
 				i++
 			}
 			if i+1 < len(argv) {
-				return opts, nil, fmt.Errorf("update 只接受一个可选版本参数")
+				return opts, nil, errors.New("update " + i18n.T("cli.err_optional_version"))
 			}
 		case "--headless":
 			opts.Headless = true
 		case "--prompt":
 			if i+1 >= len(argv) {
-				return opts, nil, fmt.Errorf("--prompt thiếu giá trị")
+				return opts, nil, errors.New("--prompt " + i18n.T("cli.err_missing_val"))
 			}
 			opts.Prompt = argv[i+1]
 			i++
 		case "--prompt-file":
 			if i+1 >= len(argv) {
-				return opts, nil, fmt.Errorf("--prompt-file thiếu giá trị")
+				return opts, nil, errors.New("--prompt-file " + i18n.T("cli.err_missing_val"))
 			}
 			opts.PromptFile = argv[i+1]
 			i++
@@ -214,13 +215,13 @@ func parseCLIOptions(argv []string) (cliOptions, []string, error) {
 		}
 	}
 	if opts.Prompt != "" && opts.PromptFile != "" {
-		return opts, nil, fmt.Errorf("--prompt 和 --prompt-file 不能同时使用")
+		return opts, nil, errors.New(i18n.T("cli.err_prompt_conflict"))
 	}
 	if opts.Version && (opts.Update || opts.Headless || opts.Prompt != "" || opts.PromptFile != "" || len(args) > 0) {
-		return opts, nil, fmt.Errorf("version 不能与其他启动参数混用")
+		return opts, nil, errors.New("version " + i18n.T("cli.err_no_mix"))
 	}
 	if opts.Update && (opts.Headless || opts.Prompt != "" || opts.PromptFile != "" || len(args) > 0) {
-		return opts, nil, fmt.Errorf("update 不能与其他启动参数混用")
+		return opts, nil, errors.New("update " + i18n.T("cli.err_no_mix"))
 	}
 	return opts, args, nil
 }
@@ -245,11 +246,11 @@ func runSelfUpdate(target string) error {
 		return err
 	}
 	if !result.Updated {
-		fmt.Printf("ainovel-cli 已是最新版本 %s\n", result.Version)
+		fmt.Println(fmt.Sprintf(i18n.T("cli.update_is_latest"), result.Version))
 		return nil
 	}
-	fmt.Printf("ainovel-cli 已更新到 %s\n", result.Version)
-	fmt.Printf("安装位置：%s\n", result.Path)
+	fmt.Println(fmt.Sprintf(i18n.T("cli.update_success"), result.Version))
+	fmt.Println(fmt.Sprintf(i18n.T("cli.update_location"), result.Path))
 	return nil
 }
 

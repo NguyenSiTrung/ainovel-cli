@@ -59,8 +59,8 @@ func TestRenderErrorEventKeepsOneLineSummary(t *testing.T) {
 // TestRenderStatusBar 守护底部状态栏的信息契约：模型身份（窗口+思考）、会话令牌、
 // 花费/预算、书目录都必须在（样式剥离后按纯文本断言）。
 func TestRenderStatusBar(t *testing.T) {
+	i18n.SetLanguage("zh")
 	out := ansi.Strip(renderStatusBar(host.UISnapshot{
-		Provider:           "openrouter",
 		ModelName:          "test-model",
 		ModelContextWindow: 200000,
 		ThinkingLevel:      "medium",

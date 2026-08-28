@@ -271,16 +271,18 @@ func runProviderSelect() (setupProvider, error) {
 	return result.items[result.cursor], nil
 }
 
-var apiTypeOptions = []setupProvider{
-	{name: "openai", label: "OpenAI 兼容"},
-	{name: "anthropic", label: "Anthropic 兼容"},
-	{name: "gemini", label: "Gemini 兼容"},
+func apiTypeOptions() []setupProvider {
+	return []setupProvider{
+		{name: "openai", label: i18n.T("setup.protocol_openai")},
+		{name: "anthropic", label: i18n.T("setup.protocol_anthropic")},
+		{name: "gemini", label: i18n.T("setup.protocol_gemini")},
+	}
 }
 
 func runTypeSelect() (string, error) {
 	m := setupSelectModel{
-		title: "API 协议类型",
-		items: apiTypeOptions,
+		title: i18n.T("setup.protocol_title"),
+		items: apiTypeOptions(),
 	}
 	p := tea.NewProgram(m, tea.WithOutput(os.Stderr))
 	final, err := p.Run()
@@ -381,7 +383,7 @@ func (m setupSelectModel) View() string {
 		}
 		b.WriteString(cursor + label + "\n")
 	}
-	b.WriteString(setupDimStyle.Render("\n  ↑↓ 选择  Enter 确认  Esc 取消"))
+	b.WriteString(setupDimStyle.Render("\n  " + i18n.T("setup.nav_select_hint")))
 	return b.String()
 }
 
@@ -436,7 +438,7 @@ func (m setupInputModel) View() string {
 		b.WriteString(m.value)
 		b.WriteString(setupCursorStyle.Render("▌"))
 	}
-	b.WriteString(setupDimStyle.Render("  (Enter 确认, Esc 取消)"))
+	b.WriteString(setupDimStyle.Render("  (" + i18n.T("setup.nav_input_hint") + ")"))
 	b.WriteString("\n")
 	return b.String()
 }
