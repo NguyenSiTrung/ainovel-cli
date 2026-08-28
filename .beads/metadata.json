@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "ainovel_cli",
+  "project_id": "00162508-21c4-457a-bfe7-1bb728d4e88a"
+}
