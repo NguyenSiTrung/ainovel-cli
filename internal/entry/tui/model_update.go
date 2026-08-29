@@ -572,6 +572,24 @@ func (m Model) handleRuntimeMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 		}
 		m.refreshEventViewport()
 		return m, nil, true
+	case updateAvailableMsg:
+		// 启动版本检查命中新版本：事件流浮出一行提醒，release notes 全文进
+		// Detail（右侧详情面板可回看）；欢迎屏同步显示一行升级入口提示。
+		// 升级与否始终由用户运行 ainovel-cli update 决定。
+		if msg.result == nil || !msg.result.UpdateAvailable {
+			return m, nil, true
+		}
+		m.updateHint = fmt.Sprintf("新版本 %s 已发布 · 运行 ainovel-cli update 升级 · 更新内容见事件流", msg.result.Latest)
+		ev := host.Event{
+			Time: time.Now(), Category: "SYSTEM", Level: "info",
+			Summary: fmt.Sprintf("新版本 %s 已发布，运行 ainovel-cli update 升级", msg.result.Latest),
+		}
+		if notes := strings.TrimSpace(msg.result.Notes); notes != "" {
+			ev.Detail = notes
+		}
+		m.applyEvent(ev)
+		m.refreshEventViewport()
+		return m, nil, true
 	case revisionDoneMsg:
 		if msg.err != nil {
 			m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: "章节同步失败：" + msg.err.Error(), Level: "error"})
