@@ -2,8 +2,8 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"strings"
-
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/voocel/ainovel-cli/internal/entry/startup"
@@ -194,12 +194,12 @@ func (s *cocreateState) buildPrompt() (string, error) {
 }
 
 func renderStartupModeBar(width int, mode startupMode) string {
-	quick := renderStartupModePill(mode == startupModeQuick, "快速开始")
-	cocreate := renderStartupModePill(mode == startupModeCoCreate, "共创规划")
+	quick := renderStartupModePill(mode == startupModeQuick, i18n.T("tui.cocreate.mode_quick"))
+	cocreate := renderStartupModePill(mode == startupModeCoCreate, i18n.T("tui.cocreate.mode_cocreate"))
 	title := lipgloss.NewStyle().
 		Foreground(colorAccent).
 		Bold(true).
-		Render("启动模式")
+		Render(i18n.T("tui.cocreate.mode_bar_title"))
 	divider := lipgloss.NewStyle().
 		Foreground(colorDim).
 		Render("·")
@@ -328,7 +328,7 @@ func renderCoCreateSuggestions(width int, state *cocreateState) string {
 	bodyStyle := lipgloss.NewStyle().Foreground(colorMuted)
 	hintStyle := lipgloss.NewStyle().Foreground(colorDim).Italic(true)
 
-	lines := []string{hintStyle.Render("AI 建议（按 1/2/3 组合，可编辑后发送）：")}
+	lines := []string{hintStyle.Render(i18n.T("tui.cocreate.ai_suggestions"))}
 	for i, s := range sugs {
 		lines = append(lines, digitStyle.Render(digits[i]+" ")+bodyStyle.Render(strings.TrimSpace(s)))
 	}
@@ -389,9 +389,9 @@ func renderCoCreateModal(width, height int, state *cocreateState, errMsg, inputV
 		contentH = 10
 	}
 
-	titleText, subtitleText := "共创规划", "先把需求聊清楚，再开始创作"
+	titleText, subtitleText := i18n.T("tui.cocreate.title"), i18n.T("tui.cocreate.subtitle")
 	if state.stage {
-		titleText, subtitleText = "阶段共创", "规划后续走向，再继续创作"
+		titleText, subtitleText = i18n.T("tui.cocreate.stage_title"), i18n.T("tui.cocreate.stage_subtitle")
 	}
 	headerStyle := lipgloss.NewStyle().Width(boxW).AlignHorizontal(lipgloss.Center)
 	title := headerStyle.Foreground(colorMuted).Bold(true).Render(titleText)
@@ -401,7 +401,7 @@ func renderCoCreateModal(width, height int, state *cocreateState, errMsg, inputV
 	hintStyle := lipgloss.NewStyle().Width(boxW).AlignHorizontal(lipgloss.Center)
 	if quitPending {
 		// quitPending 与 inputHints() 一致；否则共创 modal 盖住底栏，用户感受不到"再按一次 Ctrl+C"。
-		hintLine = hintStyle.Foreground(lipgloss.Color("243")).Bold(true).Render("Press Ctrl+C again to exit")
+		hintLine = hintStyle.Foreground(lipgloss.Color("243")).Bold(true).Render(i18n.T("tui.hints.press_ctrl_c_again"))
 	} else {
 		hintLine = hintStyle.Foreground(colorDim).Italic(true).Render(coCreateHint(state))
 	}
@@ -423,17 +423,17 @@ func renderCoCreateModal(width, height int, state *cocreateState, errMsg, inputV
 func coCreateHint(state *cocreateState) string {
 	switch {
 	case state == nil:
-		return "Enter 发送 · Esc 退出"
+		return i18n.T("tui.cocreate.hint_nil")
 	case state.awaiting:
-		return "AI 回复中 · ↑↓ 滚对话 · 滚轮滚指令 · Esc 退出"
+		return i18n.T("tui.cocreate.hint_modal_awaiting")
 	case state.canStart():
-		action := "Ctrl+S 开始创作"
+		action := i18n.T("tui.hints.cocreate_start")
 		if state.stage {
-			action = "Ctrl+S 应用并继续"
+			action = i18n.T("tui.hints.cocreate_apply")
 		}
-		return "Enter 继续补充 · " + action + " · ↑↓ 滚对话 · 滚轮滚指令 · Esc 退出"
+		return fmt.Sprintf(i18n.T("tui.cocreate.hint_modal_can_start"), action)
 	default:
-		return "Enter 发送 · ↑↓ 滚对话 · 滚轮滚指令 · Esc 退出"
+		return i18n.T("tui.cocreate.hint_modal_default")
 	}
 }
 

@@ -86,20 +86,20 @@ func NormalizeLanguage(lang string) string {
 		cleaned = cleaned[:idx]
 	}
 
-	// Normalize separators
+	// Normalize separators and trim whitespace
 	cleaned = strings.ReplaceAll(cleaned, "-", "_")
+	cleaned = strings.TrimSpace(cleaned)
 
-	if strings.HasPrefix(cleaned, "vi") {
+	switch {
+	case strings.HasPrefix(cleaned, "vi") || cleaned == "vietnamese" || cleaned == "tieng_viet" || cleaned == "tiengviet" || cleaned == "tiếng việt" || cleaned == "tiếng_việt":
 		return LangVI
-	}
-	if strings.HasPrefix(cleaned, "zh") {
-		return LangZH
-	}
-	if strings.HasPrefix(cleaned, "en") {
+	case strings.HasPrefix(cleaned, "en") || cleaned == "english":
 		return LangEN
+	case strings.HasPrefix(cleaned, "zh") || cleaned == "chinese" || cleaned == "zhongwen" || cleaned == "中文":
+		return LangZH
+	default:
+		return DefaultLanguage
 	}
-
-	return DefaultLanguage
 }
 
 // SetLanguage sets the active UI language.

@@ -37,7 +37,8 @@
     "err_update_conflict": "update không thể dùng chung với tham số khởi động khác",
     "err_no_mix": "không thể dùng chung với tham số khởi động khác",
     "err_no_cli_prompt": "Không hỗ trợ truyền yêu cầu tiểu thuyết trực tiếp qua dòng lệnh, vui lòng nhập trong giao diện TUI",
-    "err_headless_setup": "Chế độ không giao diện không hỗ trợ trình hướng dẫn cài đặt ban đầu, vui lòng chạy chế độ TUI trước"
+    "err_headless_setup": "Chế độ không giao diện không hỗ trợ trình hướng dẫn cài đặt ban đầu, vui lòng chạy chế độ TUI trước",
+    "err_headless_prompt_only": "--prompt / --prompt-file chỉ có thể sử dụng ở chế độ --headless"
   },
   "setup": {
     "welcome": "Chào mừng bạn đến với ainovel-cli!",
@@ -80,7 +81,42 @@
     "chapter_target_words": "Số chữ mục tiêu mỗi chương",
     "save": "Lưu thay đổi",
     "cancel": "Hủy",
-    "saved_notice": "Đã lưu cài đặt thành công!"
+    "saved_notice": "Đã lưu cài đặt thành công!",
+    "custom_provider_name": "Tên Provider tùy chỉnh",
+    "new_badge": "Thêm mới",
+    "advanced_label": "Cài đặt nâng cao (extra / extra_body / stream_idle_timeout)",
+    "hint_input": "Nhập liệu · Enter Xác nhận · Esc Hủy",
+    "hint_hub": "↑↓ Chọn · Enter Chỉnh sửa/Vào · Esc Quay lại",
+    "hint_delete_key": "Delete Xóa",
+    "test_api_notice": "Thử nghiệm sẽ gửi một yêu cầu nhỏ, có thể phát sinh lượng dùng API tối thiểu",
+    "models_title": "Quản lý danh sách mô hình",
+    "hint_models": "↑↓ Hàng · ←→ Cột · Enter Chỉnh sửa · Delete Xóa · Esc Quay lại",
+    "hint_input_ctrl_u": "Nhập liệu · Enter Xác nhận · Ctrl+U Xóa trắng · Esc Hủy",
+    "col_model_id": "Mã mô hình",
+    "col_context_window": "Khung ngữ cảnh",
+    "col_references": "Tham chiếu",
+    "add_model": "Thêm mô hình",
+    "auto": "Tự động",
+    "protocol": "Giao thức",
+    "default_url": "Địa chỉ mặc định",
+    "models_label": "Mô hình",
+    "models_count": "%d mô hình",
+    "no_models_hint": "Vui lòng thêm mô hình trước",
+    "key_cleared": "Đã xóa",
+    "key_not_set": "Chưa thiết lập",
+    "input_key_keep": "Nhập Key mới, để trống để giữ nguyên",
+    "input_url_default": "Để trống dùng địa chỉ mặc định",
+    "err_key_required": "Nhà cung cấp này bắt buộc phải cấu hình API Key",
+    "err_model_name_empty": "Tên mô hình không được để trống",
+    "err_model_exists": "Mô hình đã tồn tại",
+    "sync_refs_notice": "Khi lưu sẽ đồng bộ cập nhật tham chiếu:",
+    "err_model_in_use": "Mô hình này đang được sử dụng, vui lòng chuyển đổi trong /model trước khi xóa",
+    "err_model_referenced": "Mô hình vẫn đang được %s tham chiếu, vui lòng chuyển đổi trong /model trước khi xóa",
+    "cancelling_test": "Đang hủy kiểm tra kết nối...",
+    "err_invalid_window": "Khung ngữ cảnh phải là số nguyên dương, 128K, 1M hoặc để trống để tự động",
+    "err_window_overflow": "Khung ngữ cảnh vượt quá phạm vi số nguyên hợp lệ",
+    "no_provider_available": "Hiện không có nhà cung cấp nào khả dụng",
+    "provider_no_models": "Nhà cung cấp %q chưa có mô hình nào được cấu hình"
   },
   "tui": {
     "welcome": {
@@ -128,7 +164,10 @@
       "starting_placeholder": "Đang khởi tạo sáng tác...",
       "pausing_placeholder": "Đang tạm dừng sáng tác...",
       "paused_placeholder": "Đã tạm dừng, nhập bất kỳ nội dung nào để tiếp tục sáng tác",
-      "interrupted_placeholder": "Đang gián đoạn, nhập bất kỳ nội dung nào để tiếp tục"
+      "interrupted_placeholder": "Đang gián đoạn, nhập bất kỳ nội dung nào để tiếp tục",
+      "chapter_num": "Chương %d",
+      "done_placeholder": "Đã hoàn thành toàn bộ tác phẩm · Nhập yêu cầu để viết lại, dùng /reopen để mở quyển mới, hoặc /export để xuất bản",
+      "saved": "tiết kiệm "
     },
     "cocreate": {
       "title": "Đồng sáng tác & Lên kế hoạch",
@@ -159,7 +198,11 @@
       "panel_title_direction": "Hướng đi tiếp theo",
       "empty_hint_create": "AI sẽ liên tục tổng hợp bản brief hoàn chỉnh tại đây để bắt đầu sáng tác.",
       "empty_hint_stage": "AI sẽ liên tục tổng hợp hướng đi các giai đoạn tiếp theo tại đây.",
-      "stage_sys_line": "Đã tạm dừng sáng tác, chuyển sang đồng sáng tác — AI sẽ dựa vào tiến độ hiện tại để cùng bạn quy hoạch hướng đi tiếp theo."
+      "stage_sys_line": "Đã tạm dừng sáng tác, chuyển sang đồng sáng tác — AI sẽ dựa vào tiến độ hiện tại để cùng bạn quy hoạch hướng đi tiếp theo.",
+      "hint_nil": "Enter Gửi · Esc Thoát",
+      "hint_modal_awaiting": "AI đang trả lời · ↑↓ Cuộn chat · Con lăn cuộn chỉ lệnh · Esc Thoát",
+      "hint_modal_can_start": "Enter Bổ sung · %s · ↑↓ Cuộn chat · Con lăn cuộn chỉ lệnh · Esc Thoát",
+      "hint_modal_default": "Enter Gửi · ↑↓ Cuộn chat · Con lăn cuộn chỉ lệnh · Esc Thoát"
     },
     "phase": {
       "init": "Khởi tạo",
@@ -232,7 +275,8 @@
       "in_progress_badge": "Đang tiến hành"
     },
     "activity": {
-      "live_stream": "Đầu ra thời gian thực"
+      "live_stream": "Đầu ra thời gian thực",
+      "event_flow": "Dòng sự kiện"
     },
     "palette": {
       "title": "Bảng lệnh",
@@ -270,7 +314,12 @@
       "config_models_title": "Cài đặt & Cấu hình mô hình",
       "import_title": "Nhập tiểu thuyết",
       "export_title": "Xuất tiểu thuyết",
-      "report_title": "Báo cáo chẩn đoán"
+      "report_title": "Báo cáo chẩn đoán",
+      "select": "Chọn",
+      "close": "Đóng",
+      "scroll": "Cuộn",
+      "cancel": "Hủy",
+      "cancel_or_close": "Hủy/Đóng"
     },
     "export": {
       "exported": "Đã xuất %d chương (%s) ra %s",
@@ -284,20 +333,123 @@
       "err_single_path": "Chỉ hỗ trợ một tham số đường dẫn: %q"
     },
     "cmd": {
-      "help": { "desc": "Xem danh sách lệnh" },
-      "model": { "desc": "Chuyển đổi mô hình và mức độ suy luận cho từng vai trò" },
-      "config": { "desc": "Cài đặt ngôn ngữ, Provider, mô hình và thông số hệ thống" },
-      "diag": { "desc": "Chẩn đoán sức khỏe và chất lượng sáng tác tiểu thuyết" },
-      "review": { "desc": "Bật/tắt chế độ duyệt từng chương" },
-      "next": { "desc": "Phê duyệt và cho phép sáng tác chương tiếp theo" },
-      "start": { "desc": "Khởi tạo tác phẩm mới từ tệp đại cương/thiết lập" },
-      "reopen": { "desc": "Mở lại tác phẩm đã hoàn thành để viết thêm quyển mới" },
-      "simprofile": { "desc": "Chạy mô phỏng tính cách và hành vi nhân vật" },
-      "simulate": { "desc": "Chạy mô phỏng diễn biến cốt truyện tương lai" },
-      "importsim": { "desc": "Nhập kết quả mô phỏng vào ngữ cảnh tác phẩm" },
-      "advance": { "desc": "Điều chỉnh chế độ tiến độ (tự động/thủ công/duyệt)" },
-      "revision": { "desc": "Phân tích và thực hiện sửa đổi cốt truyện hồi tố" },
-      "export": { "desc": "Xuất tiểu thuyết ra định dạng TXT, Markdown, EPUB" }
+      "help": {
+        "desc": "Xem danh sách lệnh"
+      },
+      "model": {
+        "desc": "Chuyển đổi mô hình và mức độ suy luận cho từng vai trò"
+      },
+      "config": {
+        "desc": "Cài đặt ngôn ngữ, Provider, mô hình và thông số hệ thống"
+      },
+      "diag": {
+        "desc": "Chẩn đoán sức khỏe và chất lượng sáng tác tiểu thuyết"
+      },
+      "review": {
+        "desc": "Bật/tắt chế độ duyệt từng chương"
+      },
+      "next": {
+        "desc": "Phê duyệt và cho phép sáng tác chương tiếp theo"
+      },
+      "start": {
+        "desc": "Khởi tạo tác phẩm mới từ tệp đại cương/thiết lập"
+      },
+      "reopen": {
+        "desc": "Mở lại tác phẩm đã hoàn thành để viết thêm quyển mới"
+      },
+      "simprofile": {
+        "desc": "Chạy mô phỏng tính cách và hành vi nhân vật"
+      },
+      "simulate": {
+        "desc": "Chạy mô phỏng diễn biến cốt truyện tương lai"
+      },
+      "importsim": {
+        "desc": "Nhập kết quả mô phỏng vào ngữ cảnh tác phẩm"
+      },
+      "advance": {
+        "desc": "Điều chỉnh chế độ tiến độ (tự động/thủ công/duyệt)"
+      },
+      "revision": {
+        "desc": "Phân tích và thực hiện sửa đổi cốt truyện hồi tố"
+      },
+      "export": {
+        "desc": "Xuất tiểu thuyết ra định dạng TXT, Markdown, EPUB"
+      },
+      "unknown_role": "Vai trò không xác định: %s",
+      "err_advance_mode": "Chuyển đổi chế độ tiến độ thất bại",
+      "err_advance_next": "Phê duyệt qua chương tiếp theo thất bại",
+      "start_welcome_only": "/start chỉ có thể dùng ở màn hình chào mừng để tạo sách mới",
+      "err_import_start": "Khởi động nhập tiểu thuyết thất bại",
+      "err_reopen": "Mở lại sách thất bại",
+      "cocreate_running_only": "Đồng sáng tác theo giai đoạn chỉ khả dụng khi đang sáng tác",
+      "cocreate_unavailable": "Không thể vào đồng sáng tác theo giai đoạn: sách đã hoàn thành hoặc đang trong phiên đồng sáng tác",
+      "err_simulate_start": "Khởi động mô phỏng văn phong thất bại",
+      "err_importsim": "Nhập hồ sơ mô phỏng thất bại",
+      "err_sync_start": "Khởi động đồng bộ chương thất bại",
+      "sync_analyzing": "Đang phân tích và tiếp nhận các sửa đổi của chương...",
+      "sync_checking": "Đang kiểm tra các chỉnh sửa chương bên ngoài...",
+      "err_export_start": "Khởi động xuất bản thất bại",
+      "exporting": "Đang xuất bản tiểu thuyết...",
+      "unknown_command": "Lệnh không xác định: %s",
+      "needs_idle": "Lệnh chỉ có thể thực thi khi ở trạng thái nghỉ: %s",
+      "unknown_param": "Tham số không xác định",
+      "supported": "hỗ trợ"
+    },
+    "hints": {
+      "press_ctrl_c_again": "Nhấn Ctrl+C lần nữa để thoát",
+      "switch_copy_mode": "Ctrl+R Chuyển chế độ bôi đen sao chép",
+      "mouse_off_copy": "✂ Chế độ sao chép: Kéo thả bôi đen để sao chép văn bản · Ctrl+R Thoát khôi phục chuột",
+      "cocreate_scroll_conv": "Tab Cuộn: Hội thoại",
+      "cocreate_scroll_prompt": "Tab Cuộn: Chỉ lệnh sáng tác",
+      "cocreate_awaiting": "Đang đợi AI phản hồi · Esc Thoát đồng sáng tác",
+      "cocreate_start": "Ctrl+S Bắt đầu sáng tác",
+      "cocreate_apply": "Ctrl+S Áp dụng và tiếp tục",
+      "cocreate_can_start": "Enter Gửi · %s · Esc Thoát đồng sáng tác",
+      "cocreate_default": "Enter Gửi · Esc Thoát đồng sáng tác",
+      "new_quick": "Tab Chuyển chế độ · Nhập / tìm lệnh · Enter Bắt đầu sáng tác ngay · Esc Xóa nhập",
+      "new_cocreate": "Tab Chuyển chế độ · Nhập / tìm lệnh · Enter Bắt đầu hội thoại đồng sáng tác · Esc Xóa nhập",
+      "pausing": "Đang tạm dừng sáng tác · Vui lòng chờ vòng hiện tại kết thúc",
+      "paused": "Nhập / tìm lệnh · Enter Tiếp tục sáng tác · Esc Xóa nhập",
+      "running": "Nhập / tìm lệnh · Click/Tab đổi khung · ↑↓ Cuộn · End xuống đáy · Ctrl+L Xóa màn hình · Esc Tạm dừng · Enter Gửi",
+      "input_limit": "Đã nhập %d/%d",
+      "input_label": "Đã nhập"
+    },
+    "simulation": {
+      "title": "Hồ sơ mô phỏng văn phong",
+      "generate_title": "Tạo hồ sơ mô phỏng văn phong",
+      "import_title": "Nhập hồ sơ mô phỏng văn phong",
+      "failed": "Xử lý hồ sơ mô phỏng thất bại",
+      "ready": "Hồ sơ mô phỏng đã sẵn sàng, các Agent tiếp theo sẽ đọc từ novel_context"
+    },
+    "revision": {
+      "no_changes": "Không phát hiện chỉnh sửa bên ngoài nào đối với các chương",
+      "chapter_summary": "Chương %d: %s",
+      "story_updated": " (tình tiết cốt truyện đã cập nhật)",
+      "conflicts_found": " (phát hiện %d xung đột phía sau)",
+      "accepted_revisions": "Đã tiếp nhận sửa đổi các chương: %v"
+    },
+    "report": {
+      "source": "Nguồn",
+      "started": "Bắt đầu",
+      "finished": "Hoàn thành",
+      "stage": "Giai đoạn",
+      "progress": "Tiến độ",
+      "process_log": "Nhật ký tiến trình",
+      "exported_sanitized": "Đã xuất báo cáo chẩn đoán ẩn danh (có thể đính kèm vào GitHub issue)",
+      "export_failed": "Xuất báo cáo chẩn đoán ẩn danh thất bại",
+      "reviews": "Đánh giá",
+      "count_times": "%d lần",
+      "avg_score": "Điểm TB",
+      "foreshadow": "Phục bút",
+      "foreshadow_open": "đang mở %d",
+      "foreshadow_stale": "đình trệ %d",
+      "no_issues": "Không phát hiện vấn đề nào",
+      "findings": "Phát hiện",
+      "executable_actions": "Hành động có thể thực thi",
+      "generating": "Đang tạo báo cáo chẩn đoán...",
+      "started_time": "Thời gian bắt đầu",
+      "loading_desc": "Đang đọc kết quả đầu ra của tiểu thuyết và phân tích luồng xử lý, chất lượng, quy hoạch cùng các vấn đề ngữ cảnh. Có thể mất vài giây với dự án lớn.",
+      "loading_hint": "Nhấn Esc để đóng tạm thời. Phân tích nền sẽ hoàn tất và hiển thị lại ở lần mở sau."
     }
   },
   "errors": {

@@ -37,7 +37,8 @@
     "err_update_conflict": "update cannot be combined with other startup flags",
     "err_no_mix": "cannot be combined with other startup flags",
     "err_no_cli_prompt": "Passing novel prompt directly via CLI is not supported, please enter in TUI interface",
-    "err_headless_setup": "Headless mode does not support setup wizard, please run in TUI mode first"
+    "err_headless_setup": "Headless mode does not support setup wizard, please run in TUI mode first",
+    "err_headless_prompt_only": "--prompt / --prompt-file can only be used in --headless mode"
   },
   "setup": {
     "welcome": "Welcome to ainovel-cli!",
@@ -80,7 +81,42 @@
     "chapter_target_words": "Target Words per Chapter",
     "save": "Save Changes",
     "cancel": "Cancel",
-    "saved_notice": "Configuration saved successfully!"
+    "saved_notice": "Configuration saved successfully!",
+    "custom_provider_name": "Custom Provider Name",
+    "new_badge": "New",
+    "advanced_label": "Advanced Settings (extra / extra_body / stream_idle_timeout)",
+    "hint_input": "Type · Enter Confirm · Esc Cancel",
+    "hint_hub": "↑↓ Select · Enter Edit/Enter · Esc Back",
+    "hint_delete_key": "Delete Clear",
+    "test_api_notice": "Testing will send a minimal request, which may incur small API usage",
+    "models_title": "Manage Models",
+    "hint_models": "↑↓ Row · ←→ Field · Enter Edit · Delete Remove · Esc Back",
+    "hint_input_ctrl_u": "Type · Enter Confirm · Ctrl+U Clear · Esc Cancel",
+    "col_model_id": "Model ID",
+    "col_context_window": "Context Window",
+    "col_references": "References",
+    "add_model": "Add Model",
+    "auto": "Auto",
+    "protocol": "Protocol",
+    "default_url": "Default URL",
+    "models_label": "Models",
+    "models_count": "%d models",
+    "no_models_hint": "Please add a model first",
+    "key_cleared": "Cleared",
+    "key_not_set": "Not Set",
+    "input_key_keep": "Enter new key, leave empty to keep",
+    "input_url_default": "Leave empty for default URL",
+    "err_key_required": "API Key is required for this Provider",
+    "err_model_name_empty": "Model name cannot be empty",
+    "err_model_exists": "Model already exists",
+    "sync_refs_notice": "Saving will update references:",
+    "err_model_in_use": "This model is currently in use, please switch in /model before deleting",
+    "err_model_referenced": "Model is still referenced by %s, please switch in /model before deleting",
+    "cancelling_test": "Cancelling connection test...",
+    "err_invalid_window": "Context window must be a positive integer, e.g. 128K, 1M, or leave empty for auto",
+    "err_window_overflow": "Context window exceeds valid integer range",
+    "no_provider_available": "No available provider currently",
+    "provider_no_models": "Provider %q has no configured models"
   },
   "tui": {
     "welcome": {
@@ -162,7 +198,11 @@
       "panel_title_direction": "Upcoming Direction",
       "empty_hint_create": "AI will continuously synthesize an actionable prompt brief here.",
       "empty_hint_stage": "AI will continuously synthesize the next stage directional brief here.",
-      "stage_sys_line": "Novel creation paused, entering stage co-creation — AI will brainstorm upcoming directions with you based on current progress."
+      "stage_sys_line": "Novel creation paused, entering stage co-creation — AI will brainstorm upcoming directions with you based on current progress.",
+      "hint_nil": "Enter Send · Esc Exit",
+      "hint_modal_awaiting": "AI replying · ↑↓ Scroll chat · Wheel scroll prompt · Esc Exit",
+      "hint_modal_can_start": "Enter Refine · %s · ↑↓ Scroll chat · Wheel scroll prompt · Esc Exit",
+      "hint_modal_default": "Enter Send · ↑↓ Scroll chat · Wheel scroll prompt · Esc Exit"
     },
     "phase": {
       "init": "Initialization",
@@ -235,7 +275,8 @@
       "in_progress_badge": "In Progress"
     },
     "activity": {
-      "live_stream": "Live Output"
+      "live_stream": "Live Output",
+      "event_flow": "Event Flow"
     },
     "palette": {
       "title": "Command Palette",
@@ -273,7 +314,12 @@
       "config_models_title": "Settings & Model Configuration",
       "import_title": "Import Novel",
       "export_title": "Export Novel",
-      "report_title": "Diagnostic Report"
+      "report_title": "Diagnostic Report",
+      "select": "Select",
+      "close": "Close",
+      "scroll": "Scroll",
+      "cancel": "Cancel",
+      "cancel_or_close": "Cancel/Close"
     },
     "export": {
       "exported": "Exported %d chapters (%s) to %s",
@@ -287,20 +333,123 @@
       "err_single_path": "Only one path argument supported: %q"
     },
     "cmd": {
-      "help": { "desc": "Show command list and keyboard shortcuts" },
-      "model": { "desc": "Switch AI models and reasoning intensity for roles" },
-      "config": { "desc": "Configure language, AI providers, models, and parameters" },
-      "diag": { "desc": "Diagnose novel creation health and quality metrics" },
-      "review": { "desc": "Toggle chapter-by-chapter review gate mode" },
-      "next": { "desc": "Approve review gate and proceed to next chapter" },
-      "start": { "desc": "Initialize new novel from outline/premise file" },
-      "reopen": { "desc": "Reopen completed novel to continue with new volume" },
-      "simprofile": { "desc": "Simulate character personality and behavior profiles" },
-      "simulate": { "desc": "Simulate future plot trajectory and branch points" },
-      "importsim": { "desc": "Import simulation results into active story context" },
-      "advance": { "desc": "Change advancement mode (auto/manual/review)" },
-      "revision": { "desc": "Analyze and apply retroactive plot revisions" },
-      "export": { "desc": "Export novel into TXT, Markdown, or EPUB" }
+      "help": {
+        "desc": "Show command list and keyboard shortcuts"
+      },
+      "model": {
+        "desc": "Switch AI models and reasoning intensity for roles"
+      },
+      "config": {
+        "desc": "Configure language, AI providers, models, and parameters"
+      },
+      "diag": {
+        "desc": "Diagnose novel creation health and quality metrics"
+      },
+      "review": {
+        "desc": "Toggle chapter-by-chapter review gate mode"
+      },
+      "next": {
+        "desc": "Approve review gate and proceed to next chapter"
+      },
+      "start": {
+        "desc": "Initialize new novel from outline/premise file"
+      },
+      "reopen": {
+        "desc": "Reopen completed novel to continue with new volume"
+      },
+      "simprofile": {
+        "desc": "Simulate character personality and behavior profiles"
+      },
+      "simulate": {
+        "desc": "Simulate future plot trajectory and branch points"
+      },
+      "importsim": {
+        "desc": "Import simulation results into active story context"
+      },
+      "advance": {
+        "desc": "Change advancement mode (auto/manual/review)"
+      },
+      "revision": {
+        "desc": "Analyze and apply retroactive plot revisions"
+      },
+      "export": {
+        "desc": "Export novel into TXT, Markdown, or EPUB"
+      },
+      "unknown_role": "Unknown role: %s",
+      "err_advance_mode": "Failed to switch advance mode",
+      "err_advance_next": "Failed to advance next chapter",
+      "start_welcome_only": "/start can only be used on the welcome screen to create a new novel",
+      "err_import_start": "Failed to start import",
+      "err_reopen": "Failed to reopen novel",
+      "cocreate_running_only": "Stage co-creation is only available during novel writing",
+      "cocreate_unavailable": "Cannot enter stage co-creation: novel is already completed or co-creation is active",
+      "err_simulate_start": "Failed to start simulation",
+      "err_importsim": "Failed to import simulation profile",
+      "err_sync_start": "Failed to start chapter synchronization",
+      "sync_analyzing": "Analyzing and applying chapter revisions...",
+      "sync_checking": "Checking for external chapter modifications...",
+      "err_export_start": "Failed to start export",
+      "exporting": "Exporting novel...",
+      "unknown_command": "Unknown command: %s",
+      "needs_idle": "Command can only be executed in idle state: %s",
+      "unknown_param": "Unknown parameter",
+      "supported": "supported"
+    },
+    "hints": {
+      "press_ctrl_c_again": "Press Ctrl+C again to exit",
+      "switch_copy_mode": "Ctrl+R Toggle mouse copy mode",
+      "mouse_off_copy": "✂ Copy Mode: Drag to select & copy text · Ctrl+R Exit & restore mouse interaction",
+      "cocreate_scroll_conv": "Tab Scroll: Conversation",
+      "cocreate_scroll_prompt": "Tab Scroll: Prompt Brief",
+      "cocreate_awaiting": "Waiting for AI response · Esc Exit co-creation",
+      "cocreate_start": "Ctrl+S Start Writing",
+      "cocreate_apply": "Ctrl+S Apply & Continue",
+      "cocreate_can_start": "Enter Send · %s · Esc Exit co-creation",
+      "cocreate_default": "Enter Send · Esc Exit co-creation",
+      "new_quick": "Tab Switch Mode · Type / to search commands · Enter Start writing · Esc Clear input",
+      "new_cocreate": "Tab Switch Mode · Type / to search commands · Enter Start co-creation · Esc Clear input",
+      "pausing": "Pausing novel creation · Please wait for current turn to complete",
+      "paused": "Type / to search commands · Enter Resume writing · Esc Clear input",
+      "running": "Type / search commands · Click/Tab switch panels · ↑↓ Scroll · End to bottom · Ctrl+L Clear · Esc Pause · Enter Send",
+      "input_limit": "Input %d/%d",
+      "input_label": "Input"
+    },
+    "simulation": {
+      "title": "Stylistic Simulation Profile",
+      "generate_title": "Generate Stylistic Simulation Profile",
+      "import_title": "Import Stylistic Simulation Profile",
+      "failed": "Simulation profile processing failed",
+      "ready": "Simulation profile is ready, subsequent agents will read from novel_context"
+    },
+    "revision": {
+      "no_changes": "No external chapter modifications detected",
+      "chapter_summary": "Chapter %d: %s",
+      "story_updated": " (plot facts updated)",
+      "conflicts_found": " (found %d downstream conflicts)",
+      "accepted_revisions": "Accepted chapter revisions: %v"
+    },
+    "report": {
+      "source": "Source",
+      "started": "Started",
+      "finished": "Completed",
+      "stage": "Stage",
+      "progress": "Progress",
+      "process_log": "Process Log",
+      "exported_sanitized": "Sanitized diagnostic report exported (can be attached to GitHub issue)",
+      "export_failed": "Failed to export sanitized diagnostic report",
+      "reviews": "Reviews",
+      "count_times": "%d times",
+      "avg_score": "Avg Score",
+      "foreshadow": "Foreshadowing",
+      "foreshadow_open": "open %d",
+      "foreshadow_stale": "stale %d",
+      "no_issues": "No issues found",
+      "findings": "Findings",
+      "executable_actions": "Actionable Recommendations",
+      "generating": "Generating Diagnostic Report...",
+      "started_time": "Started Time",
+      "loading_desc": "Reading novel outputs and analyzing workflow, quality, planning, and context issues. May take a few seconds for large projects.",
+      "loading_hint": "Press Esc to close modal. Background analysis will re-generate on next open."
     }
   },
   "errors": {

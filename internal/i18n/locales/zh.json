@@ -37,7 +37,8 @@
     "err_update_conflict": "update 不能与其他启动参数混用",
     "err_no_mix": "不能与其他启动参数混用",
     "err_no_cli_prompt": "不支持直接通过命令行传递小说需求，请在 TUI 界面中输入",
-    "err_headless_setup": "无界面模式不支持初始配置向导，请先在 TUI 交互模式下配置"
+    "err_headless_setup": "无界面模式不支持初始配置向导，请先在 TUI 交互模式下配置",
+    "err_headless_prompt_only": "--prompt / --prompt-file 仅可在 --headless 模式下使用"
   },
   "setup": {
     "welcome": "欢迎使用 ainovel-cli！",
@@ -80,7 +81,42 @@
     "chapter_target_words": "单章目标字数",
     "save": "保存修改",
     "cancel": "取消",
-    "saved_notice": "配置已成功保存！"
+    "saved_notice": "配置已成功保存！",
+    "custom_provider_name": "自定义 Provider 名称",
+    "new_badge": "新增",
+    "advanced_label": "高级配置（extra / extra_body / stream_idle_timeout）",
+    "hint_input": "输入 · Enter 确认 · Esc 取消",
+    "hint_hub": "↑↓ 选择 · Enter 编辑/进入 · Esc 返回",
+    "hint_delete_key": "Delete 清除",
+    "test_api_notice": "测试会发送最小请求，可能产生少量 API 用量",
+    "models_title": "管理模型列表",
+    "hint_models": "↑↓ 行 · ←→ 字段 · Enter 编辑 · Delete 删除 · Esc 返回",
+    "hint_input_ctrl_u": "输入 · Enter 确认 · Ctrl+U 清空 · Esc 取消",
+    "col_model_id": "模型 ID",
+    "col_context_window": "上下文窗口",
+    "col_references": "引用",
+    "add_model": "新增模型",
+    "auto": "自动",
+    "protocol": "协议",
+    "default_url": "默认地址",
+    "models_label": "模型",
+    "models_count": "%d 个",
+    "no_models_hint": "请先添加模型",
+    "key_cleared": "已清除",
+    "key_not_set": "未设置",
+    "input_key_keep": "输入新 Key，留空保留",
+    "input_url_default": "留空使用默认地址",
+    "err_key_required": "该 Provider 必须配置 API Key",
+    "err_model_name_empty": "模型名称不能为空",
+    "err_model_exists": "模型已存在",
+    "sync_refs_notice": "保存时将同步更新引用：",
+    "err_model_in_use": "该模型正在使用中，请先用 /model 切换后再删除",
+    "err_model_referenced": "模型仍被 %s 引用，请先在 /model 切换后再删除",
+    "cancelling_test": "正在取消连接测试...",
+    "err_invalid_window": "上下文窗口请输入正整数、128K、1M，或留空使用自动值",
+    "err_window_overflow": "上下文窗口超出有效整数范围",
+    "no_provider_available": "当前没有可用 provider",
+    "provider_no_models": "provider %q 没有已配置模型"
   },
   "tui": {
     "welcome": {
@@ -162,7 +198,11 @@
       "panel_title_direction": "后续走向",
       "empty_hint_create": "AI 会在这里持续整理出一段可直接进入创作的最终指令。",
       "empty_hint_stage": "AI 会在这里持续整理出后续阶段的方向 brief。",
-      "stage_sys_line": "已暂停创作，进入阶段共创 —— AI 会结合当前故事进度，和你一起规划接下来的走向。"
+      "stage_sys_line": "已暂停创作，进入阶段共创 —— AI 会结合当前故事进度，和你一起规划接下来的走向。",
+      "hint_nil": "Enter 发送 · Esc 退出",
+      "hint_modal_awaiting": "AI 回复中 · ↑↓ 滚对话 · 滚轮滚指令 · Esc 退出",
+      "hint_modal_can_start": "Enter 继续补充 · %s · ↑↓ 滚对话 · 滚轮滚指令 · Esc 退出",
+      "hint_modal_default": "Enter 发送 · ↑↓ 滚对话 · 滚轮滚指令 · Esc 退出"
     },
     "phase": {
       "init": "初始化",
@@ -235,7 +275,8 @@
       "in_progress_badge": "进行中"
     },
     "activity": {
-      "live_stream": "实时输出"
+      "live_stream": "实时输出",
+      "event_flow": "事件流"
     },
     "palette": {
       "title": "命令列表",
@@ -273,7 +314,12 @@
       "config_models_title": "设置与模型配置",
       "import_title": "导入小说",
       "export_title": "导出作品",
-      "report_title": "诊断报告"
+      "report_title": "诊断报告",
+      "select": "选择",
+      "close": "关闭",
+      "scroll": "滚动",
+      "cancel": "取消",
+      "cancel_or_close": "取消/关闭"
     },
     "export": {
       "exported": "已导出 %d 章（%s）至 %s",
@@ -287,20 +333,123 @@
       "err_single_path": "仅支持一个路径参数：%q"
     },
     "cmd": {
-      "help": { "desc": "查看命令列表与快捷键" },
-      "model": { "desc": "切换角色的模型与推理强度" },
-      "config": { "desc": "设置语言、Provider、模型及系统参数" },
-      "diag": { "desc": "诊断小说创作健康度与质量指标" },
-      "review": { "desc": "切换逐章验收模式" },
-      "next": { "desc": "放行并继续创作下一章" },
-      "start": { "desc": "从设定或大纲文件开始创建新书" },
-      "reopen": { "desc": "重开已完结作品以续写新卷" },
-      "simprofile": { "desc": "模拟角色心智与性格画像" },
-      "simulate": { "desc": "模拟未来剧情走向分支" },
-      "importsim": { "desc": "将模拟成果导入当前故事上下文" },
-      "advance": { "desc": "切换推进模式（自动/手动/审阅）" },
-      "revision": { "desc": "分析并执行剧情回溯修改" },
-      "export": { "desc": "导出小说为 TXT、Markdown、EPUB" }
+      "help": {
+        "desc": "查看命令列表与快捷键"
+      },
+      "model": {
+        "desc": "切换角色的模型与推理强度"
+      },
+      "config": {
+        "desc": "设置语言、Provider、模型及系统参数"
+      },
+      "diag": {
+        "desc": "诊断小说创作健康度与质量指标"
+      },
+      "review": {
+        "desc": "切换逐章验收模式"
+      },
+      "next": {
+        "desc": "放行并继续创作下一章"
+      },
+      "start": {
+        "desc": "从设定或大纲文件开始创建新书"
+      },
+      "reopen": {
+        "desc": "重开已完结作品以续写新卷"
+      },
+      "simprofile": {
+        "desc": "模拟角色心智与性格画像"
+      },
+      "simulate": {
+        "desc": "模拟未来剧情走向分支"
+      },
+      "importsim": {
+        "desc": "将模拟成果导入当前故事上下文"
+      },
+      "advance": {
+        "desc": "切换推进模式（自动/手动/审阅）"
+      },
+      "revision": {
+        "desc": "分析并执行剧情回溯修改"
+      },
+      "export": {
+        "desc": "导出小说为 TXT、Markdown、EPUB"
+      },
+      "unknown_role": "未知角色：%s",
+      "err_advance_mode": "切换推进模式失败",
+      "err_advance_next": "放行下一章失败",
+      "start_welcome_only": "/start 仅可在欢迎页创建新书",
+      "err_import_start": "导入启动失败",
+      "err_reopen": "重开失败",
+      "cocreate_running_only": "阶段共创仅在创作中可用",
+      "cocreate_unavailable": "无法进入阶段共创：全书已完成或已在共创中",
+      "err_simulate_start": "仿写画像启动失败",
+      "err_importsim": "导入仿写画像失败",
+      "err_sync_start": "章节同步启动失败",
+      "sync_analyzing": "正在分析并接纳章节修订...",
+      "sync_checking": "正在检查章节外部修改...",
+      "err_export_start": "导出启动失败",
+      "exporting": "正在导出...",
+      "unknown_command": "未知命令：%s",
+      "needs_idle": "命令仅可在空闲状态执行：%s",
+      "unknown_param": "未知参数",
+      "supported": "支持"
+    },
+    "hints": {
+      "press_ctrl_c_again": "再次按 Ctrl+C 退出",
+      "switch_copy_mode": "Ctrl+R 切到选中复制模式",
+      "mouse_off_copy": "✂ 选中复制模式：可拖拽选中文本复制 · Ctrl+R 退出恢复鼠标交互",
+      "cocreate_scroll_conv": "Tab 滚动:对话",
+      "cocreate_scroll_prompt": "Tab 滚动:创作指令",
+      "cocreate_awaiting": "等待 AI 回复 · Esc 退出共创",
+      "cocreate_start": "Ctrl+S 开始创作",
+      "cocreate_apply": "Ctrl+S 应用并继续",
+      "cocreate_can_start": "Enter 发送 · %s · Esc 退出共创",
+      "cocreate_default": "Enter 发送 · Esc 退出共创",
+      "new_quick": "Tab 切换启动模式 · 输入 / 搜索命令 · Enter 直接开始创作 · Esc 清空输入",
+      "new_cocreate": "Tab 切换启动模式 · 输入 / 搜索命令 · Enter 开始共创对话 · Esc 清空输入",
+      "pausing": "正在暂停创作 · 请等待当前轮次结束",
+      "paused": "输入 / 搜索命令 · Enter 继续创作 · Esc 清空输入",
+      "running": "输入 / 搜索命令 · 点击/Tab 切换面板 · ↑↓ 滚动 · End 跳底 · Ctrl+L 清屏 · Esc 暂停 · Enter 发送",
+      "input_limit": "输入 %d/%d",
+      "input_label": "输入"
+    },
+    "simulation": {
+      "title": "仿写画像",
+      "generate_title": "生成仿写画像",
+      "import_title": "导入仿写画像",
+      "failed": "仿写画像处理失败",
+      "ready": "仿写画像已就绪，后续 Agent 会从 novel_context 读取"
+    },
+    "revision": {
+      "no_changes": "未检测到章节外部修改",
+      "chapter_summary": "第%d章：%s",
+      "story_updated": "（剧情事实已更新）",
+      "conflicts_found": "（发现%d项后续冲突）",
+      "accepted_revisions": "已接纳章节修订：%v"
+    },
+    "report": {
+      "source": "来源",
+      "started": "开始",
+      "finished": "完成",
+      "stage": "阶段",
+      "progress": "进度",
+      "process_log": "流程日志",
+      "exported_sanitized": "已导出脱敏诊断（可贴到 GitHub issue）",
+      "export_failed": "脱敏诊断导出失败",
+      "reviews": "评审",
+      "count_times": "%d次",
+      "avg_score": "均分",
+      "foreshadow": "伏笔",
+      "foreshadow_open": "打开%d",
+      "foreshadow_stale": "停滞%d",
+      "no_issues": "未发现问题",
+      "findings": "发现",
+      "executable_actions": "可执行动作",
+      "generating": "正在生成诊断报告",
+      "started_time": "开始时间",
+      "loading_desc": "正在读取当前小说 output 产物并分析流程、质量、规划和上下文问题。项目较大时可能需要几秒。",
+      "loading_hint": "Esc 可先关闭面板，后台分析完成后下次打开会重新生成。"
     }
   },
   "errors": {

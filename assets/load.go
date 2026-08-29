@@ -79,8 +79,13 @@ func DefaultLoadOptions(outputDir string) LoadOptions {
 // 题材 style-references)按 opts 做三层覆盖:内置 < 全局 < 本书。
 func Load(style string, opts LoadOptions) Bundle {
 	prompts := loadPrompts()
-	if opts.StoryLanguage == "vi" {
-		prompts = applyVietnameseStoryDirectives(prompts)
+	switch opts.StoryLanguage {
+	case "vi":
+		prompts = applyStoryLanguageDirectives(prompts, viStoryLanguageDirective)
+	case "en":
+		prompts = applyStoryLanguageDirectives(prompts, enStoryLanguageDirective)
+	case "zh":
+		prompts = applyStoryLanguageDirectives(prompts, zhStoryLanguageDirective)
 	}
 	return Bundle{
 		References: loadReferences(style, opts),
@@ -245,14 +250,21 @@ const viStoryLanguageDirective = `## Ngôn ngữ sáng tác (Story Language: Ti�
 - **Tiếng Việt tự nhiên**: Tất cả nội dung sáng tác (tên sách, giới thiệu, tiền đề, nhân vật, thế giới quan, đại cương, nội dung các chương, lời thoại, bình duyệt và tóm tắt) PHẢI được viết hoàn toàn bằng tiếng Việt tự nhiên, chuẩn văn phong tiếng Việt mượt mà, giàu hình tượng và đúng ngữ cảnh thể loại.
 - **Tránh dịch thô / convert**: Tuyệt đối không sử dụng câu từ dịch máy thô cứng hay lạm dụng từ Hán Việt quá đà. Đối thoại tự nhiên, biểu cảm chân thực.`
 
-func applyVietnameseStoryDirectives(p Prompts) Prompts {
-	p.ArchitectShort += "\n\n" + viStoryLanguageDirective
-	p.ArchitectLong += "\n\n" + viStoryLanguageDirective
-	p.Writer += "\n\n" + viStoryLanguageDirective
-	p.Editor += "\n\n" + viStoryLanguageDirective
-	p.ImportSynthesize += "\n\n" + viStoryLanguageDirective
-	p.SimulationMerge += "\n\n" + viStoryLanguageDirective
-	p.RevisionAnalyze += "\n\n" + viStoryLanguageDirective
+const enStoryLanguageDirective = `## Generation Language (Story Language: English)
+- **Natural English**: All generated creative content (book title, synopsis, premise, characters, world-building, outline, chapter text, dialogues, reviews, and summaries) MUST be written entirely in natural, fluent English appropriate for the literary genre.
+- **Tone & Prose**: Maintain immersive, idiomatic English prose with authentic dialogue and rich descriptions suitable for the novel's style and setting.`
+
+const zhStoryLanguageDirective = `## 创作语言 (Story Language: 中文)
+- **自然中文**: 所有创作内容（书名、简介、设定、角色、世界观、大纲、正文章节、对话、评审与摘要）必须使用地道自然流畅的中文撰写。`
+
+func applyStoryLanguageDirectives(p Prompts, directive string) Prompts {
+	p.ArchitectShort += "\n\n" + directive
+	p.ArchitectLong += "\n\n" + directive
+	p.Writer += "\n\n" + directive
+	p.Editor += "\n\n" + directive
+	p.ImportSynthesize += "\n\n" + directive
+	p.SimulationMerge += "\n\n" + directive
+	p.RevisionAnalyze += "\n\n" + directive
 	return p
 }
 

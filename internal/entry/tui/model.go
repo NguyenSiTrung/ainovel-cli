@@ -444,51 +444,51 @@ func (m *Model) textareaIsMultiline() bool {
 func (m *Model) inputHints() string {
 	dimStyle := lipgloss.NewStyle().Foreground(colorDim)
 	if m.quitPending {
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Bold(true).Render("Press Ctrl+C again to exit")
+		return lipgloss.NewStyle().Foreground(lipgloss.Color("243")).Bold(true).Render(i18n.T("tui.hints.press_ctrl_c_again"))
 	}
 	limitHint := m.inputLimitHint()
 	// 欢迎页(modeNew)不开鼠标上报，终端原生拖拽即可复制，无需 Ctrl+R 提示；
 	// 工作台才开上报，复制需 Ctrl+R 临时关闭。
-	suffix := limitHint + " · Ctrl+R 切到选中复制模式"
+	suffix := limitHint + " · " + i18n.T("tui.hints.switch_copy_mode")
 	if m.mode == modeNew {
 		suffix = limitHint
 	}
 	if m.mouseOff && m.mode != modeNew {
 		// 工作台手动切到选中复制：用强调色提示当前处于"自由拖拽选中"状态，按 Ctrl+R 恢复
 		return lipgloss.NewStyle().Foreground(colorAccent).Bold(true).
-			Render("✂ 选中复制模式：可拖拽选中文本复制 · Ctrl+R 退出恢复鼠标交互")
+			Render(i18n.T("tui.hints.mouse_off_copy"))
 	}
 	if m.cocreate != nil {
-		scrollHint := " · Tab 滚动:对话"
+		scrollHint := " · " + i18n.T("tui.hints.cocreate_scroll_conv")
 		if m.cocreate.focusPrompt {
-			scrollHint = " · Tab 滚动:创作指令"
+			scrollHint = " · " + i18n.T("tui.hints.cocreate_scroll_prompt")
 		}
 		switch {
 		case m.cocreate.awaiting:
-			return dimStyle.Render("等待 AI 回复 · Esc 退出共创" + scrollHint + suffix)
+			return dimStyle.Render(i18n.T("tui.hints.cocreate_awaiting") + scrollHint + suffix)
 		case m.cocreate.canStart():
-			startLabel := "Ctrl+S 开始创作"
+			startLabel := i18n.T("tui.hints.cocreate_start")
 			if m.cocreate.stage {
-				startLabel = "Ctrl+S 应用并继续"
+				startLabel = i18n.T("tui.hints.cocreate_apply")
 			}
-			return dimStyle.Render("Enter 发送 · " + startLabel + " · Esc 退出共创" + scrollHint + suffix)
+			return dimStyle.Render(fmt.Sprintf(i18n.T("tui.hints.cocreate_can_start"), startLabel) + scrollHint + suffix)
 		default:
-			return dimStyle.Render("Enter 发送 · Esc 退出共创" + scrollHint + suffix)
+			return dimStyle.Render(i18n.T("tui.hints.cocreate_default") + scrollHint + suffix)
 		}
 	}
 	if m.mode == modeNew {
 		if m.startupMode == startupModeQuick {
-			return dimStyle.Render("Tab 切换启动模式 · 输入 / 搜索命令 · Enter 直接开始创作 · Esc 清空输入" + suffix)
+			return dimStyle.Render(i18n.T("tui.hints.new_quick") + suffix)
 		}
-		return dimStyle.Render("Tab 切换启动模式 · 输入 / 搜索命令 · Enter 开始共创对话 · Esc 清空输入" + suffix)
+		return dimStyle.Render(i18n.T("tui.hints.new_cocreate") + suffix)
 	}
 	switch m.snapshot.RuntimeState {
 	case "pausing":
-		return dimStyle.Render("正在暂停创作 · 请等待当前轮次结束" + suffix)
+		return dimStyle.Render(i18n.T("tui.hints.pausing") + suffix)
 	case "paused":
-		return dimStyle.Render("输入 / 搜索命令 · Enter 继续创作 · Esc 清空输入" + suffix)
+		return dimStyle.Render(i18n.T("tui.hints.paused") + suffix)
 	}
-	return dimStyle.Render("输入 / 搜索命令 · 点击/Tab 切换面板 · ↑↓ 滚动 · End 跳底 · Ctrl+L 清屏 · Esc 暂停 · Enter 发送" + suffix)
+	return dimStyle.Render(i18n.T("tui.hints.running") + suffix)
 }
 
 func (m *Model) inputLimitHint() string {
@@ -500,7 +500,7 @@ func (m *Model) inputLimitHint() string {
 	if used < limit*4/5 {
 		return ""
 	}
-	return fmt.Sprintf(" · 输入 %d/%d", used, limit)
+	return " · " + i18n.T("tui.hints.input_limit", used, limit)
 }
 
 func (m *Model) eventFlowWidth() int {

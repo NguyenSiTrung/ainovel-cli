@@ -230,7 +230,7 @@ type hubField struct {
 func (s *modelConfigState) hubFields() []hubField {
 	var fields []hubField
 	if s.providerType != "" {
-		fields = append(fields, hubField{"protocol", "协议", s.providerType})
+		fields = append(fields, hubField{"protocol", i18n.T("config.protocol"), s.providerType})
 	}
 	if s.isOpenAIEndpoint() {
 		api := s.api
@@ -242,16 +242,16 @@ func (s *modelConfigState) hubFields() []hubField {
 	fields = append(fields, hubField{"key", "API Key", s.keyStatus()})
 	base := s.baseURL
 	if base == "" {
-		base = "默认地址"
+		base = i18n.T("config.default_url")
 	}
 	fields = append(fields, hubField{"baseurl", "Base URL", base})
-	fields = append(fields, hubField{"models", "模型", fmt.Sprintf("%d 个", len(s.models))})
+	fields = append(fields, hubField{"models", i18n.T("config.models_label"), fmt.Sprintf(i18n.T("config.models_count"), len(s.models))})
 	testModel := s.testModelName()
 	if testModel == "" {
-		testModel = "请先添加模型"
+		testModel = i18n.T("config.no_models_hint")
 	}
-	fields = append(fields, hubField{"test", "测试连接", testModel})
-	fields = append(fields, hubField{"save", "保存配置", ""})
+	fields = append(fields, hubField{"test", i18n.T("setup.test_connection"), testModel})
+	fields = append(fields, hubField{"save", i18n.T("config.save"), ""})
 	return fields
 }
 
@@ -274,7 +274,7 @@ func (s *modelConfigState) isOpenAIEndpoint() bool {
 func (s *modelConfigState) keyStatus() string {
 	switch s.apiKeyAction {
 	case host.APIKeyClear:
-		return "已清除"
+		return i18n.T("config.key_cleared")
 	case host.APIKeyReplace:
 		if s.apiKey != "" {
 			return host.MaskAPIKey(s.apiKey)
@@ -283,7 +283,7 @@ func (s *modelConfigState) keyStatus() string {
 	if s.apiKeyHint != "" {
 		return s.apiKeyHint
 	}
-	return "未设置"
+	return i18n.T("config.key_not_set")
 }
 
 // enterHubField 进入选中项；Key 与 Base URL 直接在 hub 当前行编辑。
@@ -321,13 +321,13 @@ func (s *modelConfigState) beginInlineEdit(field string) tea.Cmd {
 
 	switch field {
 	case "key":
-		placeholder := "输入 API Key"
+		placeholder := i18n.T("setup.api_key_prompt")
 		if s.hasEffectiveAPIKey() {
-			placeholder = "输入新 Key，留空保留"
+			placeholder = i18n.T("config.input_key_keep")
 		}
 		return s.startTextInput("", placeholder, true)
 	case "baseurl":
-		return s.startTextInput(s.baseURL, "留空使用默认地址", false)
+		return s.startTextInput(s.baseURL, i18n.T("config.input_url_default"), false)
 	}
 	return nil
 }
@@ -368,7 +368,7 @@ func (s *modelConfigState) finishInlineEdit() bool {
 	case "key":
 		if value == "" {
 			if !s.apiKeyOptional && !s.hasEffectiveAPIKey() {
-				s.message = "该 Provider 必须配置 API Key"
+				s.message = i18n.T("config.err_key_required")
 				return false
 			}
 		} else {
@@ -419,7 +419,7 @@ func (s *modelConfigState) beginModelEdit(idx, column int) tea.Cmd {
 	s.message = ""
 	if column == 0 {
 		s.editingField = configModelNameField
-		return s.startTextInput(s.models[idx].Name, "模型 ID", false)
+		return s.startTextInput(s.models[idx].Name, i18n.T("config.col_model_id"), false)
 	}
 	s.editingField = configModelWindowField
 	value := ""
@@ -440,12 +440,12 @@ func (s *modelConfigState) finishModelEdit() (tea.Cmd, bool) {
 	case configModelNameField:
 		name := strings.TrimSpace(s.input.Value())
 		if name == "" {
-			s.message = "模型名称不能为空"
+			s.message = i18n.T("config.err_model_name_empty")
 			return nil, false
 		}
 		for i, model := range s.models {
 			if i != idx && model.Name == name {
-				s.message = "模型已存在"
+				s.message = i18n.T("config.err_model_exists")
 				return nil, false
 			}
 		}
@@ -462,7 +462,7 @@ func (s *modelConfigState) finishModelEdit() (tea.Cmd, bool) {
 		origin := s.modelOrigins[idx]
 		if origin != "" && origin != name {
 			if refs := s.snapshot.ReferencesFor(s.provider, origin); len(refs) > 0 {
-				s.message = "保存时将同步更新引用：" + strings.Join(refs, "、")
+				s.message = i18n.T("config.sync_refs_notice") + " " + strings.Join(refs, ", ")
 			}
 		}
 		return nil, true
@@ -511,14 +511,14 @@ func (s *modelConfigState) deleteModel(idx int) bool {
 		identity = model.Name
 	}
 	if identity == s.currentModel {
-		s.message = "该模型正在使用中，请先用 /model 切换后再删除"
+		s.message = i18n.T("config.err_model_in_use")
 		return false
 	}
 	for _, ref := range s.snapshot.ReferencesFor(s.provider, identity) {
 		if ref == "default" {
 			continue // 顶层引用已由 currentModel 拦截，避免重复提示
 		}
-		s.message = fmt.Sprintf("模型仍被 %s 引用，请先在 /model 切换后再删除", ref)
+		s.message = fmt.Sprintf(i18n.T("config.err_model_referenced"), ref)
 		return false
 	}
 	s.models = append(s.models[:idx], s.models[idx+1:]...)
@@ -574,7 +574,7 @@ func (m Model) handleModelConfigKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if state.testCancel != nil {
 				state.testCancel()
 			}
-			state.message = "正在取消连接测试..."
+			state.message = i18n.T("config.cancelling_test")
 			return m, nil
 		}
 		if state.editingField != "" && (state.step == configStepHub || state.step == configStepModels) {
@@ -631,6 +631,13 @@ func (m Model) handleModelConfigKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			state.step = configStepProvider
 			state.cursor = 0
 			state.message = i18n.T("config.saved_notice")
+			m.syncRuntimePlaceholder()
+			if m.mode == modeNew {
+				m.textarea.Placeholder = placeholderForNewMode(m.startupMode)
+			}
+			m.refreshDetailViewport()
+			m.refreshStateViewport()
+			m.refreshEventViewport()
 		}
 	case configStepAddPicker:
 		moveConfigCursor(state, msg, len(state.presetChoices))
@@ -811,11 +818,11 @@ func parseContextWindowInput(input string) (int, error) {
 	}
 	number, err := strconv.ParseFloat(value, 64)
 	if err != nil || number <= 0 {
-		return 0, fmt.Errorf("上下文窗口请输入正整数、128K、1M，或留空使用自动值")
+		return 0, fmt.Errorf("%s", i18n.T("config.err_invalid_window"))
 	}
 	result := number * multiplier
 	if result > float64(math.MaxInt) || math.Trunc(result) != result {
-		return 0, fmt.Errorf("上下文窗口超出有效整数范围")
+		return 0, fmt.Errorf("%s", i18n.T("config.err_window_overflow"))
 	}
 	return int(result), nil
 }
@@ -828,9 +835,8 @@ func renderModelConfigModal(width int, state *modelConfigState) string {
 	boxW := min(max(60, width*3/5), 76, width-4)
 	contentW := paddedModalContentWidth(boxW)
 	var lines []string
-	title := "/config 配置模型"
-	hint := "↑↓ 选择 · Enter 确认 · Esc 取消"
-
+	title := "/config " + i18n.T("config.title")
+	hint := i18n.T("setup.nav_hint")
 	switch state.step {
 	case configStepProvider:
 		lines = append(lines, configHeading(i18n.T("config.title")))
@@ -851,45 +857,45 @@ func renderModelConfigModal(width int, state *modelConfigState) string {
 		lines = append(lines, configHeading(i18n.T("setup.provider_select")))
 		lines = append(lines, renderConfigChoices(labelsForProviderChoices(state.presetChoices), state.cursor, contentW, 12)...)
 	case configStepCustomName:
-		lines = append(lines, configHeading("自定义 Provider 名称"), renderConfigTextInput(&state.input, contentW))
-		hint = configInputHint
+		lines = append(lines, configHeading(i18n.T("config.custom_provider_name")), renderConfigTextInput(&state.input, contentW))
+		hint = i18n.T("config.hint_input_ctrl_u")
 	case configStepHub:
 		heading := state.provider
 		if !state.existing {
-			heading += "（新增）"
+			heading += " (" + i18n.T("config.new_badge") + ")"
 		}
 		lines = append(lines, configHeading(heading))
 		lines = append(lines, renderProviderHubFields(state, contentW)...)
 		if state.snapshot.ConfigPath != "" {
-			advanced := "高级配置（extra / extra_body / stream_idle_timeout）：" + state.snapshot.ConfigPath
+			advanced := i18n.T("config.advanced_label") + ": " + state.snapshot.ConfigPath
 			lines = append(lines, "")
 			lines = appendWrappedConfigText(lines, advanced, contentW, lipgloss.NewStyle().Foreground(colorDim))
 		}
 		if state.editingField != "" {
-			hint = "输入 · Enter 确认 · Esc 取消"
+			hint = i18n.T("config.hint_input")
 		} else {
-			hint = "↑↓ 选择 · Enter 编辑/进入 · Esc 返回"
+			hint = i18n.T("config.hint_hub")
 			fields := state.hubFields()
 			if state.apiKeyOptional && state.cursor >= 0 && state.cursor < len(fields) && fields[state.cursor].id == "key" {
-				hint += " · Delete 清除"
+				hint += " · " + i18n.T("config.hint_delete_key")
 			}
 			if state.cursor >= 0 && state.cursor < len(fields) && fields[state.cursor].id == "test" {
-				lines = append(lines, lipgloss.NewStyle().Foreground(colorDim).Render("测试会发送最小请求，可能产生少量 API 用量"))
+				lines = append(lines, lipgloss.NewStyle().Foreground(colorDim).Render(i18n.T("config.test_api_notice")))
 			}
 		}
 	case configStepProtocol:
-		lines = append(lines, configHeading("API 协议类型"))
+		lines = append(lines, configHeading(i18n.T("setup.protocol_title")))
 		lines = append(lines, renderConfigChoices(configProtocols, state.cursor, contentW, 8)...)
 	case configStepAPI:
 		lines = append(lines, configHeading("OpenAI Endpoint"))
 		lines = append(lines, renderConfigChoices([]string{"chat · /v1/chat/completions", "responses · /v1/responses"}, state.cursor, contentW, 8)...)
 	case configStepModels:
-		lines = append(lines, configHeading("管理模型列表"))
+		lines = append(lines, configHeading(i18n.T("config.models_title")))
 		lines = append(lines, renderModelConfigRows(state, contentW)...)
 		if state.editingField != "" {
-			hint = "输入 · Enter 确认 · Esc 取消"
+			hint = i18n.T("config.hint_input")
 		} else {
-			hint = "↑↓ 行 · ←→ 字段 · Enter 编辑 · Delete 删除 · Esc 返回"
+			hint = i18n.T("config.hint_models")
 		}
 	}
 
@@ -932,9 +938,9 @@ func renderModelConfigRows(state *modelConfigState, contentW int) []string {
 		nameW = max(12, contentW-2-contextW-2)
 	}
 
-	header := "  " + padConfigCell("模型 ID", nameW) + "  " + padConfigCell("上下文窗口", contextW)
+	header := "  " + padConfigCell(i18n.T("config.col_model_id"), nameW) + "  " + padConfigCell(i18n.T("config.col_context_window"), contextW)
 	if refsW > 0 {
-		header += "  " + padConfigCell("引用", refsW)
+		header += "  " + padConfigCell(i18n.T("config.col_references"), refsW)
 	}
 	lines := []string{lipgloss.NewStyle().Foreground(colorDim).Render(header)}
 
@@ -951,13 +957,13 @@ func renderModelConfigRows(state *modelConfigState, contentW int) []string {
 			if selected {
 				style = style.Foreground(colorAccent).Bold(true)
 			}
-			lines = append(lines, marker+style.Render("+ 新增模型…"))
+			lines = append(lines, marker+style.Render("+ "+i18n.T("config.add_model")+"…"))
 			continue
 		}
 
 		model := state.models[i]
 		name := padConfigCell(model.Name, nameW)
-		window := "自动"
+		window := i18n.T("config.auto")
 		if model.ContextWindow > 0 {
 			window = formatContextWindow(model.ContextWindow)
 		}

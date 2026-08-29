@@ -171,16 +171,29 @@ func TestOverrideVoice_SharesAssemblyPath(t *testing.T) {
 	}
 }
 
-func TestLoad_StoryLanguageVietnamese(t *testing.T) {
-	b := Load("default", LoadOptions{StoryLanguage: "vi"})
-	for role, prompt := range map[string]string{
-		"ArchitectShort": b.Prompts.ArchitectShort,
-		"ArchitectLong":  b.Prompts.ArchitectLong,
-		"Writer":         b.Prompts.Writer,
-		"Editor":         b.Prompts.Editor,
-	} {
-		if !strings.Contains(prompt, "Story Language: Tiếng Việt") {
-			t.Errorf("role %s prompt should contain Vietnamese story language directive", role)
-		}
+func TestLoad_StoryLanguageDirectives(t *testing.T) {
+	tests := []struct {
+		lang    string
+		keyword string
+	}{
+		{"vi", "Story Language: Tiếng Việt"},
+		{"en", "Story Language: English"},
+		{"zh", "Story Language: 中文"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.lang, func(t *testing.T) {
+			b := Load("default", LoadOptions{StoryLanguage: tt.lang})
+			for role, prompt := range map[string]string{
+				"ArchitectShort": b.Prompts.ArchitectShort,
+				"ArchitectLong":  b.Prompts.ArchitectLong,
+				"Writer":         b.Prompts.Writer,
+				"Editor":         b.Prompts.Editor,
+			} {
+				if !strings.Contains(prompt, tt.keyword) {
+					t.Errorf("role %s prompt should contain %q directive", role, tt.keyword)
+				}
+			}
+		})
 	}
 }

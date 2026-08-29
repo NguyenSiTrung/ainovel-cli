@@ -603,11 +603,11 @@ func (m Model) handleRuntimeMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 		m.modelConfig.testing = false
 		m.modelConfig.testCancel = nil
 		if errors.Is(msg.err, context.Canceled) {
-			m.modelConfig.message = "连接测试已取消"
+			m.modelConfig.message = i18n.T("config.test_cancelled")
 		} else if msg.err != nil {
 			m.modelConfig.message = msg.err.Error()
 		} else {
-			m.modelConfig.message = "连接测试成功：" + msg.model
+			m.modelConfig.message = fmt.Sprintf(i18n.T("config.test_success"), msg.model)
 		}
 		return m, nil, true
 	case startResultMsg:
