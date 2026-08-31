@@ -93,6 +93,8 @@ type Model struct {
 	starting       bool // UI 已进入工作台，Host 正在执行启动初始化
 	startupMode    startupMode
 	importHint     string // 启动时检测到未完成导入的提示（欢迎屏显示；发起导入后清空）
+	updateHint     string // 启动版本检查发现新版本的提示（欢迎屏显示；详情经事件流浮出）
+	disableUpdateCheck bool // 配置关闭启动版本检查（bootstrap.Config.DisableUpdateCheck）
 	cocreateSeq    int
 	reportSeq      int
 	err            error
@@ -160,7 +162,7 @@ func NewModel(rt *host.Host, version string) Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(
+	cmds := []tea.Cmd{
 		textarea.Blink,
 		listenEvents(m.runtime),
 		listenDone(m.runtime),
@@ -168,7 +170,12 @@ func (m Model) Init() tea.Cmd {
 		tickSnapshot(m.runtime),
 		bootstrapRuntime(m.runtime),
 		tickSpinner(),
-	)
+	}
+	// 启动版本检查：后台一次，命中才浮出提醒（checkForUpdate 内部静默所有失败）。
+	if !m.disableUpdateCheck {
+		cmds = append(cmds, checkForUpdate(m.version))
+	}
+	return tea.Batch(cmds...)
 }
 
 func (m *Model) paneAtMouse(x, y int) (focusPane, bool) {
@@ -646,7 +653,7 @@ func (m Model) View() string {
 		if m.err != nil {
 			errMsg = m.err.Error()
 		}
-		body = renderWelcome(m.width, bodyH, errMsg, m.startupMode, m.importHint)
+		body = renderWelcome(m.width, bodyH, errMsg, m.startupMode, m.importHint, m.updateHint)
 	} else {
 		leftW := m.sidebarWidth()
 		rightW := m.detailWidth()

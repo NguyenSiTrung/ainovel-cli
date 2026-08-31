@@ -29,6 +29,7 @@ func Run(cfg bootstrap.Config, bundle assets.Bundle, build buildversion.Info) er
 	defer rt.Close()
 
 	m := NewModel(rt, build.Version)
+	m.disableUpdateCheck = cfg.DisableUpdateCheck
 	if logErr := rt.FileLogError(); logErr != nil {
 		logWarning := fmt.Errorf("文件日志不可用，已继续使用终端日志：%w", logErr)
 		m.err = logWarning

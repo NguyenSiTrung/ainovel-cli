@@ -2,12 +2,15 @@ package tui
 
 import (
 	"context"
+	"path/filepath"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/voocel/ainovel-cli/internal/bootstrap"
 	"github.com/voocel/ainovel-cli/internal/diag"
 	"github.com/voocel/ainovel-cli/internal/host"
 	"github.com/voocel/ainovel-cli/internal/store"
+	buildversion "github.com/voocel/ainovel-cli/internal/version"
 )
 
 // 消息类型
@@ -53,9 +56,29 @@ type (
 	streamClearMsg     struct{}  // 清空流式缓冲（新消息开始）
 	streamFlushTickMsg struct{}  // 流式刷新节流（仅有待刷数据时调度）
 	quitResetMsg       struct{}  // 双次 Ctrl+C 超时重置
+	updateAvailableMsg struct {  // 启动版本检查命中新版本（result 非 nil 才会发出）
+		result *buildversion.CheckResult
+	}
 )
 
 // --- Cmd 函数 ---
+
+// checkForUpdate 后台查询上游新版本（5s 超时，24h 缓存节流）。失败与"无更新"
+// 都返回 nil——检查是纯提醒，任何网络问题都不该打扰用户。
+func checkForUpdate(currentVersion string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		res, err := buildversion.CheckUpdate(ctx, buildversion.CheckOptions{
+			CurrentVersion: currentVersion,
+			CachePath:      filepath.Join(bootstrap.DefaultConfigDir(), "update-check.json"),
+		})
+		if err != nil || res == nil || !res.UpdateAvailable {
+			return nil
+		}
+		return updateAvailableMsg{result: res}
+	}
+}
 
 func listenEvents(rt *host.Host) tea.Cmd {
 	return func() tea.Msg {
