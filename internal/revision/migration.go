@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"reflect"
 	"slices"
 	"sort"
 	"strings"
@@ -32,7 +31,7 @@ type legacyCommitArgs struct {
 }
 
 // MigrateLegacyBaseline 为 chapter_records 出现前创建的作品补齐接纳基线。
-// 成功提交会话保存完整章节事实，草稿保存当时的正文；只使用这两份历史事实，
+// 已有记录保持原样；缺失记录只使用成功提交中的章节事实和当时的草稿，
 // 不会把可能已被用户修改的 chapters/*.md 静默当成已接纳版本。
 func MigrateLegacyBaseline(st *store.Store) error {
 	progress, err := st.Progress.Load()
@@ -45,88 +44,85 @@ func MigrateLegacyBaseline(st *store.Store) error {
 
 	chapters := slices.Clone(progress.CompletedChapters)
 	slices.Sort(chapters)
-	missing := false
+	records := make([]domain.ChapterRecord, 0, len(chapters))
+	pending := make([]domain.ChapterRecord, 0)
+	var commits map[int]legacyCommit
 	for _, chapter := range chapters {
 		record, err := st.ChapterRecords.Load(chapter)
 		if err != nil {
 			return err
 		}
-		missing = missing || record == nil
-	}
-	if !missing {
-		records, err := st.ChapterRecords.LoadCompleted(chapters)
-		if err != nil {
-			return err
+		if record != nil {
+			records = append(records, *record)
+			continue
 		}
-		return ValidateRecords(records)
-	}
 
-	commits, err := loadLegacyCommits(st.Dir())
-	if err != nil {
-		return err
-	}
-	records := make([]domain.ChapterRecord, 0, len(chapters))
-	for _, chapter := range chapters {
-		commit, ok := commits[chapter]
-		if !ok {
-			commit, ok, err = loadLegacyImportCommit(st.Dir(), chapter)
+		if commits == nil {
+			commits, err = loadLegacyCommits(st.Dir())
 			if err != nil {
 				return err
 			}
 		}
-		if !ok {
-			return fmt.Errorf("第 %d 章缺少可验证的成功提交或导入分析记录，无法建立修订基线", chapter)
-		}
-		if err := chapterfacts.Validate(commit.facts); err != nil {
-			return fmt.Errorf("第 %d 章历史提交事实无效: %w", chapter, err)
-		}
-		draft, err := st.Drafts.LoadDraft(chapter)
+		migrated, err := buildLegacyRecord(st, chapter, commits)
 		if err != nil {
-			return fmt.Errorf("读取第 %d 章历史草稿: %w", chapter, err)
-		}
-		if strings.TrimSpace(draft) == "" {
-			return fmt.Errorf("第 %d 章缺少历史草稿，无法确认已接纳正文", chapter)
-		}
-		if err := verifyLegacySummary(st, chapter, commit.facts); err != nil {
 			return err
 		}
-		acceptedAt := commit.acceptedAt
-		if acceptedAt.IsZero() {
-			if cp := st.Checkpoints.LatestByStep(domain.ChapterScope(chapter), "commit"); cp != nil {
-				acceptedAt = cp.OccurredAt
-			}
-		}
-		if acceptedAt.IsZero() {
-			return fmt.Errorf("第 %d 章成功提交记录缺少时间，无法建立修订基线", chapter)
-		}
-		content := domain.NormalizeChapterContent(draft)
-		records = append(records, domain.ChapterRecord{
-			Version: domain.ChapterRecordVersion, Chapter: chapter, Revision: 1,
-			Origin: domain.ChapterOriginGenerated, Content: content,
-			ContentSHA256: domain.ChapterContentSHA256(content), Facts: commit.facts,
-			AcceptedAt: acceptedAt,
-		})
+		records = append(records, migrated)
+		pending = append(pending, migrated)
 	}
 	if err := ValidateRecords(records); err != nil {
-		return fmt.Errorf("历史章节事实无法形成一致基线: %w", err)
+		return fmt.Errorf("章节接纳记录无法形成一致基线: %w", err)
 	}
 
-	for _, expected := range records {
-		existing, err := st.ChapterRecords.Load(expected.Chapter)
-		if err != nil {
-			return err
-		}
-		if existing != nil {
-			if !sameLegacyRecord(*existing, expected) {
-				return fmt.Errorf("第 %d 章已有接纳记录与迁移基线冲突", expected.Chapter)
-			}
-			continue
-		}
-		if err := st.ChapterRecords.Save(expected); err != nil {
-			return fmt.Errorf("保存第 %d 章修订基线: %w", expected.Chapter, err)
+	for _, record := range pending {
+		if err := st.ChapterRecords.Save(record); err != nil {
+			return fmt.Errorf("保存第 %d 章修订基线: %w", record.Chapter, err)
 		}
 	}
 	return nil
+}
+
+func buildLegacyRecord(st *store.Store, chapter int, commits map[int]legacyCommit) (domain.ChapterRecord, error) {
+	commit, ok := commits[chapter]
+	if !ok {
+		var err error
+		commit, ok, err = loadLegacyImportCommit(st.Dir(), chapter)
+		if err != nil {
+			return domain.ChapterRecord{}, err
+		}
+	}
+	if !ok {
+		return domain.ChapterRecord{}, fmt.Errorf("第 %d 章缺少可验证的成功提交或导入分析记录，无法建立修订基线", chapter)
+	}
+	if err := chapterfacts.Validate(commit.facts); err != nil {
+		return domain.ChapterRecord{}, fmt.Errorf("第 %d 章历史提交事实无效: %w", chapter, err)
+	}
+	draft, err := st.Drafts.LoadDraft(chapter)
+	if err != nil {
+		return domain.ChapterRecord{}, fmt.Errorf("读取第 %d 章历史草稿: %w", chapter, err)
+	}
+	if strings.TrimSpace(draft) == "" {
+		return domain.ChapterRecord{}, fmt.Errorf("第 %d 章缺少历史草稿，无法确认已接纳正文", chapter)
+	}
+	if err := verifyLegacySummary(st, chapter, commit.facts); err != nil {
+		return domain.ChapterRecord{}, err
+	}
+	acceptedAt := commit.acceptedAt
+	if acceptedAt.IsZero() {
+		if cp := st.Checkpoints.LatestByStep(domain.ChapterScope(chapter), "commit"); cp != nil {
+			acceptedAt = cp.OccurredAt
+		}
+	}
+	if acceptedAt.IsZero() {
+		return domain.ChapterRecord{}, fmt.Errorf("第 %d 章成功提交记录缺少时间，无法建立修订基线", chapter)
+	}
+	content := domain.NormalizeChapterContent(draft)
+	return domain.ChapterRecord{
+		Version: domain.ChapterRecordVersion, Chapter: chapter, Revision: 1,
+		Origin: domain.ChapterOriginGenerated, Content: content,
+		ContentSHA256: domain.ChapterContentSHA256(content), Facts: commit.facts,
+		AcceptedAt: acceptedAt,
+	}, nil
 }
 
 func verifyLegacySummary(st *store.Store, chapter int, facts domain.ChapterFacts) error {
@@ -142,13 +138,6 @@ func verifyLegacySummary(st *store.Store, chapter int, facts domain.ChapterFacts
 		return fmt.Errorf("第 %d 章摘要与成功提交记录不一致，拒绝猜测迁移", chapter)
 	}
 	return nil
-}
-
-func sameLegacyRecord(a, b domain.ChapterRecord) bool {
-	return a.Version == b.Version && a.Chapter == b.Chapter && a.Revision == b.Revision &&
-		a.Origin == b.Origin && a.Content == b.Content && a.ContentSHA256 == b.ContentSHA256 &&
-		reflect.DeepEqual(a.Facts, b.Facts) && reflect.DeepEqual(a.StyleDelta, b.StyleDelta) &&
-		a.AcceptedAt.Equal(b.AcceptedAt)
 }
 
 func loadLegacyCommits(dir string) (map[int]legacyCommit, error) {

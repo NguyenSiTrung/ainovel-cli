@@ -40,9 +40,10 @@ type Store struct {
 }
 
 const (
-	LegacyProjectFormatVersion  = 1
-	CurrentProjectFormatVersion = 2
-	projectFormatPath           = "meta/format.json"
+	LegacyProjectFormatVersion        = 1
+	ChapterRecordProjectFormatVersion = 2
+	CurrentProjectFormatVersion       = 3
+	projectFormatPath                 = "meta/format.json"
 )
 
 type projectFormat struct {

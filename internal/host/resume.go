@@ -28,6 +28,8 @@ func upgradeProject(st *storepkg.Store) error {
 			if err := migrateLegacyBook(st); err != nil {
 				return fmt.Errorf("升级项目数据 v%d→v%d: %w", version, next, err)
 			}
+		case storepkg.ChapterRecordProjectFormatVersion:
+			// v3 补齐 v2 可能遗漏的接纳记录；已有记录由迁移函数原样保留。
 			if err := revision.MigrateLegacyBaseline(st); err != nil {
 				return fmt.Errorf("升级项目数据 v%d→v%d: %w", version, next, err)
 			}
