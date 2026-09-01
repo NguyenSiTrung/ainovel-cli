@@ -582,7 +582,7 @@ func TestFinalizeContextPayloadReportsAppliedTrimming(t *testing.T) {
 	}
 }
 
-func TestProjectLayeredOutlineCompactsOnlyCompletedArcs(t *testing.T) {
+func TestProjectLayeredOutlineKeepsOnlyFocusedArcDetails(t *testing.T) {
 	volumes := []domain.VolumeOutline{{
 		Index: 1,
 		Arcs: []domain.ArcOutline{
@@ -591,8 +591,11 @@ func TestProjectLayeredOutlineCompactsOnlyCompletedArcs(t *testing.T) {
 		},
 	}}
 
-	projected := projectLayeredOutlineForPlanning(volumes, 2)
-	if got := projected[0].Arcs[0]; got.Status != "completed" || len(got.Chapters) != 0 || got.StartChapter != 1 || got.EndChapter != 2 {
+	projected, detailIncluded := projectLayeredOutlineForPlanning(volumes, 2, 1, 2)
+	if !detailIncluded {
+		t.Fatal("expected focused arc details")
+	}
+	if got := projected[0].Arcs[0]; got.Status != "completed" || len(got.Chapters) != 0 || !got.ChaptersOmitted || got.StartChapter != 1 || got.EndChapter != 2 {
 		t.Fatalf("completed arc projection = %+v", got)
 	}
 	if got := projected[0].Arcs[1]; got.Status != "expanded" || len(got.Chapters) != 2 || got.StartChapter != 3 || got.EndChapter != 4 {
@@ -606,7 +609,6 @@ func TestContextToolLongLayeredPlanningStaysWithinBudget(t *testing.T) {
 		t.Fatal(err)
 	}
 	volumes := make([]domain.VolumeOutline, 10)
-	completed := make([]int, 0, 500)
 	chapter := 0
 	for vi := range volumes {
 		volumes[vi] = domain.VolumeOutline{Index: vi + 1, Title: fmt.Sprintf("卷%d", vi+1), Theme: strings.Repeat("主题", 10)}
@@ -614,7 +616,6 @@ func TestContextToolLongLayeredPlanningStaysWithinBudget(t *testing.T) {
 			arc := domain.ArcOutline{Index: ai + 1, Title: fmt.Sprintf("弧%d", ai+1), Goal: strings.Repeat("目标", 20)}
 			for ci := 0; ci < 5; ci++ {
 				chapter++
-				completed = append(completed, chapter)
 				arc.Chapters = append(arc.Chapters, domain.OutlineEntry{
 					Title: fmt.Sprintf("第%d章", chapter), CoreEvent: strings.Repeat("关键事件", 30),
 					Hook: strings.Repeat("悬念", 20), Scenes: []string{strings.Repeat("场景", 20)},
@@ -626,9 +627,13 @@ func TestContextToolLongLayeredPlanningStaysWithinBudget(t *testing.T) {
 	if err := s.Outline.SaveLayeredOutline(volumes); err != nil {
 		t.Fatal(err)
 	}
+	completed := make([]int, 297)
+	for i := range completed {
+		completed[i] = i + 1
+	}
 	if err := s.Progress.Save(&domain.Progress{
 		Phase: domain.PhaseWriting, Layered: true, CompletedChapters: completed,
-		CurrentVolume: 10, CurrentArc: 10,
+		CurrentVolume: 6, CurrentArc: 10,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -640,17 +645,101 @@ func TestContextToolLongLayeredPlanningStaysWithinBudget(t *testing.T) {
 	if len(raw) > 60*1024 {
 		t.Fatalf("architect payload = %d bytes, budget = %d", len(raw), 60*1024)
 	}
-	var payload map[string]any
+	var payload struct {
+		PlanningMemory struct {
+			LayeredOutline []planningVolumeOutline `json:"layered_outline"`
+		} `json:"planning_memory"`
+	}
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		t.Fatal(err)
 	}
-	planning := payload["planning_memory"].(map[string]any)
-	encoded, err := json.Marshal(planning["layered_outline"])
+	current := payload.PlanningMemory.LayeredOutline[5].Arcs[9]
+	if len(current.Chapters) != 5 {
+		t.Fatalf("current arc chapters = %d, want 5", len(current.Chapters))
+	}
+	future := payload.PlanningMemory.LayeredOutline[6].Arcs[0]
+	if len(future.Chapters) != 0 || !future.ChaptersOmitted {
+		t.Fatalf("future arc projection = %+v", future)
+	}
+
+	focusedRaw, err := newTestContextTool(s, References{}, "default").Execute(
+		context.Background(),
+		json.RawMessage(`{"volume":7,"arc":1}`),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(encoded), "关键事件") {
-		t.Fatal("completed chapter details must not remain in architect planning projection")
+	var focusedPayload struct {
+		PlanningMemory struct {
+			LayeredOutline []planningVolumeOutline `json:"layered_outline"`
+		} `json:"planning_memory"`
+	}
+	if err := json.Unmarshal(focusedRaw, &focusedPayload); err != nil {
+		t.Fatal(err)
+	}
+	focused := focusedPayload.PlanningMemory.LayeredOutline[6].Arcs[0]
+	if len(focused.Chapters) != 5 || focused.ChaptersOmitted {
+		t.Fatalf("focused arc projection = %+v", focused)
+	}
+}
+
+func TestContextToolValidatesPlanningDetailScope(t *testing.T) {
+	s := store.NewStore(t.TempDir())
+	if err := s.Init(); err != nil {
+		t.Fatal(err)
+	}
+	tool := newTestContextTool(s, References{}, "default")
+	if _, err := tool.Execute(context.Background(), json.RawMessage(`{"volume":1}`)); err == nil || !strings.Contains(err.Error(), "provided together") {
+		t.Fatalf("expected paired planning scope error, got %v", err)
+	}
+	if err := s.Outline.SaveLayeredOutline([]domain.VolumeOutline{{Index: 1, Arcs: []domain.ArcOutline{{Index: 1}}}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tool.Execute(context.Background(), json.RawMessage(`{"volume":2,"arc":1}`)); err == nil || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("expected missing planning scope error, got %v", err)
+	}
+	if _, err := tool.Execute(context.Background(), json.RawMessage(`{"volume":1,"arc":1}`)); err == nil || !strings.Contains(err.Error(), "not expanded") {
+		t.Fatalf("expected unexpanded planning scope error, got %v", err)
+	}
+
+	if err := s.Outline.SaveLayeredOutline([]domain.VolumeOutline{{
+		Index: 1,
+		Arcs: []domain.ArcOutline{{
+			Index:    1,
+			Chapters: []domain.OutlineEntry{{Title: "一"}, {Title: "二"}},
+		}},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Progress.Save(&domain.Progress{CompletedChapters: []int{1, 2}, CurrentVolume: 1, CurrentArc: 1}); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := tool.Execute(context.Background(), json.RawMessage(`{"volume":1,"arc":1}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		PlanningMemory struct {
+			LayeredOutline []planningVolumeOutline `json:"layered_outline"`
+			OutlineDetail  map[string]int          `json:"outline_detail"`
+		} `json:"planning_memory"`
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		t.Fatal(err)
+	}
+	focused := payload.PlanningMemory.LayeredOutline[0].Arcs[0]
+	if focused.Status != "completed" || len(focused.Chapters) != 2 || focused.ChaptersOmitted {
+		t.Fatalf("completed focused arc projection = %+v", focused)
+	}
+	if payload.PlanningMemory.OutlineDetail["volume"] != 1 || payload.PlanningMemory.OutlineDetail["arc"] != 1 {
+		t.Fatalf("outline detail = %+v", payload.PlanningMemory.OutlineDetail)
+	}
+
+	if err := s.Outline.ClearLayeredOutline(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tool.Execute(context.Background(), json.RawMessage(`{"volume":1,"arc":1}`)); err == nil || !strings.Contains(err.Error(), "requires a layered outline") {
+		t.Fatalf("expected flat outline planning scope error, got %v", err)
 	}
 }
 
