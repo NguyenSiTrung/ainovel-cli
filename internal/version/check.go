@@ -3,13 +3,15 @@ package version
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/mod/semver"
 )
 
 // DefaultRepo 是版本检查与自更新默认指向的上游仓库。
@@ -31,7 +33,7 @@ type CheckOptions struct {
 }
 
 // CheckResult 是版本检查的结论。Notes 携带 release 原文（markdown），
-// 供调用方在详情面板展示"更新了什么"，升级与否由用户决定。
+// 调用方展示前必须按自身输出介质清理；升级与否由用户决定。
 type CheckResult struct {
 	Latest          string
 	Current         string
@@ -40,8 +42,7 @@ type CheckResult struct {
 	FromCache       bool
 }
 
-// checkCache 是 CachePath 的落盘结构。损坏或残缺的缓存视为不存在
-//（下次启动重新联网），不构成错误。
+// checkCache 是 CachePath 的落盘结构。
 type checkCache struct {
 	LastCheck time.Time `json:"last_check"`
 	Latest    string    `json:"latest"`
@@ -50,7 +51,7 @@ type checkCache struct {
 
 // CheckUpdate 查询上游最新 release 并判断是否需要提醒升级。只读不写任何
 // 二进制；是否升级、何时升级完全由用户经 `ainovel-cli update` 决定。
-// 网络失败时回退过期缓存（旧提醒好过没有）；完全无数据返回 error，由调用方静默。
+// 缓存或网络失败均通过 error 暴露；缓存写入失败时仍返回已经取得的检查结果。
 func CheckUpdate(ctx context.Context, opts CheckOptions) (*CheckResult, error) {
 	current := Normalize(opts.CurrentVersion)
 	if current == "dev" {
@@ -66,13 +67,25 @@ func CheckUpdate(ctx context.Context, opts CheckOptions) (*CheckResult, error) {
 		maxAge = DefaultCheckInterval
 	}
 
-	var stale *checkCache
+	var cacheErr error
 	if opts.CachePath != "" {
-		if c, ok := loadCache(opts.CachePath); ok {
-			if time.Since(c.LastCheck) <= maxAge {
-				return c.result(current), nil
+		c, err := loadCache(opts.CachePath)
+		switch {
+		case err == nil:
+			age := time.Since(c.LastCheck)
+			if age < 0 {
+				cacheErr = fmt.Errorf("update check cache timestamp is in the future: %s", c.LastCheck.Format(time.RFC3339))
+			} else if age <= maxAge {
+				result, resultErr := c.result(current)
+				if resultErr == nil {
+					return result, nil
+				}
+				cacheErr = fmt.Errorf("validate update check cache: %w", resultErr)
 			}
-			stale = c // 过期但结构完整：留作网络失败的兜底
+		case errors.Is(err, os.ErrNotExist):
+			// 首次检查没有缓存是正常状态。
+		default:
+			cacheErr = fmt.Errorf("load update check cache: %w", err)
 		}
 	}
 
@@ -82,56 +95,59 @@ func CheckUpdate(ctx context.Context, opts CheckOptions) (*CheckResult, error) {
 	}
 	rel, err := fetchRelease(ctx, client, repo, "latest")
 	if err != nil {
-		if stale != nil {
-			return stale.result(current), nil
-		}
-		return nil, err
+		return nil, errors.Join(cacheErr, err)
 	}
 	if rel.TagName == "" {
-		if stale != nil {
-			return stale.result(current), nil
-		}
-		return nil, fmt.Errorf("release 缺少 tag_name")
+		return nil, errors.Join(cacheErr, fmt.Errorf("release 缺少 tag_name"))
 	}
 
-	// 缓存写失败只影响下次节流，本次结果照常返回。
-	_ = writeCache(opts.CachePath, rel)
+	result, err := newCheckResult(rel.TagName, current, rel.Body, false)
+	if err != nil {
+		return nil, errors.Join(cacheErr, err)
+	}
+	if err := writeCache(opts.CachePath, rel); err != nil {
+		cacheErr = errors.Join(cacheErr, fmt.Errorf("write update check cache: %w", err))
+	}
+	// 缓存错误作为伴随错误返回，调用方应记录它，但仍可使用检查结果。
+	return result, cacheErr
+}
+
+func newCheckResult(latest, current, notes string, fromCache bool) (*CheckResult, error) {
+	updateAvailable, err := isNewer(latest, current)
+	if err != nil {
+		return nil, err
+	}
 	return &CheckResult{
-		Latest:          rel.TagName,
+		Latest:          latest,
 		Current:         current,
-		Notes:           rel.Body,
-		UpdateAvailable: isNewer(rel.TagName, current),
+		Notes:           notes,
+		UpdateAvailable: updateAvailable,
+		FromCache:       fromCache,
 	}, nil
 }
 
-// loadCache 读取并解析缓存；文件不存在、损坏或字段残缺一律视为无缓存。
-func loadCache(path string) (*checkCache, bool) {
+// loadCache 读取并校验缓存；文件不存在、损坏和字段缺失由调用方分别处理。
+func loadCache(path string) (*checkCache, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
 	var c checkCache
 	if err := json.Unmarshal(data, &c); err != nil {
-		return nil, false
+		return nil, fmt.Errorf("decode cache: %w", err)
 	}
 	if c.Latest == "" || c.LastCheck.IsZero() {
-		return nil, false
+		return nil, fmt.Errorf("cache missing latest or last_check")
 	}
-	return &c, true
+	return &c, nil
 }
 
 // result 把缓存内容转换为检查结论（FromCache=true）。
-func (c *checkCache) result(current string) *CheckResult {
-	return &CheckResult{
-		Latest:          c.Latest,
-		Current:         current,
-		Notes:           c.Notes,
-		UpdateAvailable: isNewer(c.Latest, current),
-		FromCache:       true,
-	}
+func (c *checkCache) result(current string) (*CheckResult, error) {
+	return newCheckResult(c.Latest, current, c.Notes, true)
 }
 
-// writeCache 落盘本次检查结果。目录不存在则创建；缓存丢失只意味着下次多一次联网。
+// writeCache 原子落盘本次检查结果。目录不存在则创建。
 func writeCache(path string, rel *release) error {
 	if path == "" {
 		return nil
@@ -145,50 +161,46 @@ func writeCache(path string, rel *release) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o644)
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".update-check-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	committed := false
+	defer func() {
+		_ = tmp.Close()
+		if !committed {
+			_ = os.Remove(tmpPath)
+		}
+	}()
+	if err := tmp.Chmod(0o600); err != nil {
+		return err
+	}
+	if _, err := tmp.Write(append(data, '\n')); err != nil {
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		return err
+	}
+	committed = true
+	return nil
 }
 
-// isNewer 判断 latest 是否语义上新于 current。两边剥 "v" 前缀后按 "." 分段
-// 做数字比较，短的一方补零。任一段无法解析为非负整数（含 pre-release 后缀
-// 如 1.2.3-rc1）时保守返回 false——宁可漏提醒，不误提醒。
-func isNewer(latest, current string) bool {
-	a, ok := parseSemver(latest)
-	if !ok {
-		return false
+// isNewer 使用完整 SemVer 规则比较版本；非法版本显式返回错误，避免静默漏报。
+func isNewer(latest, current string) (bool, error) {
+	latest = Normalize(latest)
+	current = Normalize(current)
+	if !semver.IsValid(latest) {
+		return false, fmt.Errorf("invalid latest version %q", latest)
 	}
-	b, ok := parseSemver(current)
-	if !ok {
-		return false
+	if !semver.IsValid(current) {
+		return false, fmt.Errorf("invalid current version %q", current)
 	}
-	n := max(len(a), len(b))
-	for i := 0; i < n; i++ {
-		x, y := 0, 0
-		if i < len(a) {
-			x = a[i]
-		}
-		if i < len(b) {
-			y = b[i]
-		}
-		if x != y {
-			return x > y
-		}
-	}
-	return false
-}
-
-func parseSemver(v string) ([]int, bool) {
-	v = strings.TrimPrefix(strings.TrimSpace(v), "v")
-	if v == "" {
-		return nil, false
-	}
-	parts := strings.Split(v, ".")
-	nums := make([]int, 0, len(parts))
-	for _, p := range parts {
-		n, err := strconv.Atoi(p)
-		if err != nil || n < 0 {
-			return nil, false
-		}
-		nums = append(nums, n)
-	}
-	return nums, true
+	return semver.Compare(latest, current) > 0, nil
 }

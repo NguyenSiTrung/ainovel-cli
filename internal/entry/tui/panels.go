@@ -231,7 +231,6 @@ func renderWelcome(width, height int, errMsg string, mode startupMode, importHin
 	}
 	if updateHint != "" {
 		// 启动版本检查命中新版本：与 importHint 同款强调样式追加一行。
-		// 完整更新内容（release notes）已随 SYSTEM 事件进入事件流/详情面板。
 		b.WriteString("\n")
 		b.WriteString(lipgloss.NewStyle().Foreground(colorAccent2).Bold(true).
 			Render("! " + updateHint))
