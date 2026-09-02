@@ -56,9 +56,11 @@ func Run(cfg bootstrap.Config, bundle assets.Bundle, opts Options) error {
 			return err
 		}
 		fmt.Fprintf(stderr, "headless 启动: %s\n", eng.Dir())
-		// 启动侧确定性生成本书用户规则快照（用原始 prompt 归一化），须在 StartPrepared 前。
+		// Rule normalization is an optional enhancement. Preserve the original
+		// startup path if its model call fails; StartPrepared owns the required
+		// durable startup facts and reports its own real errors.
 		if err := eng.PrepareUserRules(prompt); err != nil {
-			return err
+			fmt.Fprintf(stderr, "警告：用户规则归一化失败，继续按原始创作流程启动：%v\n", err)
 		}
 		if err := eng.StartPrepared(prompt); err != nil {
 			return err

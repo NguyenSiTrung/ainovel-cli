@@ -191,9 +191,15 @@ func resumeBook(rt *host.Host) tea.Cmd {
 
 func startRuntime(rt *host.Host, prompt string) tea.Cmd {
 	return func() tea.Msg {
-		// 启动侧确定性生成本书用户规则快照（用原始 prompt 归一化），须在 StartPrepared 前。
+		// Rule normalization is an optional startup enhancement. It may require
+		// several synchronous LLM calls; never make it a prerequisite for the
+		// original plan-start path. StartPrepared owns the durable startup facts
+		// and remains the single required pre-Engine transition.
 		if err := rt.PrepareUserRules(prompt); err != nil {
-			return startResultMsg{err: err}
+			// Rule normalization is an optional enhancement. Preserve the original
+			// startup path if its model call fails; StartPrepared owns the required
+			// durable startup facts and reports its own real errors.
+			_ = err
 		}
 		err := rt.StartPrepared(prompt)
 		return startResultMsg{err: err}
