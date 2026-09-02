@@ -1531,14 +1531,15 @@ func (h *Host) ReplayQueue(afterSeq int64) ([]domain.RuntimeQueueItem, error) {
 // ── 共创 ──
 
 // CoCreateStream 冷启动共创：从零澄清需求，产出整本书的创作指令。
+// 系统提示 = 共创基础 prompt + 按创作语言选择的对话语言指令。
 func (h *Host) CoCreateStream(ctx context.Context, history []CoCreateMessage, onProgress func(kind, text string)) (CoCreateReply, error) {
-	return coCreateStream(ctx, h.models, h.store.Sessions, coCreateSystemPrompt, history, onProgress)
+	return coCreateStream(ctx, h.models, h.store.Sessions, buildCoCreatePrompt(coCreateSystemPrompt, h.coCreateLang()), history, onProgress)
 }
 
 // StageCoCreateStream 阶段共创：在已写内容的基础上规划后续方向。
-// 系统提示 = 阶段 prompt + 当前故事状态摘要，让助手知道"已经写了什么"。
+// 系统提示 = 阶段 prompt + 对话语言指令 + 当前故事状态摘要，让助手知道"已经写了什么"。
 func (h *Host) StageCoCreateStream(ctx context.Context, history []CoCreateMessage, onProgress func(kind, text string)) (CoCreateReply, error) {
-	return coCreateStream(ctx, h.models, h.store.Sessions, stageSystemPrompt(h.store), history, onProgress)
+	return coCreateStream(ctx, h.models, h.store.Sessions, stageSystemPrompt(h.store, h.coCreateLang()), history, onProgress)
 }
 
 // stagePlanPrefix 把共创产出的"后续方向 brief"包装成一条阶段规划干预，交 Arbiter 裁定。

@@ -9,20 +9,23 @@ import (
 
 	"github.com/voocel/agentcore"
 	"github.com/voocel/ainovel-cli/internal/bootstrap"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 	"github.com/voocel/ainovel-cli/internal/store"
 )
 
 // 冷启动共创：从零澄清需求，产出整本书的创作指令。
-const coCreateSystemPrompt = `你是一个小说共创助手。你的任务不是直接开始写小说，而是通过多轮简短对话帮助用户澄清创作需求，并持续整理出一段可直接交给创作引擎的中文创作指令。
+// 模板不锁定输出语言：给用户看的 <reply> / <suggestions> 与 <draft> 创作指令一律使用
+// 调用方按创作语言注入的「对话语言」（见 coCreateLangDirective / buildCoCreatePrompt）。
+const coCreateSystemPrompt = `你是一个小说共创助手。你的任务不是直接开始写小说，而是通过多轮简短对话帮助用户澄清创作需求，并持续整理出一段可直接交给创作引擎的创作指令（语言见文末「对话语言」）。
 
 每一轮回复严格按以下 XML 格式输出，包含四个标签，依次出现，每个标签都必须有正确的开闭标签：
 
 <reply>
-给用户看的中文自然回复：先回应用户的输入，再最多提出 1 到 2 个当前最关键的问题。如果信息已足够开始创作，告诉用户可以按 Ctrl+S 开始。
+给用户看的自然回复（语言见文末「对话语言」）：先回应用户的输入，再最多提出 1 到 2 个当前最关键的问题。如果信息已足够开始创作，告诉用户可以按 Ctrl+S 开始。
 </reply>
 
 <draft>
-当前完整的创作指令草稿，使用 Markdown：直接从二级标题开始，例如 "## 主题"、"## 关键要素"、"## 待澄清信息"；用项目符号列出要点。每一轮都要在已有结论上**累积更新**，吸收用户最新意图；即使本轮没有新增也要把完整草稿原样再写一次——不要省略、不要写"（保持上一轮）"之类的占位。
+当前完整的创作指令草稿，使用 Markdown：直接从二级标题开始（如 "## 主题"、"## 关键要素"、"## 待澄清信息"——示例仅为结构示意，标题语言同样遵循文末「对话语言」）；用项目符号列出要点。每一轮都要在已有结论上**累积更新**，吸收用户最新意图；即使本轮没有新增也要把完整草稿原样再写一次——不要省略、不要写"（保持上一轮）"之类的占位。
 </draft>
 ` + coCreateProtocolTail
 
@@ -37,11 +40,11 @@ const stageCoCreateSystemPrompt = `你是一个小说"阶段共创"助手。这�
 每一轮回复严格按以下 XML 格式输出，包含四个标签，依次出现，每个标签都必须有正确的开闭标签：
 
 <reply>
-给用户看的中文自然回复：先回应用户的输入，再最多提出 1 到 2 个当前最关键的问题。如果后续方向已足够清晰，告诉用户可以按 Ctrl+S 把方向交给创作引擎、继续创作。
+给用户看的自然回复（语言见文末「对话语言」）：先回应用户的输入，再最多提出 1 到 2 个当前最关键的问题。如果后续方向已足够清晰，告诉用户可以按 Ctrl+S 把方向交给创作引擎、继续创作。
 </reply>
 
 <draft>
-当前完整的"后续方向 brief"，使用 Markdown：直接从二级标题开始，例如 "## 后续走向"、"## 关键转折"、"## 要收的伏笔"、"## 节奏与篇幅"；用项目符号列出要点。每一轮都要在已有结论上**累积更新**，吸收用户最新意图；即使本轮没有新增也要把完整 brief 原样再写一次——不要省略、不要写"（保持上一轮）"之类的占位。
+当前完整的"后续方向 brief"，使用 Markdown：直接从二级标题开始（如 "## 后续走向"、"## 关键转折"、"## 要收的伏笔"、"## 节奏与篇幅"——示例仅为结构示意，标题语言同样遵循文末「对话语言」）；用项目符号列出要点。每一轮都要在已有结论上**累积更新**，吸收用户最新意图；即使本轮没有新增也要把完整 brief 原样再写一次——不要省略、不要写"（保持上一轮）"之类的占位。
 </draft>
 ` + coCreateProtocolTail
 
@@ -67,6 +70,57 @@ const coCreateProtocolTail = `
 - <draft> 内允许多行 Markdown，直接换行书写，不需要任何转义。
 - <ready> 只写 true 或 false。信息已足够时填 true。
 - <ready>true</ready> 时 <suggestions> 可以为空（保留空标签 <suggestions></suggestions> 即可）。`
+
+// coCreateLangDirective 按创作语言返回「对话语言」指令段，附加在系统提示末尾。
+// 与 assets.Load 的 applyStoryLanguageDirectives 同一思路：基础模板只描述结构与协议，
+// 输出语言由追加指令约束；语言以指令自身语言书写，强化模型跟随。未识别/空语言
+// 回退中文（上游默认，行为与旧版硬编码提示词一致）。
+func coCreateLangDirective(lang string) string {
+	switch i18n.NormalizeLanguage(lang) {
+	case i18n.LangVI:
+		return viCoCreateLangDirective
+	case i18n.LangEN:
+		return enCoCreateLangDirective
+	default:
+		return zhCoCreateLangDirective
+	}
+}
+
+// buildCoCreatePrompt 把共创基础模板与对话语言指令拼成最终系统提示。
+// 指令段放在末尾，离输出最近；模板内已多处指向"文末「对话语言」"。
+func buildCoCreatePrompt(base, lang string) string {
+	return base + "\n\n" + coCreateLangDirective(lang)
+}
+
+// coCreateLang 返回共创对话/指令语言：创作语言（story_language）配置优先，
+// 缺省回落界面语言；两者皆空时由 NormalizeLanguage 回退中文（上游默认行为，
+// 与旧版硬编码中文提示词一致，不产生行为漂移）。
+func (h *Host) coCreateLang() string {
+	if h == nil {
+		return ""
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.cfg.StoryLanguage != "" {
+		return i18n.NormalizeLanguage(h.cfg.StoryLanguage)
+	}
+	return i18n.NormalizeLanguage(h.cfg.Language)
+}
+
+const viCoCreateLangDirective = `## Ngôn ngữ đối thoại (Tiếng Việt)
+- Toàn bộ nội dung <reply> và <suggestions> hiển thị cho người dùng PHẢI viết hoàn toàn bằng tiếng Việt tự nhiên.
+- Nội dung <draft> cũng PHẢI viết bằng tiếng Việt, bao gồm cả tiêu đề các mục: các tiêu đề mẫu ở hướng dẫn trên (như "## 主题") chỉ để minh họa cấu trúc — hãy dùng tiêu đề tiếng Việt tương ứng (ví dụ "## Chủ đề", "## Yếu tố then chốt", "## Cần làm rõ").
+- Tuyệt đối không dùng tiếng Trung hoặc ngôn ngữ khác cho nội dung người dùng nhìn thấy.`
+
+const enCoCreateLangDirective = `## Conversation Language (English)
+- All <reply> and <suggestions> content shown to the user MUST be written entirely in natural English.
+- <draft> content MUST also be written in English, including its section headings: the sample headings above (e.g. "## 主题") only illustrate structure — use equivalent English headings instead (e.g. "## Theme", "## Key Elements", "## Open Questions").
+- Never use Chinese or any other language for user-facing content.`
+
+const zhCoCreateLangDirective = `## 对话语言（中文）
+- 面向用户的 <reply> 与 <suggestions> 内容必须全部使用自然中文撰写。
+- <draft> 内容（含小节标题，如 "## 主题"、"## 关键要素"、"## 待澄清信息"）同样必须使用中文撰写。
+- 不要为面向用户的内容混用其他语言。`
 
 // CoCreateProgressKind 标识流式回调的内容类型。
 const (
