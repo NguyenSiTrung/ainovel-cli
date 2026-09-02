@@ -175,31 +175,12 @@ func (t *ContextTool) Execute(_ context.Context, args json.RawMessage) (json.Raw
 		result["_warnings"] = reads.warnings
 	}
 
-	// 优先级预算：总大小超过阈值时裁剪低优先级数据；摘要在裁剪完成后重建，
-	// 确保展示的字段数量和 _trimmed 与最终 payload 一致。
-	budget := 60 * 1024
-	if a.Chapter > 0 {
-		budget = 100 * 1024
-	}
-	return finalizeContextPayload(result, a.Chapter, budget)
-}
-
-func finalizeContextPayload(result map[string]any, chapter, budget int) (json.RawMessage, error) {
-	if err := trimByBudget(result, budget); err != nil {
-		return nil, err
-	}
-	result["_loading_summary"] = buildLoadingSummary(result, chapter)
-	if err := trimByBudget(result, budget); err != nil {
-		return nil, err
-	}
-	result["_loading_summary"] = buildLoadingSummary(result, chapter)
+	// 工具层只做与任务相关的语义选择；上下文体积由各 Worker 按实际模型窗口管理。
+	result["_loading_summary"] = buildLoadingSummary(result, a.Chapter)
 
 	data, err := json.Marshal(result)
 	if err != nil {
 		return nil, fmt.Errorf("marshal context payload: %w", err)
-	}
-	if len(data) > budget {
-		return nil, fmt.Errorf("context payload exceeds budget after summary rebuild: size=%d budget=%d", len(data), budget)
 	}
 	return data, nil
 }
@@ -311,10 +292,6 @@ func buildLoadingSummary(result map[string]any, chapter int) string {
 	if warnings, ok := result["_warnings"].([]string); ok && len(warnings) > 0 {
 		items = append(items, fmt.Sprintf("告警:%d", len(warnings)))
 	}
-	if trimmed, ok := result["_trimmed"].([]string); ok && len(trimmed) > 0 {
-		items = append(items, fmt.Sprintf("裁剪:%s", strings.Join(trimmed, ",")))
-	}
-
 	if len(items) > 0 {
 		parts = append(parts, strings.Join(items, " "))
 	}
@@ -538,78 +515,6 @@ func (t *ContextTool) foundationStatus() (map[string]any, error) {
 		status["last_audit"] = audit
 	}
 	return status, nil
-}
-
-// trimByBudget 按优先级裁剪 result，使 JSON 总大小不超过 budget 字节。
-// 优先级（从低到高）：references < voice_samples < style_anchors < previous_tail < timeline
-//
-//	< recent_state_changes < foreshadow_ledger < relationship_state < 其余（不裁剪）
-//
-// style_stats 是体积有界的全书级核心信号，不参与裁剪。
-//
-// 裁剪的 key 会记录到 result["_trimmed"] 供日志排查。
-func trimByBudget(result map[string]any, budget int) error {
-	// 先测量当前大小
-	data, err := json.Marshal(result)
-	if err != nil {
-		return fmt.Errorf("measure context payload: %w", err)
-	}
-	if len(data) <= budget {
-		return nil
-	}
-
-	// 按优先级从低到高列出可裁剪的 key
-	trimOrder := []string{
-		"references",
-		"voice_samples",
-		"style_anchors",
-		"style_rules",
-		"previous_tail",
-		"timeline",
-		"recent_state_changes",
-		"foreshadow_ledger",
-		"relationship_state",
-	}
-
-	trimmed, _ := result["_trimmed"].([]string)
-	trimmed = append([]string(nil), trimmed...)
-	for _, key := range trimOrder {
-		if !deleteContextKey(result, key) {
-			continue
-		}
-		trimmed = append(trimmed, key)
-		result["_trimmed"] = append([]string(nil), trimmed...)
-		data, err = json.Marshal(result)
-		if err != nil {
-			return fmt.Errorf("measure trimmed context payload: %w", err)
-		}
-		if len(data) <= budget {
-			return nil
-		}
-	}
-	return fmt.Errorf("context payload exceeds budget after trimming: size=%d budget=%d", len(data), budget)
-}
-
-func deleteContextKey(result map[string]any, key string) bool {
-	deleted := false
-	for _, containerKey := range []string{
-		"working_memory",
-		"episodic_memory",
-		"planning_memory",
-		"foundation_memory",
-		"reference_pack",
-		"selected_memory",
-	} {
-		section, ok := result[containerKey].(map[string]any)
-		if !ok {
-			continue
-		}
-		if _, ok := section[key]; ok {
-			delete(section, key)
-			deleted = true
-		}
-	}
-	return deleted
 }
 
 // buildRelatedChapters 根据结构化数据反查与当前章相关的历史章节。
