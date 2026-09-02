@@ -126,6 +126,7 @@ func (m Model) toggleMouseReporting() (Model, tea.Cmd) {
 func donePlaceholder() string {
 	return i18n.T("tui.status.done_placeholder")
 }
+
 // enterRunning 进入创作工作台：开启鼠标上报（工作台需要点击切面板 / 滚轮 /
 // 拖拽侧边栏）。返回的命令需由调用方 Batch 进最终返回值。
 func (m *Model) enterRunning() tea.Cmd {
@@ -565,6 +566,7 @@ func (m Model) handleRuntimeMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 			m.applyEvent(host.Event{
 				Time: time.Now(), Category: "ERROR", Summary: i18n.T("tui.report.export_failed") + ": " + msg.err.Error(), Level: "error",
 			})
+		} else if msg.result != nil {
 			m.applyEvent(host.Event{
 				Time: time.Now(), Category: "SYSTEM", Summary: formatExportSuccess(msg.result), Level: "success",
 			})

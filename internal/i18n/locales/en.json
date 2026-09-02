@@ -84,6 +84,8 @@
     "save": "Save Changes",
     "cancel": "Cancel",
     "saved_notice": "Configuration saved successfully!",
+    "lang_switched": "UI language switched. Story language remains %s.",
+    "story_lang_note": "Story language: %s (change it via story_language in the config file or --story-lang; takes effect on next launch)",
     "custom_provider_name": "Custom Provider Name",
     "new_badge": "New",
     "advanced_label": "Advanced Settings (extra / extra_body / stream_idle_timeout)",
@@ -226,6 +228,7 @@
     },
     "phase": {
       "init": "Initialization",
+      "premise": "Premise",
       "brainstorm": "Brainstorming",
       "outline": "Outlining",
       "characters": "Characterization",
@@ -239,7 +242,8 @@
       "reviewing": "Reviewing",
       "rewriting": "Rewriting",
       "polishing": "Polishing",
-      "planning": "Planning"
+      "planning": "Planning",
+      "steering": "Steering"
     },
     "sidebar": {
       "overview": "Overview",
@@ -565,7 +569,7 @@
       "chronic_low_dimension": {
         "title": "Dimension [%s] chronically low (avg %.0f)",
         "evidence": "%d reviews, avg score %.1f",
-        "sugg": "Check Writer prompt guidance for %s or Editor scoring criteria."
+        "sugg": "Check Writer prompt guidance for %s or Editor scoring criteria for %s."
       },
       "contract_miss_pattern": {
         "title": "Low contract fulfillment rate (%.0f%% missed)",

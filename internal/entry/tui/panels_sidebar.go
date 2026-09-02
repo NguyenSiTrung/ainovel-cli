@@ -2,12 +2,12 @@ package tui
 
 import (
 	"fmt"
-	"slices"
-	"sort"
-	"strings"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/voocel/ainovel-cli/internal/host"
 	"github.com/voocel/ainovel-cli/internal/i18n"
+	"slices"
+	"sort"
+	"strings"
 )
 
 // renderStateContent 生成状态侧栏的纯内容(不含边框/外框)，供 stateVP.SetContent 使用。
@@ -50,7 +50,7 @@ func renderStateContent(snap host.UISnapshot, contentW int) string {
 	}
 	overview.WriteString(renderField(i18n.T("tui.sidebar.words"), formatNumber(snap.TotalWordCount)))
 	if label, ch := inProgressDisplay(snap); label != "" {
-		overview.WriteString(renderField(label, fmt.Sprintf(i18n.T("tui.status.chapter"), ch, "")))
+		overview.WriteString(renderField(label, fmt.Sprintf(i18n.T("tui.status.chapter_num"), ch)))
 	}
 	if headline := snapshotHeadline(snap); headline != "" {
 		label := i18n.T("tui.sidebar.current_status")
@@ -246,7 +246,7 @@ func snapshotRuntimeStateLabel(state string) string {
 	case "running":
 		return i18n.T("tui.status.running")
 	case "pausing":
-		return i18n.T("tui.status.paused")
+		return i18n.T("tui.status.pausing")
 	case "paused":
 		return i18n.T("tui.status.paused")
 	case "completed":
@@ -306,7 +306,6 @@ func renderUsageSidebar(snap host.UISnapshot, width int) string {
 	}
 	return b.String()
 }
-
 
 func usageStatsByCost(in []host.AgentCacheStat) []host.AgentCacheStat {
 	out := append([]host.AgentCacheStat(nil), in...)

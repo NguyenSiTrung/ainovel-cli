@@ -48,6 +48,7 @@ func renderOutlineList(snap host.UISnapshot, contentW int) string {
 		if snap.InProgressChapter == e.Chapter {
 			line += lipgloss.NewStyle().Foreground(colorAccent).Italic(true).Render(" " + i18n.T("tui.outline.in_progress_badge"))
 		}
+		b.WriteString(line)
 		b.WriteString("\n")
 	}
 	return b.String()

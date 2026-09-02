@@ -81,6 +81,8 @@ func commandRegistryInstance() commandRegistry {
 						m.applyEvent(host.Event{
 							Time: time.Now(), Category: "ERROR", Summary: fmt.Sprintf(i18n.T("tui.cmd.unknown_role"), roleHint), Level: "error",
 						})
+						m.refreshEventViewport()
+						return m, nil
 					}
 				}
 				m.modelSwitch = newModelSwitchState(m.runtime, roleHint)

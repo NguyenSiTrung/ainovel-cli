@@ -137,7 +137,7 @@ func renderChapterXHTML(ch int, title string, loc chapterLocation, hasLoc bool, 
   <link rel="stylesheet" type="text/css" href="style.css"/>
 </head>
 <body>
-`, i18n.CurrentLanguage(), html.EscapeString(displayTitle))
+`, epubLanguageTag(), html.EscapeString(displayTitle))
 
 	if hasLoc && loc.IsFirstOfVolume {
 		fmt.Fprintf(&b, "  <div class=\"volume-divider\">%s %s</div>\n",
@@ -224,7 +224,7 @@ func renderNavXHTML(hasCover bool, chapters []int, titleIdx chapterTitleIndex) s
   <nav epub:type="toc">
     <h1>%s</h1>
     <ol>
-`, i18n.CurrentLanguage(), html.EscapeString(tocTitle), html.EscapeString(tocTitle)))
+`, epubLanguageTag(), html.EscapeString(tocTitle), html.EscapeString(tocTitle)))
 	if hasCover {
 		b.WriteString(fmt.Sprintf("      <li><a href=\"cover.xhtml\">%s</a></li>\n", html.EscapeString(i18n.T("tui.export.cover"))))
 	}
@@ -256,7 +256,8 @@ func renderOPF(book domain.BookMetadata, hasCover bool, chapters []int) string {
 
 	title := strings.TrimSpace(book.Title)
 	if title == "" {
-		title = i18n.T("tui.welcome.untitled")
+		// 上游 EPUB 空标题兜底是字面 "Untitled"，保持导出字节兼容；不随界面语言变化。
+		title = "Untitled"
 	}
 	lang := epubLanguageTag()
 

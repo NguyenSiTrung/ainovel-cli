@@ -1,6 +1,13 @@
 package i18n_test
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"slices"
+	"strings"
 	"sync"
 	"testing"
 
@@ -42,8 +49,8 @@ func TestNormalizeLanguage(t *testing.T) {
 		{"chi", "zh"},
 		{"cn", "zh"},
 		{"tw", "zh"},
-		{"fr", "vi"}, // unsupported fallback to vi
-		{"", "vi"},
+		{"fr", "zh"}, // unsupported fallback to upstream default zh
+		{"", "zh"},
 	}
 
 	for _, tt := range tests {
@@ -129,11 +136,13 @@ func TestConcurrentAccess(t *testing.T) {
 func TestKeySymmetryAcrossLanguages(t *testing.T) {
 	essentialKeys := []string{
 		"tui.phase.init",
+		"tui.phase.premise",
 		"tui.phase.writing",
 		"tui.phase.complete",
 		"tui.flow.writing",
 		"tui.flow.reviewing",
 		"tui.flow.rewriting",
+		"tui.flow.steering",
 		"tui.welcome.title",
 		"tui.welcome.feature_multi_agent",
 		"tui.cocreate.title",
@@ -156,5 +165,71 @@ func TestKeySymmetryAcrossLanguages(t *testing.T) {
 				t.Errorf("language %q returned key itself for %q", lang, key)
 			}
 		}
+	}
+}
+
+// TestLocaleFileParity 直接读取 locales/*.json，断言三种语言键集合完全一致，
+// 且每个键的格式化动词序列（%s/%d/...）逐个对齐——模板少一个 %s 会让对应
+// 语言静默丢失参数（fmt 忽略多余实参，不报错）。
+func TestLocaleFileParity(t *testing.T) {
+	langs := []string{"vi", "en", "zh"}
+	flattened := make(map[string]map[string]string, len(langs))
+	for _, lang := range langs {
+		data, err := os.ReadFile(filepath.Join("locales", lang+".json"))
+		if err != nil {
+			t.Fatalf("read locales/%s.json: %v", lang, err)
+		}
+		var raw map[string]any
+		if err := json.Unmarshal(data, &raw); err != nil {
+			t.Fatalf("parse locales/%s.json: %v", lang, err)
+		}
+		flat := make(map[string]string)
+		flattenJSON("", raw, flat)
+		flattened[lang] = flat
+	}
+
+	base := flattened["zh"]
+	for _, lang := range []string{"vi", "en"} {
+		other := flattened[lang]
+		for key := range base {
+			if _, ok := other[key]; !ok {
+				t.Errorf("language %q is missing key %q (present in zh)", lang, key)
+			}
+		}
+		for key := range other {
+			if _, ok := base[key]; !ok {
+				t.Errorf("language %q has extra key %q (absent in zh)", lang, key)
+			}
+		}
+	}
+
+	verbPattern := regexp.MustCompile(`%[-+#0-9.]*[a-zA-Z]`)
+	for key, zhVal := range base {
+		zhVerbs := verbPattern.FindAllString(strings.ReplaceAll(zhVal, "%%", ""), -1)
+		for _, lang := range []string{"vi", "en"} {
+			otherVal, ok := flattened[lang][key]
+			if !ok {
+				continue
+			}
+			otherVerbs := verbPattern.FindAllString(strings.ReplaceAll(otherVal, "%%", ""), -1)
+			if !slices.Equal(zhVerbs, otherVerbs) {
+				t.Errorf("key %q: %s verb sequence %v does not match zh %v (value: %q)",
+					key, lang, otherVerbs, zhVerbs, otherVal)
+			}
+		}
+	}
+}
+
+func flattenJSON(prefix string, src map[string]any, dest map[string]string) {
+	for k, v := range src {
+		key := k
+		if prefix != "" {
+			key = prefix + "." + k
+		}
+		if nested, ok := v.(map[string]any); ok {
+			flattenJSON(key, nested, dest)
+			continue
+		}
+		dest[key] = fmt.Sprintf("%v", v)
 	}
 }

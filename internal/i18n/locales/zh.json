@@ -84,6 +84,8 @@
     "save": "保存修改",
     "cancel": "取消",
     "saved_notice": "配置已成功保存！",
+    "lang_switched": "界面语言已切换，小说创作语言保持 %s 不变",
+    "story_lang_note": "小说创作语言：%s（如需修改请编辑配置文件 story_language 或使用 --story-lang，重启后生效）",
     "custom_provider_name": "自定义 Provider 名称",
     "new_badge": "新增",
     "advanced_label": "高级配置（extra / extra_body / stream_idle_timeout）",
@@ -226,6 +228,7 @@
     },
     "phase": {
       "init": "初始化",
+      "premise": "前提",
       "brainstorm": "头脑风暴",
       "outline": "大纲构建",
       "characters": "人物塑造",
@@ -239,7 +242,8 @@
       "reviewing": "审阅中",
       "rewriting": "重写中",
       "polishing": "打磨中",
-      "planning": "规划中"
+      "planning": "规划中",
+      "steering": "干预"
     },
     "sidebar": {
       "overview": "概览",
@@ -509,7 +513,7 @@
     },
     "decision": {
       "prepare_user_rules": "解析创作规则与偏好",
-      "plan_start": "启动规划裁定",
+      "plan_start": "启动裁定",
       "plan_start_retry": "启动补裁",
       "user_intervention": "用户干预裁定",
       "deadlock": "僵局裁定",

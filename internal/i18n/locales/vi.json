@@ -84,6 +84,8 @@
     "save": "Lưu thay đổi",
     "cancel": "Hủy",
     "saved_notice": "Đã lưu cài đặt thành công!",
+    "lang_switched": "Đã chuyển ngôn ngữ giao diện. Ngôn ngữ sáng tác vẫn là %s.",
+    "story_lang_note": "Ngôn ngữ sáng tác: %s (thay đổi qua story_language trong tệp cấu hình hoặc --story-lang; áp dụng từ lần khởi động tiếp theo)",
     "custom_provider_name": "Tên Provider tùy chỉnh",
     "new_badge": "Thêm mới",
     "advanced_label": "Cài đặt nâng cao (extra / extra_body / stream_idle_timeout)",
@@ -226,6 +228,7 @@
     },
     "phase": {
       "init": "Khởi tạo",
+      "premise": "Tiền đề",
       "brainstorm": "Lên ý tưởng",
       "outline": "Đại cương",
       "characters": "Nhân vật",
@@ -239,7 +242,8 @@
       "reviewing": "Đang thẩm duyệt",
       "rewriting": "Đang viết lại",
       "polishing": "Đang trau chuốt",
-      "planning": "Đang quy hoạch"
+      "planning": "Đang quy hoạch",
+      "steering": "Can thiệp"
     },
     "sidebar": {
       "overview": "Tổng quan",
@@ -565,7 +569,7 @@
       "chronic_low_dimension": {
         "title": "Tiêu chí [%s] điểm thấp kéo dài (TB %.0f)",
         "evidence": "Tổng %d lần đánh giá, điểm TB %.1f",
-        "sugg": "Kiểm tra hướng dẫn Writer prompt về %s hoặc tiêu chuẩn chấm điểm của Editor."
+        "sugg": "Kiểm tra hướng dẫn Writer prompt về %s hoặc tiêu chuẩn chấm điểm của Editor cho %s."
       },
       "contract_miss_pattern": {
         "title": "Tỷ lệ thực hiện hợp đồng thấp (%.0f%% chưa đạt)",

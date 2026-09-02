@@ -623,14 +623,20 @@ func (m Model) handleModelConfigKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		moveConfigCursor(state, msg, len(supported))
 		if msg.Type == tea.KeyEnter && state.cursor >= 0 && state.cursor < len(supported) {
 			selected := supported[state.cursor]
+			// 只切界面语言：创作语言指令在启动时已烘进各系统提示词，
+			// 会话中途改 story_language 不会生效，静默改写反而让下一本书变语言。
+			storyLang := state.snapshot.StoryLanguage
+			if storyLang == "" {
+				storyLang = selected
+			}
 			i18n.SetLanguage(selected)
 			if m.runtime != nil {
-				_ = m.runtime.ConfigureLanguage(selected, selected)
+				_ = m.runtime.ConfigureLanguage(selected, "")
 			}
 			state.buildProviderMenus()
 			state.step = configStepProvider
 			state.cursor = 0
-			state.message = i18n.T("config.saved_notice")
+			state.message = fmt.Sprintf(i18n.T("config.lang_switched"), i18n.LanguageName(storyLang))
 			m.syncRuntimePlaceholder()
 			if m.mode == modeNew {
 				m.textarea.Placeholder = placeholderForNewMode(m.startupMode)
@@ -853,6 +859,11 @@ func renderModelConfigModal(width int, state *modelConfigState) string {
 			labels[i] = prefix + i18n.LanguageName(lang) + " (" + lang + ")"
 		}
 		lines = append(lines, renderConfigChoices(labels, state.cursor, contentW, 10)...)
+		storyLang := state.snapshot.StoryLanguage
+		if storyLang == "" {
+			storyLang = i18n.CurrentLanguage()
+		}
+		hint = fmt.Sprintf(i18n.T("config.story_lang_note"), i18n.LanguageName(storyLang))
 	case configStepAddPicker:
 		lines = append(lines, configHeading(i18n.T("setup.provider_select")))
 		lines = append(lines, renderConfigChoices(labelsForProviderChoices(state.presetChoices), state.cursor, contentW, 12)...)

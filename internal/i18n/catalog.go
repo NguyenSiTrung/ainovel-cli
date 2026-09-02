@@ -16,7 +16,10 @@ const (
 	LangEN = "en"
 	LangZH = "zh"
 
-	DefaultLanguage = LangVI
+	// DefaultLanguage 是无法识别语言时的兜底。选 zh（上游原版语言）：
+	// vi/en 用户会通过自身 locale 被正确探测到，而 LANG=C/未知环境的
+	// 上游用户保持中文界面与中文创作指令，不产生行为漂移。
+	DefaultLanguage = LangZH
 )
 
 var (
@@ -74,7 +77,8 @@ func flattenMap(prefix string, src map[string]any, dest map[string]string) {
 }
 
 // NormalizeLanguage standardizes locale codes to supported languages (vi, en, zh).
-// Defaults to "vi".
+// Defaults to DefaultLanguage ("zh", the upstream project language) so users with
+// unrecognized environments keep the original Chinese behavior.
 func NormalizeLanguage(lang string) string {
 	cleaned := strings.ToLower(strings.TrimSpace(lang))
 	if cleaned == "" {
@@ -131,7 +135,7 @@ func LanguageName(lang string) string {
 	case LangZH:
 		return "中文"
 	default:
-		return "Tiếng Việt"
+		return "中文"
 	}
 }
 

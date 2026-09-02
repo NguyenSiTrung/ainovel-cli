@@ -52,16 +52,16 @@ func TestDetectFromEnv(t *testing.T) {
 			expected: "zh",
 		},
 		{
-			name:     "Empty env falls back to default vi",
+			name:     "Empty env falls back to default zh",
 			env:      map[string]string{},
-			expected: "vi",
+			expected: "zh",
 		},
 		{
-			name: "Unknown language falls back to default vi",
+			name: "Unknown language falls back to default zh",
 			env: map[string]string{
 				"LANG": "fr_FR.UTF-8",
 			},
-			expected: "vi",
+			expected: "zh",
 		},
 	}
 
