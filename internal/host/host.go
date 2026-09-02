@@ -23,6 +23,7 @@ import (
 	"github.com/voocel/ainovel-cli/internal/host/exp"
 	"github.com/voocel/ainovel-cli/internal/host/imp"
 	"github.com/voocel/ainovel-cli/internal/host/sim"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 	runtimelog "github.com/voocel/ainovel-cli/internal/logger"
 	modelreg "github.com/voocel/ainovel-cli/internal/models"
 	"github.com/voocel/ainovel-cli/internal/notify"
@@ -300,10 +301,16 @@ func (h *Host) PrepareUserRules(rawPrompt string) error {
 	if err := h.refuseNewBookOverExisting(); err != nil {
 		return err
 	}
-	svc := userrules.NewService(h.store, h.models.Default, rules.DefaultOptions())
-	snap, err := svc.Build(context.Background(), rawPrompt)
+	var defaultModel agentcore.ChatModel
+	if h.models != nil {
+		defaultModel = h.models.Default
+	}
+	svc := userrules.NewService(h.store, defaultModel, rules.DefaultOptions())
+	snap, err := runObservedDecision(h.observer, i18n.T("tui.decision.prepare_user_rules"), func() (*rules.Snapshot, error) {
+		return svc.Build(h.runCtx, rawPrompt)
+	})
 	if err != nil {
-		return fmt.Errorf("用户规则快照落盘失败，无法继续: %w", err)
+		return fmt.Errorf("%s: %w", i18n.T("errors.user_rules_failed"), err)
 	}
 	logUserRulesSnapshot(snap)
 	return nil
@@ -312,8 +319,12 @@ func (h *Host) PrepareUserRules(rawPrompt string) error {
 // ensureUserRules 在恢复路径确保快照存在；缺失时按
 // system_defaults + rules 文件生成。
 func (h *Host) ensureUserRules() {
-	svc := userrules.NewService(h.store, h.models.Default, rules.DefaultOptions())
-	snap, err := svc.GetOrBuild(context.Background())
+	var defaultModel agentcore.ChatModel
+	if h.models != nil {
+		defaultModel = h.models.Default
+	}
+	svc := userrules.NewService(h.store, defaultModel, rules.DefaultOptions())
+	snap, err := svc.GetOrBuild(h.runCtx)
 	if err != nil {
 		slog.Warn("用户规则快照读取/生成失败，运行时将退到内置默认", "module", "rules", "err", err)
 		return
@@ -383,7 +394,7 @@ func (h *Host) StartPrepared(rawRequirement string) error {
 
 	// 启动裁定:失败显式报错中止(启动期用户在场,报错优于猜测)。
 	start := time.Now()
-	decision, derr := runObservedDecision(h.observer, "启动裁定", func() (arbiter.PlanStartDecision, error) {
+	decision, derr := runObservedDecision(h.observer, i18n.T("tui.decision.plan_start"), func() (arbiter.PlanStartDecision, error) {
 		return arbiter.DecidePlanStart(h.runCtx, h.arbiterModel(),
 			h.bundle.Prompts.ArbiterPlanStart, rawRequirement, h.cfg.Style)
 	})
@@ -410,7 +421,7 @@ func (h *Host) StartPrepared(rawRequirement string) error {
 	}
 
 	h.emitEvent(Event{Time: time.Now(), Category: "SYSTEM",
-		Summary: fmt.Sprintf("开始创作（规划师: %s——%s）", decision.Planner, decision.Reason), Level: "info"})
+		Summary: fmt.Sprintf(i18n.T("tui.event.start_creative"), decision.Planner, decision.Reason), Level: "info"})
 	if !h.startEngine(&flow.Instruction{Agent: decision.Planner, Task: decision.Task, Reason: decision.Reason}) {
 		return fmt.Errorf("Engine 已在运行或正在停止，无法启动新书")
 	}
@@ -625,7 +636,7 @@ func (h *Host) doIntervention(text string, restart bool) error {
 	facts.Running = h.engine.isRunning()
 
 	start := time.Now()
-	decision, derr := runObservedDecision(h.observer, "用户干预裁定", func() (arbiter.InterventionDecision, error) {
+	decision, derr := runObservedDecision(h.observer, i18n.T("tui.decision.user_intervention"), func() (arbiter.InterventionDecision, error) {
 		return arbiter.DecideIntervention(h.runCtx, h.arbiterModel(),
 			h.bundle.Prompts.ArbiterIntervention, facts, text)
 	})

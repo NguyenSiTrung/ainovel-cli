@@ -26,6 +26,7 @@ import (
 	"github.com/voocel/ainovel-cli/internal/arbiter"
 	"github.com/voocel/ainovel-cli/internal/domain"
 	"github.com/voocel/ainovel-cli/internal/flow"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 	storepkg "github.com/voocel/ainovel-cli/internal/store"
 	"github.com/voocel/ainovel-cli/internal/tools"
 )
@@ -735,7 +736,8 @@ func TestEngine_RetriesUnfinishedPlanStart(t *testing.T) {
 		if ev.Category == "DISPATCH" {
 			dispatched = true
 		}
-		if strings.Contains(ev.Summary, "启动裁定已补齐") {
+		prefix := strings.Split(i18n.T("tui.event.plan_start_fixed"), "(")[0]
+		if strings.Contains(ev.Summary, "启动裁定已补齐") || (prefix != "" && strings.Contains(ev.Summary, prefix)) {
 			healed = true
 		}
 	}

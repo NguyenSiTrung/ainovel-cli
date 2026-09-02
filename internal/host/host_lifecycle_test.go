@@ -175,3 +175,41 @@ func TestCloseWaitsForRegisteredAsyncWork(t *testing.T) {
 		t.Fatal("Close did not return after async work finished")
 	}
 }
+
+func TestPrepareUserRules_EmitsObservedDecision(t *testing.T) {
+	dir := t.TempDir()
+	st := storepkg.NewStore(dir)
+	if err := st.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+
+	var events []Event
+	h := &Host{
+		store:  st,
+		events: make(chan Event, 16),
+	}
+	h.observer = newObserver(st, func(ev Event) {
+		events = append(events, ev)
+	}, func(string) {}, func() {})
+
+	if err := h.PrepareUserRules("写一本修仙小说，主角稳健谨慎"); err != nil {
+		t.Fatalf("PrepareUserRules failed: %v", err)
+	}
+
+	var foundDecision, finished bool
+	for _, ev := range events {
+		if ev.Category == "DECISION" && ev.Agent == "arbiter" {
+			foundDecision = true
+			if !ev.FinishedAt.IsZero() && ev.Level == "success" {
+				finished = true
+			}
+		}
+	}
+
+	if !foundDecision {
+		t.Fatalf("expected DECISION event for user rules normalization, got events: %+v", events)
+	}
+	if !finished {
+		t.Fatalf("expected DECISION event to finish with success, got events: %+v", events)
+	}
+}

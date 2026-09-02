@@ -45,7 +45,7 @@ func renderTopBar(snap host.UISnapshot, width int, spinnerFrame, version string)
 		color = colorDim
 	}
 	icon, labelText := statusDisplayFor(label)
-	if snap.IsRunning && spinnerFrame != "" {
+	if spinnerFrame != "" {
 		icon = spinnerFrame
 	}
 	var status string

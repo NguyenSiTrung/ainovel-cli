@@ -506,6 +506,18 @@
       "run_upgrade": "run ainovel-cli update to upgrade",
       "check_failed": "Startup update check failed",
       "cache_warning": "Update check completed with cache anomalies"
+    },
+    "decision": {
+      "prepare_user_rules": "Analyzing writing rules & preferences",
+      "plan_start": "Determining novel architecture & plan",
+      "plan_start_retry": "Re-determining novel plan",
+      "user_intervention": "Evaluating user intervention",
+      "deadlock": "Resolving workflow deadlock",
+      "worker_failure": "Handling agent task failure"
+    },
+    "event": {
+      "start_creative": "Starting novel creation (Planner: %s — %s)",
+      "plan_start_fixed": "Startup plan determined (Planner: %s — %s)"
     }
   },
   "errors": {
@@ -520,7 +532,8 @@
     "update_cache_dir": "Unable to determine update check cache directory",
     "file_log_unavailable": "File logging unavailable, falling back to terminal logging",
     "startup_failed_model": "Startup failed, please check model configuration or use /model to switch models",
-    "prompt_read_failed": "Failed to read prompt"
+    "prompt_read_failed": "Failed to read prompt",
+    "user_rules_failed": "Failed to save user writing rules snapshot, cannot proceed"
   },
   "diag": {
     "rules": {

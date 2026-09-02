@@ -6,7 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/voocel/ainovel-cli/internal/host"
 	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
@@ -66,6 +68,56 @@ func TestEnterStartingSwitchesToWorkbenchImmediately(t *testing.T) {
 	}
 	if m.events[0].Category != "USER" || !strings.HasPrefix(m.events[0].Summary, i18n.T("tui.hints.input_label")+": ") {
 		t.Fatalf("first event = %+v, want USER prompt event", m.events[0])
+	}
+}
+
+func TestStartupSpinnerAnimatesWhileStartingAndRunning(t *testing.T) {
+	m := NewModel(nil, "")
+	m.width = 120
+	m.height = 40
+	m.enterStarting("写一本东方玄幻长篇")
+
+	// 即使 snapshot 被后台 tick 置为 IsRunning=false，m.starting 仍驱动顶部 spinner 转动
+	m.snapshot.IsRunning = false
+	frame := m.currentSpinnerFrame()
+	if frame == "" {
+		t.Fatal("currentSpinnerFrame should be non-empty while starting=true")
+	}
+	topBar := renderTopBar(m.snapshot, m.width, frame, m.version)
+	if !strings.Contains(topBar, frame) {
+		t.Fatalf("topBar should render spinnerFrame during starting: %q", topBar)
+	}
+}
+
+func TestStartupObservedDecisionTriggersToolSpinner(t *testing.T) {
+	m := NewModel(nil, "")
+	m.width = 120
+	m.height = 40
+	m.enterStarting("写一本东方玄幻长篇")
+
+	// 收到归一化/启动裁定等具有 lifecycle 的 DECISION 事件
+	startEv := host.Event{
+		ID:       "e1",
+		Time:     time.Now(),
+		Category: "DECISION",
+		Agent:    "arbiter",
+		Summary:  i18n.T("tui.decision.prepare_user_rules"),
+		Level:    "info",
+	}
+
+	updated, cmd, handled := m.handleRuntimeMsg(eventMsg(startEv))
+	if !handled {
+		t.Fatal("eventMsg should be handled")
+	}
+	got := updated.(Model)
+	if !got.hasRunningEvent() {
+		t.Fatal("hasRunningEvent should be true for in-flight DECISION event")
+	}
+	if !got.toolTicking {
+		t.Fatal("toolTicking should be activated for in-flight DECISION event")
+	}
+	if cmd == nil {
+		t.Fatal("expected tickToolSpinner command in batch")
 	}
 }
 

@@ -506,6 +506,18 @@
       "run_upgrade": "chạy ainovel-cli update để nâng cấp",
       "check_failed": "Kiểm tra cập nhật phiên bản khởi động thất bại",
       "cache_warning": "Kiểm tra cập nhật hoàn tất nhưng bộ nhớ đệm có bất thường"
+    },
+    "decision": {
+      "prepare_user_rules": "Phân tích quy tắc & sở thích viết",
+      "plan_start": "Xác định kiến trúc & kế hoạch sáng tác",
+      "plan_start_retry": "Tái xác định kế hoạch sáng tác",
+      "user_intervention": "Đánh giá can thiệp người dùng",
+      "deadlock": "Giải quyết bế tắc luồng xử lý",
+      "worker_failure": "Xử lý lỗi tác vụ của Agent"
+    },
+    "event": {
+      "start_creative": "Bắt đầu sáng tác (Quy hoạch: %s — %s)",
+      "plan_start_fixed": "Đã bổ sung quyết định khởi tạo (Quy hoạch: %s — %s)"
     }
   },
   "errors": {
@@ -520,7 +532,8 @@
     "update_cache_dir": "Không thể xác định thư mục bộ nhớ đệm kiểm tra cập nhật",
     "file_log_unavailable": "Ghi tệp nhật ký không khả dụng, tiếp tục dùng nhật ký terminal",
     "startup_failed_model": "Khởi động thất bại, vui lòng kiểm tra cấu hình mô hình hoặc dùng /model để đổi mô hình",
-    "prompt_read_failed": "Đọc prompt thất bại"
+    "prompt_read_failed": "Đọc prompt thất bại",
+    "user_rules_failed": "Lưu snapshot quy tắc viết của người dùng thất bại, không thể tiếp tục"
   },
   "diag": {
     "rules": {

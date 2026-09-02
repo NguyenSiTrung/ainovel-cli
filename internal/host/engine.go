@@ -18,6 +18,7 @@ import (
 	"github.com/voocel/ainovel-cli/internal/domain"
 	"github.com/voocel/ainovel-cli/internal/errs"
 	"github.com/voocel/ainovel-cli/internal/flow"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 	"github.com/voocel/ainovel-cli/internal/notify"
 	storepkg "github.com/voocel/ainovel-cli/internal/store"
 	"github.com/voocel/ainovel-cli/internal/tools"
@@ -338,7 +339,7 @@ func (e *engine) planStartFallback(ctx context.Context) (*flow.Instruction, erro
 // retryPlanStart 补裁启动决策并固化(裁定先落事实再执行,与 StartPrepared 同构)。
 func (e *engine) retryPlanStart(ctx context.Context, prompt string) *flow.Instruction {
 	start := time.Now()
-	decision, derr := runObservedDecision(e.observer, "启动补裁", func() (arbiter.PlanStartDecision, error) {
+	decision, derr := runObservedDecision(e.observer, i18n.T("tui.decision.plan_start_retry"), func() (arbiter.PlanStartDecision, error) {
 		return arbiter.DecidePlanStart(ctx, e.arbiterModel, e.planStartPrompt, prompt, e.style)
 	})
 	rec := storepkg.DecisionRecord{Kind: "plan_start", Decider: "arbiter", Input: prompt,
@@ -365,7 +366,7 @@ func (e *engine) retryPlanStart(ctx context.Context, prompt string) *flow.Instru
 		return nil
 	}
 	e.emitEvent(Event{Time: time.Now(), Category: "SYSTEM", Level: "info",
-		Summary: fmt.Sprintf("启动裁定已补齐(规划师: %s——%s)", decision.Planner, decision.Reason)})
+		Summary: fmt.Sprintf(i18n.T("tui.event.plan_start_fixed"), decision.Planner, decision.Reason)})
 	return &flow.Instruction{Agent: decision.Planner, Task: decision.Task, Reason: decision.Reason}
 }
 
@@ -452,7 +453,7 @@ func (e *engine) trackDeadlock(ctx context.Context, inst **flow.Instruction) (st
 	}
 	// Arbiter 僵局咨询(repeats ∈ [consultAt, abortAt))。裁定 retry 不清零计数。
 	facts := e.failureFacts("deadlock", in, e.workerErrorFor(in))
-	decision, err := runObservedDecision(e.observer, "僵局裁定", func() (arbiter.FailureDecision, error) {
+	decision, err := runObservedDecision(e.observer, i18n.T("tui.decision.deadlock"), func() (arbiter.FailureDecision, error) {
 		return arbiter.DecideFailure(ctx, e.arbiterModel, e.failurePrompt, facts)
 	})
 	e.recordFailureDecision("deadlock", in, facts, decision, err)
@@ -516,7 +517,7 @@ func (e *engine) handleWorkerError(ctx context.Context, inst *flow.Instruction, 
 	}
 	e.failedKey = ""
 	facts := e.failureFacts("worker_failure", inst, werr)
-	decision, err := runObservedDecision(e.observer, "失败裁定", func() (arbiter.FailureDecision, error) {
+	decision, err := runObservedDecision(e.observer, i18n.T("tui.decision.worker_failure"), func() (arbiter.FailureDecision, error) {
 		return arbiter.DecideFailure(ctx, e.arbiterModel, e.failurePrompt, facts)
 	})
 	e.recordFailureDecision("worker_failure", inst, facts, decision, err)

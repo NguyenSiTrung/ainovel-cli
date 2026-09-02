@@ -506,6 +506,18 @@
       "run_upgrade": "运行 ainovel-cli update 升级",
       "check_failed": "启动版本检查失败",
       "cache_warning": "启动版本检查完成，但缓存存在异常"
+    },
+    "decision": {
+      "prepare_user_rules": "解析创作规则与偏好",
+      "plan_start": "启动规划裁定",
+      "plan_start_retry": "启动补裁",
+      "user_intervention": "用户干预裁定",
+      "deadlock": "僵局裁定",
+      "worker_failure": "失败裁定"
+    },
+    "event": {
+      "start_creative": "开始创作（规划师: %s——%s）",
+      "plan_start_fixed": "启动裁定已补齐(规划师: %s——%s)"
     }
   },
   "errors": {
@@ -520,7 +532,8 @@
     "update_cache_dir": "无法确定更新检查缓存目录",
     "file_log_unavailable": "文件日志不可用，已继续使用终端日志",
     "startup_failed_model": "启动失败，请检查模型配置或使用 /model 切换模型",
-    "prompt_read_failed": "读取 prompt 失败"
+    "prompt_read_failed": "读取 prompt 失败",
+    "user_rules_failed": "用户规则快照落盘失败，无法继续"
   },
   "diag": {
     "rules": {
