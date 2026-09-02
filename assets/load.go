@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/voocel/ainovel-cli/internal/i18n"
 	"github.com/voocel/ainovel-cli/internal/tools"
 )
 
@@ -79,13 +80,15 @@ func DefaultLoadOptions(outputDir string) LoadOptions {
 // 题材 style-references)按 opts 做三层覆盖:内置 < 全局 < 本书。
 func Load(style string, opts LoadOptions) Bundle {
 	prompts := loadPrompts()
-	switch opts.StoryLanguage {
-	case "vi":
-		prompts = applyStoryLanguageDirectives(prompts, viStoryLanguageDirective)
-	case "en":
-		prompts = applyStoryLanguageDirectives(prompts, enStoryLanguageDirective)
-	case "zh":
-		prompts = applyStoryLanguageDirectives(prompts, zhStoryLanguageDirective)
+	if opts.StoryLanguage != "" {
+		switch i18n.NormalizeLanguage(opts.StoryLanguage) {
+		case i18n.LangVI:
+			prompts = applyStoryLanguageDirectives(prompts, viStoryLanguageDirective)
+		case i18n.LangEN:
+			prompts = applyStoryLanguageDirectives(prompts, enStoryLanguageDirective)
+		case i18n.LangZH:
+			prompts = applyStoryLanguageDirectives(prompts, zhStoryLanguageDirective)
+		}
 	}
 	return Bundle{
 		References: loadReferences(style, opts),

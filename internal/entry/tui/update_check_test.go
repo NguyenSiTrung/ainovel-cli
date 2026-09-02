@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 	buildversion "github.com/voocel/ainovel-cli/internal/version"
 )
 
@@ -22,13 +23,21 @@ func TestUpdateNotesPreviewSanitizesAndTruncates(t *testing.T) {
 }
 
 func TestFormatUpdateNoticeIncludesSafePreview(t *testing.T) {
-	got := formatUpdateNotice(&buildversion.CheckResult{
-		Latest: "v1.2.4",
-		Notes:  "## 修复启动问题",
-	})
-	for _, want := range []string{"v1.2.4", "修复启动问题", "ainovel-cli update"} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("更新提示 %q 缺少 %q", got, want)
-		}
+	origLang := i18n.CurrentLanguage()
+	defer i18n.SetLanguage(origLang)
+
+	for _, lang := range []string{"vi", "en", "zh"} {
+		t.Run(lang, func(t *testing.T) {
+			i18n.SetLanguage(lang)
+			got := formatUpdateNotice(&buildversion.CheckResult{
+				Latest: "v1.2.4",
+				Notes:  "## 修复启动问题",
+			})
+			for _, want := range []string{"v1.2.4", "修复启动问题", "ainovel-cli update"} {
+				if !strings.Contains(got, want) {
+					t.Fatalf("[%s] 更新提示 %q 缺少 %q", lang, got, want)
+				}
+			}
+		})
 	}
 }

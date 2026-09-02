@@ -116,7 +116,17 @@
     "err_invalid_window": "上下文窗口请输入正整数、128K、1M，或留空使用自动值",
     "err_window_overflow": "上下文窗口超出有效整数范围",
     "no_provider_available": "当前没有可用 provider",
-    "provider_no_models": "provider %q 没有已配置模型"
+    "provider_no_models": "provider %q 没有已配置模型",
+    "disable_update_check": "关闭启动时新版本检查",
+    "err_provider_name_empty": "Provider 名称不能为空",
+    "err_provider_exists": "Provider 已存在，请返回后选择编辑",
+    "notice_key_cleared": "API Key 已标记清除，保存配置后生效",
+    "err_add_model_before_test": "请至少添加一个模型后再测试连接",
+    "testing_connection": "正在测试连接：%s/%s...",
+    "validating_saving": "正在校验并保存配置...",
+    "test_cancelled": "连接测试已取消",
+    "no_available_options": "没有可用选项",
+    "err_key_cannot_clear": "该 Provider 必须配置 API Key，不能清除"
   },
   "tui": {
     "welcome": {
@@ -167,7 +177,9 @@
       "pausing_placeholder": "正在暂停创作...",
       "paused_placeholder": "创作已暂停，输入任意内容继续创作",
       "review_wait_placeholder": "逐章验收等待中：输入修改意见，或 /next 放行下一章",
-      "interrupted_placeholder": "运行中断，输入任意内容恢复创作"
+      "interrupted_placeholder": "运行中断，输入任意内容恢复创作",
+      "loading": "加载中...",
+      "terminal_too_narrow": "终端宽度不足，请至少扩展到 100 列"
     },
     "cocreate": {
       "title": "共创规划",
@@ -202,7 +214,11 @@
       "hint_nil": "Enter 发送 · Esc 退出",
       "hint_modal_awaiting": "AI 回复中 · ↑↓ 滚对话 · 滚轮滚指令 · Esc 退出",
       "hint_modal_can_start": "Enter 继续补充 · %s · ↑↓ 滚对话 · 滚轮滚指令 · Esc 退出",
-      "hint_modal_default": "Enter 发送 · ↑↓ 滚对话 · 滚轮滚指令 · Esc 退出"
+      "hint_modal_default": "Enter 发送 · ↑↓ 滚对话 · 滚轮滚指令 · Esc 退出",
+      "stage_pause_msg": "我先暂停一下，想和你一起规划接下来的走向。",
+      "scroll_more_down": "↓ 下方还有内容，可滚轮或 PgDn 查看",
+      "scroll_more_up": "↑ 上方还有内容，可滚轮或 PgUp 查看",
+      "scroll_more_both": "↑↓ 可继续滚动查看"
     },
     "phase": {
       "init": "初始化",
@@ -393,7 +409,8 @@
       "unknown_command": "未知命令：%s",
       "needs_idle": "命令仅可在空闲状态执行：%s",
       "unknown_param": "未知参数",
-      "supported": "支持"
+      "supported": "支持",
+      "start_path_param": "设定或大纲文件路径"
     },
     "hints": {
       "press_ctrl_c_again": "再次按 Ctrl+C 退出",
@@ -426,7 +443,8 @@
       "chapter_summary": "第%d章：%s",
       "story_updated": "（剧情事实已更新）",
       "conflicts_found": "（发现%d项后续冲突）",
-      "accepted_revisions": "已接纳章节修订：%v"
+      "accepted_revisions": "已接纳章节修订：%v",
+      "modified_notice": "检测到章节正文已被外部修改：%v；执行 /sync 接纳"
     },
     "report": {
       "source": "来源",
@@ -450,6 +468,12 @@
       "started_time": "开始时间",
       "loading_desc": "正在读取当前小说 output 产物并分析流程、质量、规划和上下文问题。项目较大时可能需要几秒。",
       "loading_hint": "Esc 可先关闭面板，后台分析完成后下次打开会重新生成。"
+    },
+    "update": {
+      "notice": "新版本 %s 已发布",
+      "run_upgrade": "运行 ainovel-cli update 升级",
+      "check_failed": "启动版本检查失败",
+      "cache_warning": "启动版本检查完成，但缓存存在异常"
     }
   },
   "errors": {
@@ -460,6 +484,10 @@
     "model_not_found": "未找到模型: %s",
     "pause_exit_prompt": "按回车键退出...",
     "last_error_log": "错误详情已记录至: %s",
-    "network_error": "连接 AI 服务器网络错误: %v"
+    "network_error": "连接 AI 服务器网络错误: %v",
+    "update_cache_dir": "无法确定更新检查缓存目录",
+    "file_log_unavailable": "文件日志不可用，已继续使用终端日志",
+    "startup_failed_model": "启动失败，请检查模型配置或使用 /model 切换模型",
+    "prompt_read_failed": "读取 prompt 失败"
   }
 }

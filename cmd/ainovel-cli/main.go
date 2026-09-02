@@ -60,7 +60,7 @@ func main() {
 	// 首次引导
 	if bootstrap.NeedsSetup() {
 		if opts.Headless {
-			die("error: headless mode does not support initial setup wizard, please run TUI mode first to configure")
+			die("error: %s", i18n.T("cli.err_headless_setup"))
 		}
 		setupCfg, err := bootstrap.RunSetup()
 		if err != nil {
@@ -110,7 +110,7 @@ func runWithConfig(cfg bootstrap.Config, opts cliOptions, args []string) {
 	rules.EnsureHomeRulesDir()
 
 	if len(args) > 0 {
-		die("error: Không hỗ trợ truyền yêu cầu tiểu thuyết trực tiếp qua dòng lệnh, vui lòng nhập trong giao diện TUI")
+		die("error: %s", i18n.T("cli.err_no_cli_prompt"))
 	}
 
 	if opts.Language != "" {
@@ -138,7 +138,7 @@ func runWithConfig(cfg bootstrap.Config, opts cliOptions, args []string) {
 		return
 	}
 	if opts.Prompt != "" || opts.PromptFile != "" {
-		die("error: --prompt/--prompt-file chỉ có thể sử dụng ở chế độ --headless")
+		die("error: %s", i18n.T("cli.err_headless_prompt_only"))
 	}
 	if err := tui.Run(cfg, bundle, versionInfo()); err != nil {
 		die("error: %v", err)
@@ -164,13 +164,13 @@ func parseCLIOptions(argv []string) (cliOptions, []string, error) {
 		switch argv[i] {
 		case "--lang", "-l":
 			if i+1 >= len(argv) {
-				return opts, nil, fmt.Errorf("--lang / -l thiếu giá trị ngôn ngữ (vi, en, zh)")
+				return opts, nil, errors.New(i18n.T("cli.err_lang_missing"))
 			}
 			opts.Language = i18n.NormalizeLanguage(argv[i+1])
 			i++
 		case "--story-lang":
 			if i+1 >= len(argv) {
-				return opts, nil, fmt.Errorf("--story-lang thiếu giá trị ngôn ngữ (vi, en, zh)")
+				return opts, nil, errors.New(i18n.T("cli.err_story_lang_missing"))
 			}
 			opts.StoryLanguage = i18n.NormalizeLanguage(argv[i+1])
 			i++
@@ -266,7 +266,7 @@ func loadPromptFrom(opts cliOptions, stdin io.Reader) (string, error) {
 	if opts.PromptFile == "-" {
 		data, err := io.ReadAll(stdin)
 		if err != nil {
-			return "", fmt.Errorf("读取 prompt 失败: %w", err)
+			return "", fmt.Errorf("%s: %w", i18n.T("errors.prompt_read_failed"), err)
 		}
 		return strings.TrimSpace(string(data)), nil
 	}

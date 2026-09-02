@@ -91,11 +91,11 @@ func NormalizeLanguage(lang string) string {
 	cleaned = strings.TrimSpace(cleaned)
 
 	switch {
-	case strings.HasPrefix(cleaned, "vi") || cleaned == "vietnamese" || cleaned == "tieng_viet" || cleaned == "tiengviet" || cleaned == "tiếng việt" || cleaned == "tiếng_việt":
+	case strings.HasPrefix(cleaned, "vi") || cleaned == "vietnamese" || cleaned == "tieng_viet" || cleaned == "tiengviet" || cleaned == "tiếng việt" || cleaned == "tiếng_việt" || cleaned == "vn" || cleaned == "vie" || cleaned == "viet":
 		return LangVI
-	case strings.HasPrefix(cleaned, "en") || cleaned == "english":
+	case strings.HasPrefix(cleaned, "en") || cleaned == "english" || cleaned == "eng" || cleaned == "us" || cleaned == "gb":
 		return LangEN
-	case strings.HasPrefix(cleaned, "zh") || cleaned == "chinese" || cleaned == "zhongwen" || cleaned == "中文":
+	case strings.HasPrefix(cleaned, "zh") || cleaned == "chinese" || cleaned == "zhongwen" || cleaned == "中文" || cleaned == "cmn" || cleaned == "zho" || cleaned == "chi" || cleaned == "cn" || cleaned == "tw":
 		return LangZH
 	default:
 		return DefaultLanguage

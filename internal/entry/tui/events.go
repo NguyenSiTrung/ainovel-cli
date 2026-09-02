@@ -13,6 +13,7 @@ import (
 	"github.com/voocel/ainovel-cli/internal/bootstrap"
 	"github.com/voocel/ainovel-cli/internal/diag"
 	"github.com/voocel/ainovel-cli/internal/host"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 	"github.com/voocel/ainovel-cli/internal/store"
 	buildversion "github.com/voocel/ainovel-cli/internal/version"
 )
@@ -74,7 +75,7 @@ func checkForUpdate(currentVersion string) tea.Cmd {
 	return func() tea.Msg {
 		configDir := bootstrap.DefaultConfigDir()
 		if configDir == "" {
-			return updateCheckMsg{err: fmt.Errorf("无法确定更新检查缓存目录")}
+			return updateCheckMsg{err: fmt.Errorf("%s", i18n.T("errors.update_cache_dir"))}
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -91,11 +92,11 @@ func checkForUpdate(currentVersion string) tea.Cmd {
 const updateNotesPreviewWidth = 56
 
 func formatUpdateNotice(result *buildversion.CheckResult) string {
-	notice := fmt.Sprintf("新版本 %s 已发布", result.Latest)
+	notice := fmt.Sprintf(i18n.T("tui.update.notice"), result.Latest)
 	if preview := updateNotesPreview(result.Notes); preview != "" {
 		notice += " · " + preview
 	}
-	return notice + " · 运行 ainovel-cli update 升级"
+	return notice + " · " + i18n.T("tui.update.run_upgrade")
 }
 
 func updateNotesPreview(notes string) string {

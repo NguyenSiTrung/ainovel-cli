@@ -116,7 +116,17 @@
     "err_invalid_window": "Context window must be a positive integer, e.g. 128K, 1M, or leave empty for auto",
     "err_window_overflow": "Context window exceeds valid integer range",
     "no_provider_available": "No available provider currently",
-    "provider_no_models": "Provider %q has no configured models"
+    "provider_no_models": "Provider %q has no configured models",
+    "disable_update_check": "Disable startup update check",
+    "err_provider_name_empty": "Provider name cannot be empty",
+    "err_provider_exists": "Provider already exists, please return and select edit",
+    "notice_key_cleared": "API Key marked for removal, will take effect upon saving",
+    "err_add_model_before_test": "Please add at least one model before testing connection",
+    "testing_connection": "Testing connection: %s/%s...",
+    "validating_saving": "Validating and saving configuration...",
+    "test_cancelled": "Connection test cancelled",
+    "no_available_options": "No options available",
+    "err_key_cannot_clear": "This Provider requires an API Key and cannot be cleared"
   },
   "tui": {
     "welcome": {
@@ -167,7 +177,9 @@
       "pausing_placeholder": "Pausing novel creation...",
       "paused_placeholder": "Creation paused, enter any input to resume",
       "review_wait_placeholder": "Chapter review gate: enter feedback or /next to approve next chapter",
-      "interrupted_placeholder": "Execution interrupted, enter any input to recover"
+      "interrupted_placeholder": "Execution interrupted, enter any input to recover",
+      "loading": "Loading...",
+      "terminal_too_narrow": "Terminal width too narrow, please expand to at least 100 columns"
     },
     "cocreate": {
       "title": "Co-Create & Planning",
@@ -202,7 +214,11 @@
       "hint_nil": "Enter Send · Esc Exit",
       "hint_modal_awaiting": "AI replying · ↑↓ Scroll chat · Wheel scroll prompt · Esc Exit",
       "hint_modal_can_start": "Enter Refine · %s · ↑↓ Scroll chat · Wheel scroll prompt · Esc Exit",
-      "hint_modal_default": "Enter Send · ↑↓ Scroll chat · Wheel scroll prompt · Esc Exit"
+      "hint_modal_default": "Enter Send · ↑↓ Scroll chat · Wheel scroll prompt · Esc Exit",
+      "stage_pause_msg": "Pausing momentarily to plan the upcoming story direction with you.",
+      "scroll_more_down": "↓ More content below, scroll or press PgDn to view",
+      "scroll_more_up": "↑ More content above, scroll or press PgUp to view",
+      "scroll_more_both": "↑↓ Scroll to view more"
     },
     "phase": {
       "init": "Initialization",
@@ -393,7 +409,8 @@
       "unknown_command": "Unknown command: %s",
       "needs_idle": "Command can only be executed in idle state: %s",
       "unknown_param": "Unknown parameter",
-      "supported": "supported"
+      "supported": "supported",
+      "start_path_param": "path to outline or premise file"
     },
     "hints": {
       "press_ctrl_c_again": "Press Ctrl+C again to exit",
@@ -426,7 +443,8 @@
       "chapter_summary": "Chapter %d: %s",
       "story_updated": " (plot facts updated)",
       "conflicts_found": " (found %d downstream conflicts)",
-      "accepted_revisions": "Accepted chapter revisions: %v"
+      "accepted_revisions": "Accepted chapter revisions: %v",
+      "modified_notice": "Detected external modifications to chapters: %v; run /sync to accept"
     },
     "report": {
       "source": "Source",
@@ -450,6 +468,12 @@
       "started_time": "Started Time",
       "loading_desc": "Reading novel outputs and analyzing workflow, quality, planning, and context issues. May take a few seconds for large projects.",
       "loading_hint": "Press Esc to close modal. Background analysis will re-generate on next open."
+    },
+    "update": {
+      "notice": "New version %s is available",
+      "run_upgrade": "run ainovel-cli update to upgrade",
+      "check_failed": "Startup update check failed",
+      "cache_warning": "Update check completed with cache anomalies"
     }
   },
   "errors": {
@@ -460,6 +484,10 @@
     "model_not_found": "Model not found: %s",
     "pause_exit_prompt": "Press Enter to exit...",
     "last_error_log": "Error details logged to: %s",
-    "network_error": "Network error connecting to AI server: %v"
+    "network_error": "Network error connecting to AI server: %v",
+    "update_cache_dir": "Unable to determine update check cache directory",
+    "file_log_unavailable": "File logging unavailable, falling back to terminal logging",
+    "startup_failed_model": "Startup failed, please check model configuration or use /model to switch models",
+    "prompt_read_failed": "Failed to read prompt"
   }
 }

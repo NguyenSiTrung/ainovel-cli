@@ -147,6 +147,8 @@
   //   "events": ["run_end", "budget", "advance_gate", "stop_guard", "plan_start", "deadlock", "worker_failure"]
   // }
 
+  // Tùy chọn. Đặt true để tắt thông báo kiểm tra phiên bản mới khi khởi động (mặc định bật).
+  // Optional. Set true to disable startup update check notifications (enabled by default).
   // 可选。置 true 关闭启动时的新版本检查提醒（默认开）。检查只读 GitHub Releases
   // 公开接口，结果本地缓存 24h；发现新版本时在欢迎页/事件流提示版本号与更新摘要，
   // 是否升级始终由你运行 ainovel-cli update 决定。

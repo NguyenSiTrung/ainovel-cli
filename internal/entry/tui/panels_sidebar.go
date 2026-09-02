@@ -617,11 +617,11 @@ func agentOrder(name string) int {
 func agentStateLabel(state string) string {
 	switch state {
 	case "running":
-		return "运行中"
+		return i18n.T("tui.status.running")
 	case "failed":
-		return "异常"
+		return i18n.T("tui.status.error")
 	case "idle":
-		return "待命"
+		return i18n.T("tui.sidebar.standby")
 	default:
 		return state
 	}
@@ -656,21 +656,21 @@ func taskStatusColor(status string) lipgloss.AdaptiveColor {
 func taskKindLabel(kind string) string {
 	switch kind {
 	case "foundation_plan":
-		return "基础规划"
+		return i18n.T("tui.flow.planning")
 	case "chapter_write":
-		return "章节写作"
+		return i18n.T("tui.flow.writing")
 	case "chapter_review":
-		return "章节评审"
+		return i18n.T("tui.flow.reviewing")
 	case "chapter_rewrite":
-		return "章节重写"
+		return i18n.T("tui.flow.rewriting")
 	case "chapter_polish":
-		return "章节打磨"
+		return i18n.T("tui.flow.polishing")
 	case "arc_expand":
-		return "弧展开"
+		return i18n.T("tui.sidebar.current_arc")
 	case "volume_append":
-		return "下一卷规划"
+		return i18n.T("tui.sidebar.planned")
 	case "steer_apply":
-		return "处理干预"
+		return i18n.T("tui.sidebar.steer")
 	default:
 		return kind
 	}

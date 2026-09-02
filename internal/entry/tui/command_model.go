@@ -274,10 +274,10 @@ func (s *modelSwitchState) syncThinking(rt modelRuntime) {
 
 func (s *modelSwitchState) apply(rt modelRuntime) error {
 	if len(s.providers) == 0 {
-		return fmt.Errorf("当前没有可用 provider")
+		return fmt.Errorf("%s", i18n.T("config.no_provider_available"))
 	}
 	if len(s.models) == 0 {
-		return fmt.Errorf("provider %q 没有已配置模型", s.provider())
+		return fmt.Errorf(i18n.T("config.provider_no_models"), s.provider())
 	}
 	wantThinking := s.thinkingKey()
 	if err := rt.SwitchModel(s.role(), s.provider(), s.model()); err != nil {

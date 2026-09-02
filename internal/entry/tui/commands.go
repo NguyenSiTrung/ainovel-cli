@@ -79,10 +79,8 @@ func commandRegistryInstance() commandRegistry {
 					roleHint = args[0]
 					if normalizeRoleKey(roleHint) == "" {
 						m.applyEvent(host.Event{
-							Time: time.Now(), Category: "ERROR", Summary: "未知角色：" + roleHint, Level: "error",
+							Time: time.Now(), Category: "ERROR", Summary: fmt.Sprintf(i18n.T("tui.cmd.unknown_role"), roleHint), Level: "error",
 						})
-						m.refreshEventViewport()
-						return m, nil
 					}
 				}
 				m.modelSwitch = newModelSwitchState(m.runtime, roleHint)
@@ -128,7 +126,7 @@ func commandRegistryInstance() commandRegistry {
 			Description: "切换逐章验收模式",
 			Run: func(m Model, args []string) (tea.Model, tea.Cmd) {
 				if len(args) != 1 || (args[0] != "on" && args[0] != "off") {
-					m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: "用法：/review on|off", Level: "error"})
+					m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: i18n.T("cli.usage") + ": /review on|off", Level: "error"})
 					m.refreshEventViewport()
 					return m, nil
 				}
@@ -137,7 +135,7 @@ func commandRegistryInstance() commandRegistry {
 					mode = domain.ChapterAdvanceAuto
 				}
 				if err := m.runtime.SetAdvanceMode(mode); err != nil {
-					m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: "切换推进模式失败：" + err.Error(), Level: "error"})
+					m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: i18n.T("tui.cmd.err_advance_mode") + ": " + err.Error(), Level: "error"})
 					m.refreshEventViewport()
 					return m, nil
 				}
@@ -153,12 +151,12 @@ func commandRegistryInstance() commandRegistry {
 			NeedsIdle:   true,
 			Run: func(m Model, args []string) (tea.Model, tea.Cmd) {
 				if len(args) != 0 {
-					m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: "用法：/next", Level: "error"})
+					m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: i18n.T("cli.usage") + ": /next", Level: "error"})
 					m.refreshEventViewport()
 					return m, nil
 				}
 				if err := m.runtime.AdvanceOneChapter(); err != nil {
-					m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: "放行下一章失败：" + err.Error(), Level: "error"})
+					m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: i18n.T("tui.cmd.err_advance_next") + ": " + err.Error(), Level: "error"})
 					m.refreshEventViewport()
 					return m, nil
 				}
@@ -173,7 +171,7 @@ func commandRegistryInstance() commandRegistry {
 			Run: func(m Model, args []string) (tea.Model, tea.Cmd) {
 				if m.mode != modeNew {
 					m.applyEvent(host.Event{
-						Time: time.Now(), Category: "ERROR", Summary: "/start 仅可在欢迎页创建新书", Level: "error",
+						Time: time.Now(), Category: "ERROR", Summary: i18n.T("tui.cmd.start_welcome_only"), Level: "error",
 					})
 					m.refreshEventViewport()
 					return m, nil
@@ -198,7 +196,7 @@ func commandRegistryInstance() commandRegistry {
 				state, listenCmd, err := startImport(m.runtime, m.importSeq, args, m.width, m.height)
 				if err != nil {
 					m.applyEvent(host.Event{
-						Time: time.Now(), Category: "ERROR", Summary: "导入启动失败：" + err.Error(), Level: "error",
+						Time: time.Now(), Category: "ERROR", Summary: i18n.T("tui.cmd.err_import_start") + ": " + err.Error(), Level: "error",
 					})
 					m.refreshEventViewport()
 					return m, nil
@@ -218,7 +216,7 @@ func commandRegistryInstance() commandRegistry {
 			Run: func(m Model, args []string) (tea.Model, tea.Cmd) {
 				if err := m.runtime.Reopen(strings.Join(args, " ")); err != nil {
 					m.applyEvent(host.Event{
-						Time: time.Now(), Category: "ERROR", Summary: "重开失败：" + err.Error(), Level: "error",
+						Time: time.Now(), Category: "ERROR", Summary: i18n.T("tui.cmd.err_reopen") + ": " + err.Error(), Level: "error",
 					})
 					m.refreshEventViewport()
 					return m, nil
@@ -236,14 +234,14 @@ func commandRegistryInstance() commandRegistry {
 			Run: func(m Model, _ []string) (tea.Model, tea.Cmd) {
 				if m.mode != modeRunning {
 					m.applyEvent(host.Event{
-						Time: time.Now(), Category: "ERROR", Summary: "阶段共创仅在创作中可用", Level: "error",
+						Time: time.Now(), Category: "ERROR", Summary: i18n.T("tui.cmd.cocreate_running_only"), Level: "error",
 					})
 					m.refreshEventViewport()
 					return m, nil
 				}
 				if !m.runtime.PauseForCoCreate() {
 					m.applyEvent(host.Event{
-						Time: time.Now(), Category: "ERROR", Summary: "无法进入阶段共创：全书已完成或已在共创中", Level: "error",
+						Time: time.Now(), Category: "ERROR", Summary: i18n.T("tui.cmd.cocreate_unavailable"), Level: "error",
 					})
 					m.refreshEventViewport()
 					return m, nil
@@ -265,7 +263,7 @@ func commandRegistryInstance() commandRegistry {
 				state, listenCmd, err := startSimulate(m.runtime, m.simSeq, args, m.width, m.height)
 				if err != nil {
 					m.applyEvent(host.Event{
-						Time: time.Now(), Category: "ERROR", Summary: "仿写画像启动失败：" + err.Error(), Level: "error",
+						Time: time.Now(), Category: "ERROR", Summary: i18n.T("tui.cmd.err_simulate_start") + ": " + err.Error(), Level: "error",
 					})
 					m.refreshEventViewport()
 					return m, nil
@@ -286,7 +284,7 @@ func commandRegistryInstance() commandRegistry {
 				state, listenCmd, err := startImportSimulation(m.runtime, m.simSeq, args, m.width, m.height)
 				if err != nil {
 					m.applyEvent(host.Event{
-						Time: time.Now(), Category: "ERROR", Summary: "导入仿写画像失败：" + err.Error(), Level: "error",
+						Time: time.Now(), Category: "ERROR", Summary: i18n.T("tui.cmd.err_importsim") + ": " + err.Error(), Level: "error",
 					})
 					m.refreshEventViewport()
 					return m, nil
@@ -306,16 +304,15 @@ func commandRegistryInstance() commandRegistry {
 			Run: func(m Model, args []string) (tea.Model, tea.Cmd) {
 				cmd, checkOnly, err := startRevisionSync(m.runtime, args)
 				if err != nil {
-					m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: "章节同步启动失败：" + err.Error(), Level: "error"})
+					m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: i18n.T("tui.cmd.err_sync_start") + ": " + err.Error(), Level: "error"})
 					m.refreshEventViewport()
 					return m, nil
 				}
-				summary := "正在分析并接纳章节修订..."
+				summary := i18n.T("tui.cmd.sync_analyzing")
 				if checkOnly {
-					summary = "正在检查章节外部修改..."
+					summary = i18n.T("tui.cmd.sync_checking")
 				}
 				m.applyEvent(host.Event{Time: time.Now(), Category: "SYSTEM", Summary: summary, Level: "info"})
-				m.refreshEventViewport()
 				return m, cmd
 			},
 		},
@@ -329,13 +326,13 @@ func commandRegistryInstance() commandRegistry {
 				cmd, err := startExport(m.runtime, args)
 				if err != nil {
 					m.applyEvent(host.Event{
-						Time: time.Now(), Category: "ERROR", Summary: "导出启动失败：" + err.Error(), Level: "error",
+						Time: time.Now(), Category: "ERROR", Summary: i18n.T("tui.cmd.err_export_start") + ": " + err.Error(), Level: "error",
 					})
 					m.refreshEventViewport()
 					return m, nil
 				}
 				m.applyEvent(host.Event{
-					Time: time.Now(), Category: "SYSTEM", Summary: "正在导出...", Level: "info",
+					Time: time.Now(), Category: "SYSTEM", Summary: i18n.T("tui.cmd.exporting"), Level: "info",
 				})
 				m.refreshEventViewport()
 				return m, cmd
@@ -355,7 +352,7 @@ func prepareFileStart(args []string) (string, error) {
 		path = path[1 : len(path)-1]
 	}
 	if path == "" {
-		return "", fmt.Errorf("用法：/start <设定或大纲文件路径>")
+		return "", fmt.Errorf("%s: /start <%s>", i18n.T("cli.usage"), i18n.T("tui.cmd.start_path_param"))
 	}
 	prompt, err := startup.LoadPromptFile(path)
 	if err != nil {
@@ -368,14 +365,14 @@ func (m Model) handleSlashCommand(cmd slashCommand) (tea.Model, tea.Cmd) {
 	spec, ok := commandRegistryInstance().Find(cmd.name)
 	if !ok {
 		m.applyEvent(host.Event{
-			Time: time.Now(), Category: "ERROR", Summary: "未知命令：/" + cmd.name, Level: "error",
+			Time: time.Now(), Category: "ERROR", Summary: fmt.Sprintf(i18n.T("tui.cmd.unknown_command"), "/"+cmd.name), Level: "error",
 		})
 		m.refreshEventViewport()
 		return m, nil
 	}
 	if spec.NeedsIdle && m.snapshot.IsRunning {
 		m.applyEvent(host.Event{
-			Time: time.Now(), Category: "ERROR", Summary: "命令仅可在空闲状态执行：/" + spec.Name, Level: "error",
+			Time: time.Now(), Category: "ERROR", Summary: fmt.Sprintf(i18n.T("tui.cmd.needs_idle"), "/"+spec.Name), Level: "error",
 		})
 		m.refreshEventViewport()
 		return m, nil

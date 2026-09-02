@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 func TestStartCommandLoadsPromptFile(t *testing.T) {
@@ -56,13 +58,13 @@ func TestEnterStartingSwitchesToWorkbenchImmediately(t *testing.T) {
 	if !m.snapshot.IsRunning {
 		t.Fatal("snapshot should render as running during local startup")
 	}
-	if got := m.textarea.Placeholder; got != "正在初始化创作..." {
+	if got := m.textarea.Placeholder; got != i18n.T("tui.status.starting_placeholder") {
 		t.Fatalf("placeholder = %q", got)
 	}
 	if len(m.events) != 2 {
 		t.Fatalf("events = %+v, want startup user + system events", m.events)
 	}
-	if m.events[0].Category != "USER" || !strings.HasPrefix(m.events[0].Summary, "创作需求: ") {
+	if m.events[0].Category != "USER" || !strings.HasPrefix(m.events[0].Summary, i18n.T("tui.hints.input_label")+": ") {
 		t.Fatalf("first event = %+v, want USER prompt event", m.events[0])
 	}
 }

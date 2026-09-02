@@ -104,7 +104,9 @@ func newCoCreateState(initial string) *cocreateState {
 
 // stageCoCreateOpener 是阶段共创的合成开场用户语，作为 kickoff 的 user 轮次发给 LLM，
 // 让助手据"当前故事状态"主动开局，而不是空对话干等用户先说话。
-const stageCoCreateOpener = "我先暂停一下，想和你一起规划接下来的走向。"
+func stageCoCreateOpener() string {
+	return i18n.T("tui.cocreate.stage_pause_msg")
+}
 
 // stageCoCreateSystemLine 是这条开场在 UI 里的中性呈现：开场句本质是系统合成的、
 // 用户并未真打过，故不伪装成"你"的发言，改以系统行交代上下文（它仍以 stageCoCreateOpener
@@ -114,7 +116,7 @@ const stageCoCreateSystemLine = "已暂停创作，进入阶段共创 —— AI 
 // newStageCoCreateState 创建阶段共创状态：seed 开场并标记 stage，使 runCoCreate 走
 // StageCoCreateStream、Ctrl+S 走 ResumeFromCoCreate。
 func newStageCoCreateState() *cocreateState {
-	s := newCoCreateState(stageCoCreateOpener)
+	s := newCoCreateState(stageCoCreateOpener())
 	s.stage = true
 	return s
 }
@@ -586,14 +588,13 @@ func renderCoCreatePromptPanel(width, height int, state *cocreateState) string {
 	if state.promptVP.TotalLineCount() > state.promptVP.VisibleLineCount() {
 		switch {
 		case state.promptVP.AtTop():
-			hint = "↓ 下方还有内容，可滚轮或 PgDn 查看"
+			hint = i18n.T("tui.cocreate.scroll_more_down")
 		case state.promptVP.AtBottom():
-			hint = "↑ 上方还有内容，可滚轮或 PgUp 查看"
+			hint = i18n.T("tui.cocreate.scroll_more_up")
 		default:
-			hint = "↑↓ 可继续滚动查看"
+			hint = i18n.T("tui.cocreate.scroll_more_both")
 		}
 	}
-
 	style := lipgloss.NewStyle().
 		Width(contentW).
 		Height(height).

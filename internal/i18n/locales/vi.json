@@ -116,7 +116,17 @@
     "err_invalid_window": "Khung ngữ cảnh phải là số nguyên dương, 128K, 1M hoặc để trống để tự động",
     "err_window_overflow": "Khung ngữ cảnh vượt quá phạm vi số nguyên hợp lệ",
     "no_provider_available": "Hiện không có nhà cung cấp nào khả dụng",
-    "provider_no_models": "Nhà cung cấp %q chưa có mô hình nào được cấu hình"
+    "provider_no_models": "Nhà cung cấp %q chưa có mô hình nào được cấu hình",
+    "disable_update_check": "Tắt tự động kiểm tra cập nhật khi khởi động",
+    "err_provider_name_empty": "Tên Provider không được để trống",
+    "err_provider_exists": "Provider đã tồn tại, vui lòng quay lại và chọn chỉnh sửa",
+    "notice_key_cleared": "API Key đã được đánh dấu xóa, có hiệu lực sau khi lưu",
+    "err_add_model_before_test": "Vui lòng thêm ít nhất một mô hình trước khi thử kết nối",
+    "testing_connection": "Đang thử kết nối: %s/%s...",
+    "validating_saving": "Đang xác thực và lưu cấu hình...",
+    "test_cancelled": "Đã hủy thử nghiệm kết nối",
+    "no_available_options": "Không có lựa chọn khả dụng",
+    "err_key_cannot_clear": "Nhà cung cấp này bắt buộc phải có API Key, không thể xóa"
   },
   "tui": {
     "welcome": {
@@ -167,7 +177,9 @@
       "interrupted_placeholder": "Đang gián đoạn, nhập bất kỳ nội dung nào để tiếp tục",
       "chapter_num": "Chương %d",
       "done_placeholder": "Đã hoàn thành toàn bộ tác phẩm · Nhập yêu cầu để viết lại, dùng /reopen để mở quyển mới, hoặc /export để xuất bản",
-      "saved": "tiết kiệm "
+      "saved": "tiết kiệm ",
+      "loading": "Đang tải...",
+      "terminal_too_narrow": "Độ rộng terminal không đủ, vui lòng mở rộng tối thiểu 100 cột"
     },
     "cocreate": {
       "title": "Đồng sáng tác & Lên kế hoạch",
@@ -202,7 +214,11 @@
       "hint_nil": "Enter Gửi · Esc Thoát",
       "hint_modal_awaiting": "AI đang trả lời · ↑↓ Cuộn chat · Con lăn cuộn chỉ lệnh · Esc Thoát",
       "hint_modal_can_start": "Enter Bổ sung · %s · ↑↓ Cuộn chat · Con lăn cuộn chỉ lệnh · Esc Thoát",
-      "hint_modal_default": "Enter Gửi · ↑↓ Cuộn chat · Con lăn cuộn chỉ lệnh · Esc Thoát"
+      "hint_modal_default": "Enter Gửi · ↑↓ Cuộn chat · Con lăn cuộn chỉ lệnh · Esc Thoát",
+      "stage_pause_msg": "Tôi tạm dừng một chút để cùng bạn lập kế hoạch cho hướng đi tiếp theo.",
+      "scroll_more_down": "↓ Còn nội dung bên dưới, có thể cuộn chuột hoặc nhấn PgDn",
+      "scroll_more_up": "↑ Còn nội dung bên trên, có thể cuộn chuột hoặc nhấn PgUp",
+      "scroll_more_both": "↑↓ Có thể tiếp tục cuộn để xem"
     },
     "phase": {
       "init": "Khởi tạo",
@@ -393,7 +409,8 @@
       "unknown_command": "Lệnh không xác định: %s",
       "needs_idle": "Lệnh chỉ có thể thực thi khi ở trạng thái nghỉ: %s",
       "unknown_param": "Tham số không xác định",
-      "supported": "hỗ trợ"
+      "supported": "hỗ trợ",
+      "start_path_param": "đường dẫn tệp thiết lập hoặc đại cương"
     },
     "hints": {
       "press_ctrl_c_again": "Nhấn Ctrl+C lần nữa để thoát",
@@ -426,7 +443,8 @@
       "chapter_summary": "Chương %d: %s",
       "story_updated": " (tình tiết cốt truyện đã cập nhật)",
       "conflicts_found": " (phát hiện %d xung đột phía sau)",
-      "accepted_revisions": "Đã tiếp nhận sửa đổi các chương: %v"
+      "accepted_revisions": "Đã tiếp nhận sửa đổi các chương: %v",
+      "modified_notice": "Phát hiện văn bản chương đã bị sửa đổi bên ngoài: %v; thực hiện /sync để tiếp nhận"
     },
     "report": {
       "source": "Nguồn",
@@ -450,6 +468,12 @@
       "started_time": "Thời gian bắt đầu",
       "loading_desc": "Đang đọc kết quả đầu ra của tiểu thuyết và phân tích luồng xử lý, chất lượng, quy hoạch cùng các vấn đề ngữ cảnh. Có thể mất vài giây với dự án lớn.",
       "loading_hint": "Nhấn Esc để đóng tạm thời. Phân tích nền sẽ hoàn tất và hiển thị lại ở lần mở sau."
+    },
+    "update": {
+      "notice": "Đã có phiên bản mới %s",
+      "run_upgrade": "chạy ainovel-cli update để nâng cấp",
+      "check_failed": "Kiểm tra cập nhật phiên bản khởi động thất bại",
+      "cache_warning": "Kiểm tra cập nhật hoàn tất nhưng bộ nhớ đệm có bất thường"
     }
   },
   "errors": {
@@ -460,6 +484,10 @@
     "model_not_found": "Không tìm thấy mô hình: %s",
     "pause_exit_prompt": "Nhấn Enter để thoát...",
     "last_error_log": "Chi tiết lỗi đã được ghi vào: %s",
-    "network_error": "Lỗi kết nối mạng đến máy chủ AI: %v"
+    "network_error": "Lỗi kết nối mạng đến máy chủ AI: %v",
+    "update_cache_dir": "Không thể xác định thư mục bộ nhớ đệm kiểm tra cập nhật",
+    "file_log_unavailable": "Ghi tệp nhật ký không khả dụng, tiếp tục dùng nhật ký terminal",
+    "startup_failed_model": "Khởi động thất bại, vui lòng kiểm tra cấu hình mô hình hoặc dùng /model để đổi mô hình",
+    "prompt_read_failed": "Đọc prompt thất bại"
   }
 }

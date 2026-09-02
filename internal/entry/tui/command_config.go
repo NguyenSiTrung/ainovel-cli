@@ -180,7 +180,7 @@ func (s *modelConfigState) applyProviderChoice(choice configProviderChoice) {
 		s.providerType = "openai" // 自定义默认 openai，可在 hub 改
 		s.baseURL = ""
 		s.step = configStepCustomName
-		s.startTextInput("", "Provider 名称", false)
+		s.startTextInput("", i18n.T("config.custom_provider_name"), false)
 		return
 	}
 	s.provider = choice.preset.Name
@@ -648,12 +648,12 @@ func (m Model) handleModelConfigKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if msg.Type == tea.KeyEnter {
 			name := strings.TrimSpace(state.input.Value())
 			if name == "" {
-				state.message = "Provider 名称不能为空"
+				state.message = i18n.T("config.err_provider_name_empty")
 				break
 			}
 			for _, provider := range state.snapshot.Providers {
 				if provider.Name == name {
-					state.message = "Provider 已存在，请返回后选择编辑"
+					state.message = i18n.T("config.err_provider_exists")
 					return m, nil
 				}
 			}
@@ -680,12 +680,12 @@ func (m Model) handleModelConfigKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		moveConfigCursor(state, msg, len(fields))
 		if msg.Type == tea.KeyDelete && state.cursor >= 0 && state.cursor < len(fields) && fields[state.cursor].id == "key" {
 			if !state.apiKeyOptional {
-				state.message = "该 Provider 必须配置 API Key，不能清除"
+				state.message = i18n.T("config.err_key_cannot_clear")
 				break
 			}
 			state.apiKeyAction = host.APIKeyClear
 			state.apiKey = ""
-			state.message = "API Key 已标记清除，保存配置后生效"
+			state.message = i18n.T("config.notice_key_cleared")
 			break
 		}
 		if msg.Type == tea.KeyEnter && state.cursor >= 0 && state.cursor < len(fields) {
@@ -693,15 +693,15 @@ func (m Model) handleModelConfigKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if fieldID == "test" {
 				model := state.testModelName()
 				if model == "" {
-					state.message = "请至少添加一个模型后再测试连接"
+					state.message = i18n.T("config.err_add_model_before_test")
 					break
 				}
 				if !state.apiKeyOptional && !state.hasEffectiveAPIKey() {
-					state.message = "该 Provider 必须配置 API Key"
+					state.message = i18n.T("config.err_key_required")
 					break
 				}
 				state.testing = true
-				state.message = fmt.Sprintf("正在测试连接：%s/%s...", state.provider, model)
+				state.message = fmt.Sprintf(i18n.T("config.testing_connection"), state.provider, model)
 				ctx, cancel := context.WithCancel(context.Background())
 				state.testCancel = cancel
 				return m, testModelConnection(ctx, m.runtime, state.draft(), model)
@@ -709,15 +709,15 @@ func (m Model) handleModelConfigKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			save, cmd := state.enterHubField(fieldID)
 			if save {
 				if len(state.models) == 0 {
-					state.message = "请至少添加一个模型"
+					state.message = i18n.T("config.no_models_hint")
 					break
 				}
 				if !state.apiKeyOptional && !state.hasEffectiveAPIKey() {
-					state.message = "该 Provider 必须配置 API Key"
+					state.message = i18n.T("config.err_key_required")
 					break
 				}
 				state.saving = true
-				state.message = "正在校验并保存配置..."
+				state.message = i18n.T("config.validating_saving")
 				return m, saveModelConfiguration(m.runtime, state.draft())
 			}
 			return m, cmd
@@ -901,12 +901,13 @@ func renderModelConfigModal(width int, state *modelConfigState) string {
 
 	if state.message != "" {
 		color := colorError
-		if strings.HasPrefix(state.message, "连接测试成功") {
+		if strings.HasPrefix(state.message, i18n.T("setup.test_success")) || strings.HasPrefix(state.message, "连接测试成功") {
 			color = colorSuccess
 		} else if state.saving || state.testing || strings.HasPrefix(state.message, "已选择") ||
-			strings.HasPrefix(state.message, "API Key 已") || strings.HasPrefix(state.message, "连接测试已取消") {
+			strings.HasPrefix(state.message, i18n.T("config.notice_key_cleared")) || strings.HasPrefix(state.message, "API Key 已") ||
+			strings.HasPrefix(state.message, i18n.T("config.test_cancelled")) || strings.HasPrefix(state.message, "连接测试已取消") {
 			color = colorAccent
-		} else if strings.HasPrefix(state.message, "保存时将同步更新引用") {
+		} else if strings.HasPrefix(state.message, i18n.T("config.sync_refs_notice")) || strings.HasPrefix(state.message, "保存时将同步更新引用") {
 			color = colorAccent
 		}
 		lines = append(lines, "")
@@ -1062,7 +1063,7 @@ func labelsForProviderChoices(choices []configProviderChoice) []string {
 
 func renderConfigChoices(labels []string, cursor, width, limit int) []string {
 	if len(labels) == 0 {
-		return []string{lipgloss.NewStyle().Foreground(colorDim).Render("没有可用选项")}
+		return []string{lipgloss.NewStyle().Foreground(colorDim).Render(i18n.T("config.no_available_options"))}
 	}
 	start, end := configWindow(len(labels), cursor, limit)
 	lines := make([]string, 0, end-start)

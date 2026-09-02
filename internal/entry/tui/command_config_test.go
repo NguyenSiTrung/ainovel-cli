@@ -359,7 +359,7 @@ func TestProviderHubDeleteClearsOnlyOptionalAPIKey(t *testing.T) {
 	required.cursor = hubFieldIndex(required.hubFields(), "key")
 	m = Model{modelConfig: required}
 	m.handleModelConfigKey(tea.KeyMsg{Type: tea.KeyDelete})
-	if required.apiKeyAction != host.APIKeyKeep || !strings.Contains(required.message, "不能清除") {
+	if required.apiKeyAction != host.APIKeyKeep || required.message != i18n.T("config.err_key_cannot_clear") {
 		t.Fatalf("必需 Key 不应被清除，action=%q message=%q", required.apiKeyAction, required.message)
 	}
 }

@@ -563,9 +563,8 @@ func (m Model) handleRuntimeMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 	case exportDoneMsg:
 		if msg.err != nil {
 			m.applyEvent(host.Event{
-				Time: time.Now(), Category: "ERROR", Summary: "导出失败：" + msg.err.Error(), Level: "error",
+				Time: time.Now(), Category: "ERROR", Summary: i18n.T("tui.report.export_failed") + ": " + msg.err.Error(), Level: "error",
 			})
-		} else if msg.result != nil {
 			m.applyEvent(host.Event{
 				Time: time.Now(), Category: "SYSTEM", Summary: formatExportSuccess(msg.result), Level: "success",
 			})
@@ -574,9 +573,9 @@ func (m Model) handleRuntimeMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 		return m, nil, true
 	case updateCheckMsg:
 		if msg.err != nil {
-			message := "启动版本检查失败"
+			message := i18n.T("tui.update.check_failed")
 			if msg.result != nil {
-				message = "启动版本检查完成，但缓存存在异常"
+				message = i18n.T("tui.update.cache_warning")
 			}
 			slog.Warn(message, "module", "version", "err", msg.err)
 		}
@@ -594,11 +593,11 @@ func (m Model) handleRuntimeMsg(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 		return m, nil, true
 	case revisionDoneMsg:
 		if msg.err != nil {
-			m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: "章节同步失败：" + msg.err.Error(), Level: "error"})
+			m.applyEvent(host.Event{Time: time.Now(), Category: "ERROR", Summary: i18n.T("tui.cmd.err_sync_start") + ": " + msg.err.Error(), Level: "error"})
 		} else if msg.checkOnly {
-			summary := "未检测到章节外部修改"
+			summary := i18n.T("tui.revision.no_changes")
 			if len(msg.chapters) > 0 {
-				summary = fmt.Sprintf("检测到章节正文已被外部修改：%v；执行 /sync 接纳", msg.chapters)
+				summary = fmt.Sprintf(i18n.T("tui.revision.modified_notice"), msg.chapters)
 			}
 			m.applyEvent(host.Event{Time: time.Now(), Category: "SYSTEM", Summary: summary, Level: "info"})
 		} else {
@@ -771,7 +770,7 @@ func (m Model) handleStartResultMsg(msg startResultMsg) (tea.Model, tea.Cmd) {
 			m.mode = modeRunning
 			m.snapshot.IsRunning = false
 			m.snapshot.RuntimeState = "idle"
-			m.textarea.Placeholder = "启动失败，请检查模型配置或使用 /model 切换模型"
+			m.textarea.Placeholder = i18n.T("errors.startup_failed_model")
 			m.refreshStreamViewport()
 			m.refreshStateViewport()
 			return m, m.textarea.Focus()
@@ -804,10 +803,10 @@ func (m *Model) enterStarting(rawPrompt string) tea.Cmd {
 	enableMouse := m.enterRunning()
 	m.resetOutputPanels()
 	m.resizeTextarea()
-	m.textarea.Placeholder = "正在初始化创作..."
+	m.textarea.Placeholder = i18n.T("tui.status.starting_placeholder")
 	m.applyStartupPromptEvent(rawPrompt)
 	m.applyEvent(host.Event{
-		Time: time.Now(), Category: "SYSTEM", Summary: "正在初始化创作", Level: "info",
+		Time: time.Now(), Category: "SYSTEM", Summary: i18n.T("tui.status.starting_placeholder"), Level: "info",
 	})
 	m.refreshEventViewport()
 	m.refreshStreamViewport()
@@ -823,7 +822,7 @@ func (m *Model) applyStartupPromptEvent(rawPrompt string) {
 	m.applyEvent(host.Event{
 		Time:     time.Now(),
 		Category: "USER",
-		Summary:  "创作需求: " + truncate(text, maxPromptEventCols),
+		Summary:  i18n.T("tui.hints.input_label") + ": " + truncate(text, maxPromptEventCols),
 		Detail:   text,
 		Level:    "info",
 	})
