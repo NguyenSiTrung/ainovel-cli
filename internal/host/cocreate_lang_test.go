@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/voocel/ainovel-cli/internal/bootstrap"
 	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
@@ -42,6 +43,28 @@ func TestCoCreatePromptBaseNeutral(t *testing.T) {
 			if strings.Contains(p, pin) {
 				t.Errorf("%s 仍含硬编码输出语言 pin %q，应交给 coCreateLangDirective", name, pin)
 			}
+		}
+	}
+}
+
+// TestCoCreateLangPriority 守护语言优先级：界面语言（language）优先于 story_language。
+// /config 的语言切换只改界面语言，而共创是用户正在看的对话界面——回归场景：
+// language=vi + story_language=en 时回复必须跟随 vi，而不是 story_language 的 en。
+func TestCoCreateLangPriority(t *testing.T) {
+	cases := []struct {
+		name      string
+		language  string
+		storyLang string
+		want      string
+	}{
+		{"ui wins over story", "vi", "en", "vi"},
+		{"story fallback", "", "en", "en"},
+		{"both empty -> zh", "", "", "zh"},
+	}
+	for _, c := range cases {
+		h := &Host{cfg: bootstrap.Config{Language: c.language, StoryLanguage: c.storyLang}}
+		if got := h.coCreateLang(); got != c.want {
+			t.Errorf("%s: coCreateLang() = %q, want %q", c.name, got, c.want)
 		}
 	}
 }

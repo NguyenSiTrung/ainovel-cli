@@ -63,8 +63,11 @@ type Host struct {
 
 	mu         sync.Mutex
 	lifecycle  lifecycle
-	cocreating bool   // 阶段共创占用：paused 窗口内堵住 import/simulate/continue 的并发介入
-	exclusive  string // 后台独占作业占用（导入/仿写/修订）：非空表示某作业在跑，堵住并发独占入口
+	cocreating bool // 阶段共创占用：paused 窗口内堵住 import/simulate/continue 的并发介入
+	// coCreateStopTimeout bounds the asynchronous engine drain after stage co-create abort.
+	// A zero value uses the production default; tests may shorten it.
+	coCreateStopTimeout time.Duration
+	exclusive           string // 后台独占作业占用（导入/仿写/修订）：非空表示某作业在跑，堵住并发独占入口
 	// exclusiveCancel 是当前独占作业的取消函数：预算硬停/手动暂停须能停掉正在烧钱的
 	// 导入，而不仅是 Engine——abortWithEvent 在 Engine 未运行时取消它（预算哨兵的
 	// abort 回调与手动 Abort 共用同一停机机制）。releaseExclusive 一并清空。
@@ -382,6 +385,12 @@ func (h *Host) StartPrepared(rawRequirement string) error {
 	}
 	if err := h.store.Checkpoints.Reset(); err != nil {
 		return fmt.Errorf("reset checkpoints: %w", err)
+	}
+	// A fresh start is an explicit new run, not a resume. Clear durable recovery
+	// signals left by an interrupted run so the new engine cannot replay stale
+	// commit/rewrite state before producing new output.
+	if err := h.store.Signals.ClearPendingCommit(); err != nil {
+		return fmt.Errorf("clear pending commit: %w", err)
 	}
 	if err := h.store.Progress.Init(0); err != nil {
 		return fmt.Errorf("init progress: %w", err)
@@ -1589,10 +1598,23 @@ func (h *Host) ResumeFromCoCreate(draft string) error {
 	}
 	h.cocreating = false
 	h.mu.Unlock()
-
 	// PauseForCoCreate 的 abort 是异步的:等引擎循环真正收敛再继续,回到与手动
-	// 暂停后 Continue 一致的"真停机"前提。共创窗口是人机交互时间尺度,短轮询无感。
+	// 暂停后 Continue 一致的"真停机"前提。引擎异常卡住时必须有界退出，避免 Ctrl-S
+	// 的 tea 命令永久等待并占住共创状态。
+	timeout := h.coCreateStopTimeout
+	if timeout <= 0 {
+		timeout = 30 * time.Second
+	}
+	deadline := time.NewTimer(timeout)
+	defer deadline.Stop()
 	for h.engine.isRunning() {
+		select {
+		case <-deadline.C:
+			err := fmt.Errorf("阶段共创恢复等待 Engine 停止超时（%s）", timeout)
+			h.emitEvent(newInterventionFailureEvent(err))
+			return err
+		default:
+		}
 		time.Sleep(20 * time.Millisecond)
 	}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/voocel/ainovel-cli/internal/domain"
 	"github.com/voocel/ainovel-cli/internal/host/imp"
@@ -89,6 +90,23 @@ func TestResumeFromCoCreate_RejectsWhenNotCocreating(t *testing.T) {
 		t.Fatalf("非共创态应报 not in co-create，得 %v", err)
 	}
 }
+func TestResumeFromCoCreate_TimesOutWaitingForEngineStop(t *testing.T) {
+	h := newFlagTestHost(lifecyclePaused, true)
+	h.engine.running = true
+	h.coCreateStopTimeout = 10 * time.Millisecond
+	start := time.Now()
+	err := h.ResumeFromCoCreate("继续")
+	if err == nil || !strings.Contains(err.Error(), "阶段共创") {
+		t.Fatalf("engine 停止超时应返回阶段共创错误，得 %v", err)
+	}
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Fatalf("停止等待不应无界，耗时 %s", elapsed)
+	}
+	if h.cocreating {
+		t.Fatal("超时后 cocreating 应清空")
+	}
+}
+
 
 func TestAcquireExclusive(t *testing.T) {
 	cases := []struct {

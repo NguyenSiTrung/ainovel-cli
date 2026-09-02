@@ -92,34 +92,38 @@ func buildCoCreatePrompt(base, lang string) string {
 	return base + "\n\n" + coCreateLangDirective(lang)
 }
 
-// coCreateLang 返回共创对话/指令语言：创作语言（story_language）配置优先，
-// 缺省回落界面语言；两者皆空时由 NormalizeLanguage 回退中文（上游默认行为，
-// 与旧版硬编码中文提示词一致，不产生行为漂移）。
+// coCreateLang 返回共创对话/指令语言：界面语言（language）优先——共创是用户正在
+// 盯着的对话界面，/config 里切换语言应立即生效；story_language 只管小说正文语言，
+// 仅作缺省回落（未配置界面语言的 headless 场景）。两者皆空时由 NormalizeLanguage
+// 回退中文（上游默认行为，与旧版硬编码中文提示词一致，不产生行为漂移）。
 func (h *Host) coCreateLang() string {
 	if h == nil {
 		return ""
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if h.cfg.StoryLanguage != "" {
-		return i18n.NormalizeLanguage(h.cfg.StoryLanguage)
+	if h.cfg.Language != "" {
+		return i18n.NormalizeLanguage(h.cfg.Language)
 	}
-	return i18n.NormalizeLanguage(h.cfg.Language)
+	return i18n.NormalizeLanguage(h.cfg.StoryLanguage)
 }
 
 const viCoCreateLangDirective = `## Ngôn ngữ đối thoại (Tiếng Việt)
 - Toàn bộ nội dung <reply> và <suggestions> hiển thị cho người dùng PHẢI viết hoàn toàn bằng tiếng Việt tự nhiên.
 - Nội dung <draft> cũng PHẢI viết bằng tiếng Việt, bao gồm cả tiêu đề các mục: các tiêu đề mẫu ở hướng dẫn trên (như "## 主题") chỉ để minh họa cấu trúc — hãy dùng tiêu đề tiếng Việt tương ứng (ví dụ "## Chủ đề", "## Yếu tố then chốt", "## Cần làm rõ").
-- Tuyệt đối không dùng tiếng Trung hoặc ngôn ngữ khác cho nội dung người dùng nhìn thấy.`
+- Nếu người dùng viết bằng một ngôn ngữ khác, hãy dùng đúng ngôn ngữ đó cho <reply>, <draft> và <suggestions>; chỉ dùng tiếng Việt khi người dùng dùng tiếng Việt.
+- Tuyệt đối không dùng tiếng Trung hoặc ngôn ngữ khác cho nội dung người dùng nhìn thấy khi người dùng viết tiếng Việt.`
 
 const enCoCreateLangDirective = `## Conversation Language (English)
 - All <reply> and <suggestions> content shown to the user MUST be written entirely in natural English.
 - <draft> content MUST also be written in English, including its section headings: the sample headings above (e.g. "## 主题") only illustrate structure — use equivalent English headings instead (e.g. "## Theme", "## Key Elements", "## Open Questions").
-- Never use Chinese or any other language for user-facing content.`
+- If the user writes in a different language, use that language for <reply>, <draft>, and <suggestions>; fall back to English only when the user writes in English or the language is unclear.
+- Never use Chinese or any other language for user-facing content when the user writes in English.`
 
 const zhCoCreateLangDirective = `## 对话语言（中文）
 - 面向用户的 <reply> 与 <suggestions> 内容必须全部使用自然中文撰写。
 - <draft> 内容（含小节标题，如 "## 主题"、"## 关键要素"、"## 待澄清信息"）同样必须使用中文撰写。
+- 若用户使用其他语言提问，<reply>、<draft> 与 <suggestions> 一律改用用户所用的语言。
 - 不要为面向用户的内容混用其他语言。`
 
 // CoCreateProgressKind 标识流式回调的内容类型。
