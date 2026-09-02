@@ -2,12 +2,19 @@ package tui
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
+	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/voocel/ainovel-cli/internal/bootstrap"
 	"github.com/voocel/ainovel-cli/internal/diag"
 	"github.com/voocel/ainovel-cli/internal/host"
 	"github.com/voocel/ainovel-cli/internal/store"
+	buildversion "github.com/voocel/ainovel-cli/internal/version"
 )
 
 // 消息类型
@@ -53,9 +60,62 @@ type (
 	streamClearMsg     struct{}  // 清空流式缓冲（新消息开始）
 	streamFlushTickMsg struct{}  // 流式刷新节流（仅有待刷数据时调度）
 	quitResetMsg       struct{}  // 双次 Ctrl+C 超时重置
+	updateCheckMsg     struct {
+		result *buildversion.CheckResult
+		err    error
+	}
 )
 
 // --- Cmd 函数 ---
+
+// checkForUpdate 后台查询上游新版本（5s 超时，24h 缓存节流）。错误随消息
+// 返回，由 Update 写日志但不打扰用户界面。
+func checkForUpdate(currentVersion string) tea.Cmd {
+	return func() tea.Msg {
+		configDir := bootstrap.DefaultConfigDir()
+		if configDir == "" {
+			return updateCheckMsg{err: fmt.Errorf("无法确定更新检查缓存目录")}
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		res, err := buildversion.CheckUpdate(ctx, buildversion.CheckOptions{
+			CurrentVersion: currentVersion,
+			CachePath:      filepath.Join(configDir, "update-check.json"),
+		})
+		return updateCheckMsg{result: res, err: err}
+	}
+}
+
+// updateNotesPreviewWidth 是欢迎页与事件流共用的单行摘要宽度。远端 release
+// 文本不直接进入终端：先移除 ANSI/控制字符，再显式截断，避免终端控制序列和超长行。
+const updateNotesPreviewWidth = 56
+
+func formatUpdateNotice(result *buildversion.CheckResult) string {
+	notice := fmt.Sprintf("新版本 %s 已发布", result.Latest)
+	if preview := updateNotesPreview(result.Notes); preview != "" {
+		notice += " · " + preview
+	}
+	return notice + " · 运行 ainovel-cli update 升级"
+}
+
+func updateNotesPreview(notes string) string {
+	plain := ansi.Strip(notes)
+	plain = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) && r != '\n' && r != '\t' {
+			return -1
+		}
+		return r
+	}, plain)
+	for _, rawLine := range strings.Split(plain, "\n") {
+		line := strings.TrimSpace(rawLine)
+		line = strings.TrimSpace(strings.TrimLeft(line, "#>*-"))
+		line = strings.Join(strings.Fields(line), " ")
+		if line != "" {
+			return truncate(line, updateNotesPreviewWidth)
+		}
+	}
+	return ""
+}
 
 func listenEvents(rt *host.Host) tea.Cmd {
 	return func() tea.Msg {

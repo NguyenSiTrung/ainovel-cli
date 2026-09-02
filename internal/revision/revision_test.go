@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -134,6 +135,62 @@ func TestMigrateLegacyBaselineFromImportArtifact(t *testing.T) {
 	record, err := st.ChapterRecords.Load(1)
 	if err != nil || record == nil || record.Facts.Summary != facts.Summary || record.Content != "导入正文" {
 		t.Fatalf("导入书迁移结果错误: record=%+v err=%v", record, err)
+	}
+}
+
+func TestMigrateLegacyBaselineFillsOnlyMissingRecords(t *testing.T) {
+	st := newRevisionTestStore(t, 2)
+	facts1 := domain.ChapterFacts{
+		Title: "第一章", Summary: "已经接纳", KeyEvents: []string{"出发"},
+		HookType: "mystery", DominantStrand: "quest",
+	}
+	acceptTestChapter(t, st, 1, "第一章正文", facts1)
+	existing, err := st.ChapterRecords.Load(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	existing.Revision = 2
+	existing.StyleDelta = domain.StyleDelta{Prose: []string{"保留短句节奏"}}
+	if err := st.ChapterRecords.Save(*existing); err != nil {
+		t.Fatal(err)
+	}
+
+	facts2 := domain.ChapterFacts{
+		Title: "第二章", Summary: "抵达旧城", KeyEvents: []string{"入城"},
+		HookType: "mystery", DominantStrand: "quest",
+	}
+	if err := st.Drafts.SaveDraft(2, "第二章历史草稿"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Drafts.SaveFinalChapter(2, "第二章历史草稿"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Summaries.SaveSummary(domain.ChapterSummary{
+		Chapter: 2, Title: facts2.Title, Summary: facts2.Summary, KeyEvents: facts2.KeyEvents,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Progress.StartChapter(2); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Progress.MarkChapterComplete(2, 8, facts2.HookType, facts2.DominantStrand); err != nil {
+		t.Fatal(err)
+	}
+	writeLegacyCommitSession(t, st.Dir(), 2, facts2)
+
+	if err := MigrateLegacyBaseline(st); err != nil {
+		t.Fatal(err)
+	}
+	after, err := st.ChapterRecords.Load(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(after, existing) {
+		t.Fatalf("existing record changed: before=%+v after=%+v", existing, after)
+	}
+	migrated, err := st.ChapterRecords.Load(2)
+	if err != nil || migrated == nil || migrated.Content != "第二章历史草稿" {
+		t.Fatalf("missing record was not migrated: record=%+v err=%v", migrated, err)
 	}
 }
 

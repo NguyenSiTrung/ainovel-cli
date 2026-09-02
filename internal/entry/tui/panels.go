@@ -134,7 +134,7 @@ func renderDetailPanel(vp viewport.Model, width, height int, focused bool) strin
 }
 
 // renderWelcome 渲染新建态首屏。
-func renderWelcome(width, height int, errMsg string, mode startupMode, importHint string) string {
+func renderWelcome(width, height int, errMsg string, mode startupMode, importHint, updateHint string) string {
 	// 简洁标题
 	title := lipgloss.NewStyle().
 		Foreground(colorAccent).
@@ -221,6 +221,12 @@ func renderWelcome(width, height int, errMsg string, mode startupMode, importHin
 	} else {
 		b.WriteString(lipgloss.NewStyle().Foreground(colorDim).
 			Render(i18n.T("tui.welcome.import_hint")))
+	}
+	if updateHint != "" {
+		// 启动版本检查命中新版本：与 importHint 同款强调样式追加一行。
+		b.WriteString("\n")
+		b.WriteString(lipgloss.NewStyle().Foreground(colorAccent2).Bold(true).
+			Render("! " + updateHint))
 	}
 	b.WriteString("\n\n")
 	b.WriteString(lipgloss.NewStyle().Foreground(colorDim).Italic(true).

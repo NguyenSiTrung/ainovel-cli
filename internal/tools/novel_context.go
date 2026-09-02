@@ -71,6 +71,12 @@ func (r *contextReads) require(scope string, err error) {
 	r.err = fmt.Errorf("%s 读取失败: %w", scope, err)
 }
 
+func (r *contextReads) fail(err error) {
+	if r.err == nil {
+		r.err = err
+	}
+}
+
 // NewContextTool 创建上下文工具。styleStats 必须与 commit_chapter 共享，
 // 否则重写章节后上下文会继续读取旧统计。
 // user_rules 由 buildUserRules 直接读本书快照（meta/user_rules.json）注入，不再依赖加载选项。
@@ -89,7 +95,8 @@ func NewContextTool(
 func (t *ContextTool) Name() string { return "novel_context" }
 func (t *ContextTool) Description() string {
 	return "获取小说当前状态和创作上下文。" +
-		"不传 chapter：返回 progress_status（phase/flow/next_chapter/pending_rewrites 等进度字段）+ 基础设定，用于判断下一步该做什么。" +
+		"不传 chapter：返回 progress_status（phase/flow/next_chapter/pending_rewrites 等进度字段）+ 精简规划概览，用于判断下一步该做什么；" +
+		"长篇 Architect 可传 volume + arc 聚焦读取一个已展开弧的章节详情。" +
 		"传 chapter=N：额外返回该章的前情摘要、伏笔、角色状态、风格规则等写作上下文"
 }
 func (t *ContextTool) Label() string { return "加载上下文" }
@@ -101,15 +108,28 @@ func (t *ContextTool) ConcurrencySafe(_ json.RawMessage) bool { return true }
 func (t *ContextTool) Schema() map[string]any {
 	return schema.Object(
 		schema.Property("chapter", schema.Int("章节号。不传则返回进度状态和基础设定（Architect 用）；传入则额外返回该章的写作上下文（Writer/Editor 用）")),
+		schema.Property("volume", schema.Int("长篇 Architect 可选：聚焦读取的卷序号；必须与 arc 同时传入，不能与 chapter 同时使用")),
+		schema.Property("arc", schema.Int("长篇 Architect 可选：聚焦读取的卷内弧序号；必须与 volume 同时传入，不能与 chapter 同时使用")),
 	)
 }
 
 func (t *ContextTool) Execute(_ context.Context, args json.RawMessage) (json.RawMessage, error) {
 	var a struct {
 		Chapter int `json:"chapter"`
+		Volume  int `json:"volume"`
+		Arc     int `json:"arc"`
 	}
 	if err := json.Unmarshal(args, &a); err != nil {
 		return nil, fmt.Errorf("invalid args: %w", err)
+	}
+	if a.Chapter < 0 || a.Volume < 0 || a.Arc < 0 {
+		return nil, fmt.Errorf("chapter, volume and arc must be >= 0")
+	}
+	if a.Chapter > 0 && (a.Volume > 0 || a.Arc > 0) {
+		return nil, fmt.Errorf("chapter cannot be combined with volume or arc")
+	}
+	if (a.Volume > 0) != (a.Arc > 0) {
+		return nil, fmt.Errorf("volume and arc must be provided together")
 	}
 
 	result := make(map[string]any)
@@ -134,7 +154,7 @@ func (t *ContextTool) Execute(_ context.Context, args json.RawMessage) (json.Raw
 	} else {
 		// Architect 路径：只返回状态 + 结构化数据，不加载全量原文
 		t.buildProgressStatus(result, reads)
-		t.buildArchitectContext(result, reads)
+		t.buildArchitectContext(result, reads, a.Volume, a.Arc)
 	}
 
 	// 注入 working_memory.user_rules（canonical 路径）。架构师路径原本没有 working_memory，
