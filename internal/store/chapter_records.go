@@ -119,7 +119,7 @@ func validateChapterRecord(record domain.ChapterRecord) error {
 		return fmt.Errorf("chapter must be > 0")
 	case record.Revision <= 0:
 		return fmt.Errorf("revision must be > 0")
-	case record.Origin != domain.ChapterOriginGenerated && record.Origin != domain.ChapterOriginUser:
+	case record.Origin != domain.ChapterOriginGenerated && record.Origin != domain.ChapterOriginUser && record.Origin != domain.ChapterOriginLegacy:
 		return fmt.Errorf("invalid chapter origin %q", record.Origin)
 	case record.ContentSHA256 != domain.ChapterContentSHA256(record.Content):
 		return fmt.Errorf("content digest mismatch")

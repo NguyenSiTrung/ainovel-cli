@@ -1,7 +1,6 @@
 package host
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,24 +84,6 @@ func TestUpgradeProjectRepairsMissingV2ChapterRecord(t *testing.T) {
 	if _, err := st.Checkpoints.AppendArtifact(domain.ChapterScope(1), "commit", "chapters/01.md"); err != nil {
 		t.Fatal(err)
 	}
-	type importFacts struct {
-		Chapter int `json:"chapter"`
-		domain.ChapterFacts
-	}
-	artifact, err := json.Marshal(map[string]any{
-		"payload": map[string]any{"facts": importFacts{Chapter: 1, ChapterFacts: facts}},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	analysisPath := filepath.Join(dir, "meta", "import", "analyses", "000001.json")
-	if err := os.MkdirAll(filepath.Dir(analysisPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(analysisPath, artifact, 0o644); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := upgradeProject(st); err != nil {
 		t.Fatal(err)
 	}

@@ -40,16 +40,17 @@ func Scan(st *store.Store) ([]Change, error) {
 		}
 		path := filepath.Join(st.Dir(), filepath.FromSlash(fmt.Sprintf("chapters/%02d.md", chapter)))
 		data, err := os.ReadFile(path)
-		if err != nil {
+		if err != nil && !os.IsNotExist(err) {
 			return nil, fmt.Errorf("读取第 %d 章工作区正文: %w", chapter, err)
 		}
 		content := domain.NormalizeChapterContent(string(data))
-		if strings.TrimSpace(content) == "" {
-			return nil, fmt.Errorf("第 %d 章工作区正文为空，拒绝接纳", chapter)
-		}
 		digest := domain.ChapterContentSHA256(content)
 		if digest == record.ContentSHA256 {
 			continue
+		}
+		// 已接纳的正文为空时文件缺失不算改动；把非空正文删空则仍需用户处理。
+		if strings.TrimSpace(content) == "" {
+			return nil, fmt.Errorf("第 %d 章工作区正文为空，拒绝接纳", chapter)
 		}
 		changes = append(changes, Change{
 			Chapter: chapter, BaseSHA256: record.ContentSHA256, CurrentSHA256: digest,

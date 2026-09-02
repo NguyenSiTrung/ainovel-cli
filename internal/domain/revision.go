@@ -14,6 +14,7 @@ type ChapterOrigin string
 const (
 	ChapterOriginGenerated ChapterOrigin = "generated"
 	ChapterOriginUser      ChapterOrigin = "user"
+	ChapterOriginLegacy    ChapterOrigin = "legacy"
 )
 
 // ChapterFacts 是一章正文对应的完整结构化事实，也是所有派生状态的输入。

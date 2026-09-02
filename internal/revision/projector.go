@@ -17,65 +17,110 @@ type Projector struct{ store *store.Store }
 
 func NewProjector(st *store.Store) *Projector { return &Projector{store: st} }
 
+type projection struct {
+	summaries     []domain.ChapterSummary
+	timeline      []domain.TimelineEvent
+	foreshadow    []domain.ForeshadowEntry
+	relationships []domain.RelationshipEntry
+	stateChanges  []domain.StateChange
+	cast          []domain.CastEntry
+	wordCounts    map[int]int
+	totalWords    int
+	hookHistory   []string
+	strandHistory []string
+	style         domain.AuthorRevisionStyle
+}
+
 // ValidateRecords 校验完整章节记录集能否被确定性重放，不写入任何投影。
 func ValidateRecords(records []domain.ChapterRecord) error {
-	records = slices.Clone(records)
-	slices.SortFunc(records, func(a, b domain.ChapterRecord) int { return a.Chapter - b.Chapter })
-	for _, record := range records {
-		if err := chapterfacts.Validate(record.Facts); err != nil {
-			return fmt.Errorf("第 %d 章事实无效: %w", record.Chapter, err)
-		}
+	records, err := prepareRecords(records)
+	if err != nil {
+		return err
 	}
-	_, _, _, _, err := projectWorld(records)
+	_, _, _, _, err = projectWorld(records)
 	return err
 }
 
-func (p *Projector) Apply(records []domain.ChapterRecord) error {
+func prepareRecords(records []domain.ChapterRecord) ([]domain.ChapterRecord, error) {
 	records = slices.Clone(records)
 	slices.SortFunc(records, func(a, b domain.ChapterRecord) int { return a.Chapter - b.Chapter })
 	for _, record := range records {
-		if err := chapterfacts.Validate(record.Facts); err != nil {
-			return fmt.Errorf("第 %d 章事实无效: %w", record.Chapter, err)
+		// legacy 记录由旧版 store 状态重建，只受当时的合同约束；Validate 是新模型输出的合同。
+		if record.Origin == domain.ChapterOriginLegacy {
+			continue
 		}
+		if err := chapterfacts.Validate(record.Facts); err != nil {
+			return nil, fmt.Errorf("第 %d 章事实无效: %w", record.Chapter, err)
+		}
+	}
+	return records, nil
+}
+
+func (p *Projector) build(records []domain.ChapterRecord) (projection, error) {
+	records, err := prepareRecords(records)
+	if err != nil {
+		return projection{}, err
 	}
 
 	timeline, ledger, relationships, changes, err := projectWorld(records)
 	if err != nil {
-		return err
+		return projection{}, err
 	}
-	cast, err := p.projectCast(records)
+	characters, err := p.store.Characters.Load()
+	if err != nil {
+		return projection{}, fmt.Errorf("读取核心角色: %w", err)
+	}
+
+	result := projection{
+		timeline: timeline, foreshadow: ledger, relationships: relationships,
+		stateChanges: changes, cast: projectCast(records, characters),
+		wordCounts: make(map[int]int, len(records)), style: projectStyle(records),
+	}
+	for _, record := range records {
+		facts := record.Facts
+		result.summaries = append(result.summaries, domain.ChapterSummary{
+			Chapter: record.Chapter, Title: facts.Title, Summary: facts.Summary,
+			Characters: facts.Characters, KeyEvents: facts.KeyEvents,
+		})
+		count := utf8.RuneCountInString(record.Content)
+		result.wordCounts[record.Chapter] = count
+		result.totalWords += count
+		setChapterHistory(&result.hookHistory, record.Chapter, facts.HookType)
+		setChapterHistory(&result.strandHistory, record.Chapter, facts.DominantStrand)
+	}
+	return result, nil
+}
+
+func (p *Projector) Apply(records []domain.ChapterRecord) error {
+	result, err := p.build(records)
 	if err != nil {
 		return err
 	}
 
-	for _, record := range records {
-		facts := record.Facts
-		if err := p.store.Summaries.SaveSummary(domain.ChapterSummary{
-			Chapter: record.Chapter, Title: facts.Title, Summary: facts.Summary,
-			Characters: facts.Characters, KeyEvents: facts.KeyEvents,
-		}); err != nil {
-			return fmt.Errorf("保存第 %d 章摘要: %w", record.Chapter, err)
+	for _, summary := range result.summaries {
+		if err := p.store.Summaries.SaveSummary(summary); err != nil {
+			return fmt.Errorf("保存第 %d 章摘要: %w", summary.Chapter, err)
 		}
 	}
-	if err := p.store.World.SaveTimeline(timeline); err != nil {
+	if err := p.store.World.SaveTimeline(result.timeline); err != nil {
 		return fmt.Errorf("重建时间线: %w", err)
 	}
-	if err := p.store.World.SaveForeshadowLedger(ledger); err != nil {
+	if err := p.store.World.SaveForeshadowLedger(result.foreshadow); err != nil {
 		return fmt.Errorf("重建伏笔账本: %w", err)
 	}
-	if err := p.store.World.SaveRelationships(relationships); err != nil {
+	if err := p.store.World.SaveRelationships(result.relationships); err != nil {
 		return fmt.Errorf("重建人物关系: %w", err)
 	}
-	if err := p.store.World.SaveStateChanges(changes); err != nil {
+	if err := p.store.World.SaveStateChanges(result.stateChanges); err != nil {
 		return fmt.Errorf("重建状态变化: %w", err)
 	}
-	if err := p.store.Cast.Save(cast); err != nil {
+	if err := p.store.Cast.Save(result.cast); err != nil {
 		return fmt.Errorf("重建配角名册: %w", err)
 	}
-	if err := p.updateProgress(records); err != nil {
+	if err := p.updateProgress(result); err != nil {
 		return err
 	}
-	if err := p.store.World.SaveAuthorRevisionStyle(projectStyle(records)); err != nil {
+	if err := p.store.World.SaveAuthorRevisionStyle(result.style); err != nil {
 		return fmt.Errorf("保存用户修订风格: %w", err)
 	}
 	return p.refreshRuleViolations(records)
@@ -106,8 +151,8 @@ func projectWorld(records []domain.ChapterRecord) ([]domain.TimelineEvent, []dom
 			idx, exists := foreshadowIndex[update.ID]
 			switch update.Action {
 			case "plant":
-				if strings.TrimSpace(update.ID) == "" || strings.TrimSpace(update.Description) == "" {
-					return nil, nil, nil, nil, fmt.Errorf("第 %d 章伏笔 plant 缺少 id 或 description", chapter)
+				if strings.TrimSpace(update.ID) == "" {
+					return nil, nil, nil, nil, fmt.Errorf("第 %d 章伏笔 plant 缺少 id", chapter)
 				}
 				if exists {
 					if ledger[idx].Description == "" {
@@ -144,11 +189,7 @@ func projectWorld(records []domain.ChapterRecord) ([]domain.TimelineEvent, []dom
 	return timeline, ledger, relationList, changes, nil
 }
 
-func (p *Projector) projectCast(records []domain.ChapterRecord) ([]domain.CastEntry, error) {
-	characters, err := p.store.Characters.Load()
-	if err != nil {
-		return nil, fmt.Errorf("读取核心角色: %w", err)
-	}
+func projectCast(records []domain.ChapterRecord, characters []domain.Character) []domain.CastEntry {
 	core := make(map[string]bool)
 	for _, character := range characters {
 		core[character.Name] = true
@@ -190,10 +231,10 @@ func (p *Projector) projectCast(records []domain.ChapterRecord) ([]domain.CastEn
 		}
 		return strings.Compare(a.Name, b.Name)
 	})
-	return out, nil
+	return out
 }
 
-func (p *Projector) updateProgress(records []domain.ChapterRecord) error {
+func (p *Projector) updateProgress(result projection) error {
 	progress, err := p.store.Progress.Load()
 	if err != nil {
 		return fmt.Errorf("读取进度: %w", err)
@@ -201,17 +242,10 @@ func (p *Projector) updateProgress(records []domain.ChapterRecord) error {
 	if progress == nil {
 		return fmt.Errorf("progress 未初始化")
 	}
-	progress.ChapterWordCounts = make(map[int]int, len(records))
-	progress.TotalWordCount = 0
-	progress.HookHistory = nil
-	progress.StrandHistory = nil
-	for _, record := range records {
-		count := utf8.RuneCountInString(record.Content)
-		progress.ChapterWordCounts[record.Chapter] = count
-		progress.TotalWordCount += count
-		setChapterHistory(&progress.HookHistory, record.Chapter, record.Facts.HookType)
-		setChapterHistory(&progress.StrandHistory, record.Chapter, record.Facts.DominantStrand)
-	}
+	progress.ChapterWordCounts = result.wordCounts
+	progress.TotalWordCount = result.totalWords
+	progress.HookHistory = result.hookHistory
+	progress.StrandHistory = result.strandHistory
 	if err := p.store.Progress.Save(progress); err != nil {
 		return fmt.Errorf("更新章节进度投影: %w", err)
 	}

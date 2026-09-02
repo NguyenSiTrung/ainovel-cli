@@ -134,18 +134,20 @@ func New(cfg bootstrap.Config, bundle assets.Bundle, options ...NewOption) (*Hos
 
 	slog.Info("启动", "module", "boot", "provider", cfg.Provider, "model", cfg.ModelName, "output", cfg.OutputDir)
 
-	// 起后台 goroutine 从 OpenRouter 刷新模型元数据（窗口/价格），磁盘缓存 24h。
-	modelreg.StartPricingRefresh(modelreg.DefaultRegistry(), bootstrap.DefaultConfigDir())
-
 	store := storepkg.NewStore(cfg.OutputDir)
 	if err := store.Init(); err != nil {
 		return nil, fmt.Errorf("init store: %w", err)
+	}
+	if err := upgradeProject(store); err != nil {
+		return nil, err
 	}
 	// RunMeta 是所有控制语义的事实源，必须在构造模型/后台任务之前完成校验。
 	// 未知 advance mode 直接返回结构化错误；禁止猜测降级后继续写盘。
 	if err := store.RunMeta.Init(cfg.Style, cfg.Provider, cfg.ModelName); err != nil {
 		return nil, fmt.Errorf("init run meta: %w", err)
 	}
+	// 起后台 goroutine 从 OpenRouter 刷新模型元数据（窗口/价格），磁盘缓存 24h。
+	modelreg.StartPricingRefresh(modelreg.DefaultRegistry(), bootstrap.DefaultConfigDir())
 
 	models, err := bootstrap.NewModelSet(cfg)
 	if err != nil {
@@ -363,9 +365,6 @@ func (h *Host) StartPrepared(rawRequirement string) error {
 	if err := h.refuseNewBookOverExisting(); err != nil {
 		return err
 	}
-	if err := upgradeProject(h.store); err != nil {
-		return err
-	}
 	if err := h.budget.Refuse(); err != nil {
 		return err
 	}
@@ -539,10 +538,6 @@ func (h *Host) Resume() (string, error) {
 		return "", fmt.Errorf("%s进行中，请先完成后再恢复创作", ex)
 	}
 	h.mu.Unlock()
-	if err := upgradeProject(h.store); err != nil {
-		return "", err
-	}
-
 	label, err := resumeLabel(h.store)
 	if err != nil {
 		return "", err
