@@ -38,7 +38,9 @@
     "err_no_mix": "không thể dùng chung với tham số khởi động khác",
     "err_no_cli_prompt": "Không hỗ trợ truyền yêu cầu tiểu thuyết trực tiếp qua dòng lệnh, vui lòng nhập trong giao diện TUI",
     "err_headless_setup": "Chế độ không giao diện không hỗ trợ trình hướng dẫn cài đặt ban đầu, vui lòng chạy chế độ TUI trước",
-    "err_headless_prompt_only": "--prompt / --prompt-file chỉ có thể sử dụng ở chế độ --headless"
+    "err_headless_prompt_only": "--prompt / --prompt-file chỉ có thể sử dụng ở chế độ --headless",
+    "flag_config": "Tệp cấu hình",
+    "err_no_args": "không nhận tham số"
   },
   "setup": {
     "welcome": "Chào mừng bạn đến với ainovel-cli!",
@@ -126,7 +128,9 @@
     "validating_saving": "Đang xác thực và lưu cấu hình...",
     "test_cancelled": "Đã hủy thử nghiệm kết nối",
     "no_available_options": "Không có lựa chọn khả dụng",
-    "err_key_cannot_clear": "Nhà cung cấp này bắt buộc phải có API Key, không thể xóa"
+    "err_key_cannot_clear": "Nhà cung cấp này bắt buộc phải có API Key, không thể xóa",
+    "main_model": "Mô hình chính",
+    "test_success": "%s kết nối thành công!"
   },
   "tui": {
     "welcome": {
@@ -285,7 +289,28 @@
       "synopsis": "Tóm tắt",
       "planned": "Đã quy hoạch",
       "current_arc": "Cung này",
-      "global": "Toàn cục"
+      "global": "Toàn cục",
+      "state": "Trạng thái",
+      "phase": "Giai đoạn",
+      "flow": "Luồng",
+      "advance": "Tiến độ",
+      "advance_auto": "Tự động",
+      "advance_review": "Duyệt từng chương",
+      "advance_permit": "Đã duyệt chương %d",
+      "completed": "Đã hoàn thành",
+      "chapters_count": "%d chương",
+      "last_commit": "Lần commit gần nhất",
+      "last_review": "Đánh giá gần nhất",
+      "summaries": "Tóm tắt gần đây",
+      "premise": "Tiền đề cốt truyện",
+      "scope_baseline": "Cơ sở",
+      "scope_projected": "Chiếu",
+      "scope_recovered": "Khôi phục",
+      "scope_committed": "Đã commit",
+      "scope_skipped": "Bỏ qua do ngắt mạch",
+      "strategy_microcompact": "Nén nhỏ kết quả công cụ",
+      "strategy_light_trim": "Cắt tỉa nhẹ",
+      "strategy_full_summary": "Tóm tắt đầy đủ"
     },
     "outline": {
       "in_progress_badge": "Đang tiến hành"
@@ -467,7 +492,14 @@
       "generating": "Đang tạo báo cáo chẩn đoán...",
       "started_time": "Thời gian bắt đầu",
       "loading_desc": "Đang đọc kết quả đầu ra của tiểu thuyết và phân tích luồng xử lý, chất lượng, quy hoạch cùng các vấn đề ngữ cảnh. Có thể mất vài giây với dự án lớn.",
-      "loading_hint": "Nhấn Esc để đóng tạm thời. Phân tích nền sẽ hoàn tất và hiển thị lại ở lần mở sau."
+      "loading_hint": "Nhấn Esc để đóng tạm thời. Phân tích nền sẽ hoàn tất và hiển thị lại ở lần mở sau.",
+      "not_available": "Báo cáo chẩn đoán không khả dụng",
+      "chapter_label": "Chương",
+      "rework_label": "Viết lại",
+      "planning_label": "Quy hoạch",
+      "critical_count": "%d nghiêm trọng",
+      "warning_count": "%d cảnh báo",
+      "info_count": "%d thông tin"
     },
     "update": {
       "notice": "Đã có phiên bản mới %s",
@@ -489,5 +521,128 @@
     "file_log_unavailable": "Ghi tệp nhật ký không khả dụng, tiếp tục dùng nhật ký terminal",
     "startup_failed_model": "Khởi động thất bại, vui lòng kiểm tra cấu hình mô hình hoặc dùng /model để đổi mô hình",
     "prompt_read_failed": "Đọc prompt thất bại"
+  },
+  "diag": {
+    "rules": {
+      "load_error": {
+        "title": "Tải tệp dữ liệu thất bại: %s",
+        "sugg": "Tệp có thể bị hỏng hoặc thiếu quyền; kết quả chẩn đoán có thể không đầy đủ."
+      },
+      "invalid_pending_rewrites": {
+        "title": "Hàng đợi viết lại chứa chương chưa hoàn thành: [%s]",
+        "sugg": "Bất biến trạng thái bị hỏng. Dừng chạy và chỉnh sửa meta/progress.json để xóa các chương chưa hoàn thành khỏi pending_rewrites; nếu hàng đợi trống, đổi flow thành writing và xóa rewrite_reason."
+      },
+      "rewrite_pending_pressure": {
+        "title": "Chương chờ viết lại: [%s]",
+        "sugg": "Kiểm tra xem tiêu chí đánh giá của Editor có quá khắt khe hoặc prompt viết lại của Writer có hiệu quả không. Hệ thống sẽ tự động gỡ chương thất bại nhiều lần."
+      },
+      "orphaned_steer": {
+        "title": "Tồn tại chỉ thị điều hướng chưa xử lý",
+        "sugg": "Chỉ thị steer đã được lưu nhưng chưa được tiêu thụ bởi luồng phân xử. Kiểm tra logic khôi phục hoặc ghi đè bằng cách gửi lại."
+      },
+      "phase_flow_mismatch": {
+        "title": "Không khớp trạng thái giai đoạn/luồng: phase=%s, flow=%s",
+        "evidence": "phase=%s không nên có flow=%s không phải ban đầu",
+        "sugg": "Máy trạng thái có thể bị hỏng, cần kiểm tra trường phase và flow trong meta/progress.json."
+      },
+      "chapter_gaps": {
+        "title": "Nhảy số chương: thiếu [%s]",
+        "sugg": "commit_chapter có thể bị gián đoạn giữa chừng. Kiểm tra meta/pending_commit.json."
+      },
+      "chronic_low_dimension": {
+        "title": "Tiêu chí [%s] điểm thấp kéo dài (TB %.0f)",
+        "evidence": "Tổng %d lần đánh giá, điểm TB %.1f",
+        "sugg": "Kiểm tra hướng dẫn Writer prompt về %s hoặc tiêu chuẩn chấm điểm của Editor."
+      },
+      "contract_miss_pattern": {
+        "title": "Tỷ lệ thực hiện hợp đồng thấp (%.0f%% chưa đạt)",
+        "evidence": "Chưa đạt: [%s], tổng %d/%d",
+        "sugg": "Writer có thể chưa đọc contract hoặc required_beats quá tham vọng. Kiểm tra plan_chapter và writer.md."
+      },
+      "hook_weak_chain": {
+        "title": "Móc câu cuối chương yếu liên tục (%d chương liên tiếp)",
+        "sugg": "Kiểm tra thực thi hook_goal trong writer.md, làm rõ móc câu trong plan_chapter, hiệu chỉnh tiêu chí hook của Editor."
+      },
+      "payoff_miss_pattern": {
+        "title": "Tỷ lệ giải tỏa cao trào thấp (%.0f%% chưa đạt)",
+        "evidence": "Chương chưa giải tỏa: [%s], tổng %d/%d",
+        "sugg": "Kiểm tra xem payoff_points trong plan_chapter có quá nhiều hoặc mơ hồ không; đảm bảo Writer trả điểm cao trào trong chính văn."
+      },
+      "excessive_rewrites": {
+        "title": "Tỷ lệ viết lại quá cao (%d/%d = %.0f%%)",
+        "evidence": "Tổng %d lần đánh giá, %d lần rewrite",
+        "sugg": "Writer liên tục tạo nội dung dưới ngưỡng Editor. Căn chỉnh tiêu chuẩn chất lượng của Writer với Editor."
+      },
+      "word_count_anomaly": {
+        "title": "Số chữ trong chương bất thường (TB %d chữ)",
+        "sugg": "Chương quá ngắn có thể do bị cắt token; chương quá dài tốn nhiều ngữ cảnh. Kiểm tra cấu hình max_tokens của mô hình."
+      },
+      "stale_foreshadow": {
+        "title": "Phục bút đình trệ: %d mục quá %d chương chưa tiến triển",
+        "evidence_item": "%s(chôn ở ch%d, đã qua %d chương)",
+        "sugg": "Nhắc nhở phục bút trong novel_context có thể chưa hiệu quả hoặc Writer thiếu hướng dẫn. Kiểm tra foreshadow_ledger."
+      },
+      "compass_drift": {
+        "missing_title": "Chế độ dài tập thiếu la bàn định hướng",
+        "missing_sugg": "Architect nên tạo la bàn khi quy hoạch ban đầu. Kiểm tra architect-long.md.",
+        "stale_title": "La bàn chưa cập nhật trong %d chương",
+        "stale_sugg": "Architect nên cập nhật la bàn tại ranh giới hồi/quyển. Kiểm tra architect-long.md."
+      },
+      "outline_exhausted": {
+        "title": "Cạn đại cương: đã hoàn thành %d chương >= đã quy hoạch %d chương",
+        "sugg": "Tín hiệu mở rộng hồi hoặc quyển mới chưa được kích hoạt. Kiểm tra chiến lược commit và logic khôi phục."
+      },
+      "missing_summaries": {
+        "title": "Thiếu tóm tắt: %d chương không có tóm tắt",
+        "sugg": "Tóm tắt là yếu tố cốt lõi cho tính liên tục của ngữ cảnh. Kiểm tra ghi tóm tắt trong commit_chapter."
+      },
+      "ghost_character": {
+        "title": "Nhân vật biến mất: %d nhân vật cốt lõi vắng mặt lâu dài",
+        "never_seen": "%s(chưa từng xuất hiện trong tóm tắt)",
+        "absent_long": "%s(xuất hiện cuối ở ch%d, vắng mặt %d chương)",
+        "sugg": "Writer có thể đã mất dấu nhân vật. Nhập chỉ thị điều hướng để đưa nhân vật trở lại hoặc hạ bậc tier trong characters.json."
+      },
+      "timeline_gaps": {
+        "empty_title": "Dòng thời gian trống",
+        "empty_sugg": "Trích xuất dòng thời gian của commit_chapter có thể chưa hoạt động. Kiểm tra trường timeline của Writer.",
+        "gap_title": "Khoảng trống dòng thời gian: %d chương không có sự kiện",
+        "gap_sugg": "Trích xuất dòng thời gian có thể bị lỗi một phần. Kiểm tra định dạng trường timeline."
+      },
+      "relationship_stagnation": {
+        "title": "Dữ liệu quan hệ đình trệ: cập nhật gần nhất ở chương %d",
+        "sugg": "Cập nhật quan hệ của commit_chapter có thể đã dừng hoạt động hoặc quan hệ không đổi."
+      },
+      "repeated_tool_error": {
+        "title": "Công cụ liên tục báo cùng một lỗi",
+        "sugg": "Cùng một công cụ liên tục trả về lỗi giống nhau; kiểm tra xác thực công cụ agentcore / thỏa thuận tham số prompt (#34)."
+      },
+      "args_invalid_loop": {
+        "title": "Tham số liên tục không thể phân tích",
+        "sugg": "Mô hình gửi tham số không phân tích được nhưng liên tục thử lại; kiểm tra ép kiểu linh hoạt trong agentcore (#34)."
+      },
+      "stuck_step": {
+        "title": "Checkpoint đình trệ ở cùng một step",
+        "evidence": "Liên tục dừng tại `%s` ×%d",
+        "sugg": "Cùng một step liên tục được ghi mà không tiến triển; định vị subagent bị kẹt."
+      },
+      "stream_idle_storm": {
+        "title": "Gián đoạn luồng thường xuyên (stream_idle)",
+        "sugg": "Thượng nguồn phát token quá chậm bị watchdog ngắt; tăng streamIdleTimeout cho mô hình suy nghĩ chậm hoặc kiểm tra kết nối (#32)."
+      }
+    },
+    "actions": {
+      "state_machine_fix": {
+        "summary": "Sửa lỗi máy trạng thái",
+        "msg": "Bất thường máy trạng thái: %s. Vui lòng kiểm tra và sửa trạng thái phase/flow trong progress trước khi tiếp tục."
+      },
+      "outline_exhausted": {
+        "summary": "Xử lý cạn đại cương",
+        "msg": "Số chương hoàn thành đã đạt giới hạn quy hoạch. Gọi Architect mở rộng hồi tiếp theo hoặc thêm quyển trước khi viết tiếp."
+      },
+      "orphaned_steer": {
+        "summary": "Xử lý can thiệp người dùng chưa hoàn tất",
+        "msg": "Tồn tại chỉ thị can thiệp của người dùng chưa xử lý. Vui lòng xử lý pending steer trước khi tiếp tục."
+      }
+    }
   }
 }

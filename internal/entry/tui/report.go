@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/voocel/ainovel-cli/internal/diag"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 type reportState struct {
@@ -55,7 +56,7 @@ func (s *reportState) setContent(contentW int) {
 	case s.report != nil:
 		s.viewport.SetContent(renderReportText(*s.report, contentW, s.exportPath, s.exportErr, s.startedAt, s.finishedAt))
 	default:
-		s.viewport.SetContent("诊断报告不可用")
+		s.viewport.SetContent(i18n.T("tui.report.not_available"))
 	}
 }
 
@@ -86,65 +87,65 @@ func renderReportText(report diag.Report, width int, exportPath string, exportEr
 	// 脱敏诊断已导出 → 引导用户贴 issue
 	if exportPath != "" {
 		exportStyle := lipgloss.NewStyle().Foreground(colorAccent2)
-		b.WriteString(exportStyle.Render("已导出脱敏诊断（可贴到 GitHub issue）"))
+		b.WriteString(exportStyle.Render(i18n.T("tui.report.exported_sanitized")))
 		b.WriteString("\n")
 		b.WriteString(dimStyle.Render(wrapText(exportPath, width)))
 		b.WriteString("\n\n")
 	} else if exportErr != nil {
-		b.WriteString(lipgloss.NewStyle().Foreground(colorError).Render("脱敏诊断导出失败：" + exportErr.Error()))
+		b.WriteString(lipgloss.NewStyle().Foreground(colorError).Render(i18n.T("tui.report.export_failed") + ": " + exportErr.Error()))
 		b.WriteString("\n\n")
 	}
 
-	b.WriteString(titleStyle.Render("概览"))
+	b.WriteString(titleStyle.Render(i18n.T("tui.sidebar.overview")))
 	b.WriteString("\n\n")
-	b.WriteString(dimStyle.Render("开始 "))
+	b.WriteString(dimStyle.Render(i18n.T("tui.report.started") + " "))
 	b.WriteString(formatReportTime(startedAt))
 	if !finishedAt.IsZero() {
-		b.WriteString(dimStyle.Render("  完成 "))
+		b.WriteString(dimStyle.Render("  " + i18n.T("tui.report.finished") + " "))
 		b.WriteString(formatReportTime(finishedAt))
 	}
 	b.WriteString("\n\n")
 
 	// 第一行：章节 + 字数
-	b.WriteString(mutedStyle.Render("章节 "))
+	b.WriteString(mutedStyle.Render(i18n.T("tui.report.chapter_label") + " "))
 	b.WriteString(fmt.Sprintf("%d/%d", st.CompletedChapters, st.TotalChapters))
-	b.WriteString(mutedStyle.Render("  字数 "))
+	b.WriteString(mutedStyle.Render("  " + i18n.T("tui.sidebar.words") + " "))
 	b.WriteString(fmt.Sprintf("%d", st.TotalWords))
 	if st.AvgWordsPerCh > 0 {
 		b.WriteString(dimStyle.Render(fmt.Sprintf(" (%d/ch)", st.AvgWordsPerCh)))
 	}
-	b.WriteString(mutedStyle.Render("  阶段 "))
-	b.WriteString(st.Phase)
+	b.WriteString(mutedStyle.Render("  " + i18n.T("tui.report.stage") + " "))
+	b.WriteString(snapshotPhaseLabel(st.Phase))
 	if st.Flow != "" && st.Flow != "writing" {
 		b.WriteString(mutedStyle.Render("/"))
-		b.WriteString(st.Flow)
+		b.WriteString(snapshotFlowLabel(st.Flow))
 	}
 	b.WriteString("\n")
 
 	// 第二行：评审 + 改写 + 均分
-	b.WriteString(mutedStyle.Render("评审 "))
-	b.WriteString(fmt.Sprintf("%d次", st.ReviewCount))
+	b.WriteString(mutedStyle.Render(i18n.T("tui.report.reviews") + " "))
+	b.WriteString(fmt.Sprintf(i18n.T("tui.report.count_times"), st.ReviewCount))
 	if st.RewriteCount > 0 {
-		b.WriteString(mutedStyle.Render("  改写 "))
-		b.WriteString(fmt.Sprintf("%d次", st.RewriteCount))
+		b.WriteString(mutedStyle.Render("  " + i18n.T("tui.report.rework_label") + " "))
+		b.WriteString(fmt.Sprintf(i18n.T("tui.report.count_times"), st.RewriteCount))
 	}
 	if st.AvgReviewScore > 0 {
-		b.WriteString(mutedStyle.Render("  均分 "))
+		b.WriteString(mutedStyle.Render("  " + i18n.T("tui.report.avg_score") + " "))
 		b.WriteString(fmt.Sprintf("%.1f", st.AvgReviewScore))
 	}
 	b.WriteString("\n")
 
 	// 第三行：伏笔 + 规划
 	if st.ForeshadowOpen > 0 || st.ForeshadowStale > 0 {
-		b.WriteString(mutedStyle.Render("伏笔 "))
-		b.WriteString(fmt.Sprintf("打开%d", st.ForeshadowOpen))
+		b.WriteString(mutedStyle.Render(i18n.T("tui.report.foreshadow") + " "))
+		b.WriteString(fmt.Sprintf(i18n.T("tui.report.foreshadow_open"), st.ForeshadowOpen))
 		if st.ForeshadowStale > 0 {
-			b.WriteString(lipgloss.NewStyle().Foreground(colorReview).Render(fmt.Sprintf(" 停滞%d", st.ForeshadowStale)))
+			b.WriteString(lipgloss.NewStyle().Foreground(colorReview).Render(" " + fmt.Sprintf(i18n.T("tui.report.foreshadow_stale"), st.ForeshadowStale)))
 		}
 		b.WriteString("\n")
 	}
 	if st.PlanningTier != "" {
-		b.WriteString(mutedStyle.Render("规划 "))
+		b.WriteString(mutedStyle.Render(i18n.T("tui.report.planning_label") + " "))
 		b.WriteString(st.PlanningTier)
 		b.WriteString("\n")
 	}
@@ -153,13 +154,13 @@ func renderReportText(report diag.Report, width int, exportPath string, exportEr
 	b.WriteString("\n")
 	findings := report.Findings
 	if len(findings) == 0 {
-		b.WriteString(lipgloss.NewStyle().Foreground(colorSuccess).Render("未发现问题"))
+		b.WriteString(lipgloss.NewStyle().Foreground(colorSuccess).Render(i18n.T("tui.report.no_issues")))
 		b.WriteString("\n")
 		return b.String()
 	}
 
 	criticals, warnings, infos := countSeverities(findings)
-	b.WriteString(titleStyle.Render("发现"))
+	b.WriteString(titleStyle.Render(i18n.T("tui.report.findings")))
 	b.WriteString(" ")
 	b.WriteString(dimStyle.Render(formatSeverityCounts(criticals, warnings, infos)))
 	b.WriteString("\n")
@@ -171,7 +172,7 @@ func renderReportText(report diag.Report, width int, exportPath string, exportEr
 
 	if len(report.Actions) > 0 {
 		b.WriteString("\n")
-		b.WriteString(titleStyle.Render("可执行动作"))
+		b.WriteString(titleStyle.Render(i18n.T("tui.report.executable_actions")))
 		b.WriteString(" ")
 		b.WriteString(dimStyle.Render(fmt.Sprintf("(%d)", len(report.Actions))))
 		b.WriteString("\n")
@@ -199,13 +200,13 @@ func renderReportLoadingText(width int, startedAt time.Time) string {
 	hintStyle := lipgloss.NewStyle().Foreground(colorDim)
 
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("正在生成诊断报告"))
+	b.WriteString(titleStyle.Render(i18n.T("tui.report.generating")))
 	b.WriteString("\n\n")
-	b.WriteString(hintStyle.Render("开始时间 " + formatReportTime(startedAt)))
+	b.WriteString(hintStyle.Render(i18n.T("tui.report.started_time") + " " + formatReportTime(startedAt)))
 	b.WriteString("\n\n")
-	b.WriteString(bodyStyle.Render(wrapText("正在读取当前小说 output 产物并分析流程、质量、规划和上下文问题。项目较大时可能需要几秒。", width)))
+	b.WriteString(bodyStyle.Render(wrapText(i18n.T("tui.report.loading_desc"), width)))
 	b.WriteString("\n\n")
-	b.WriteString(hintStyle.Render("Esc 可先关闭面板，后台分析完成后下次打开会重新生成。"))
+	b.WriteString(hintStyle.Render(i18n.T("tui.report.loading_hint")))
 	return b.String()
 }
 
@@ -285,13 +286,13 @@ func countSeverities(findings []diag.Finding) (c, w, i int) {
 func formatSeverityCounts(c, w, i int) string {
 	parts := make([]string, 0, 3)
 	if c > 0 {
-		parts = append(parts, fmt.Sprintf("%d critical", c))
+		parts = append(parts, fmt.Sprintf(i18n.T("tui.report.critical_count"), c))
 	}
 	if w > 0 {
-		parts = append(parts, fmt.Sprintf("%d warning", w))
+		parts = append(parts, fmt.Sprintf(i18n.T("tui.report.warning_count"), w))
 	}
 	if i > 0 {
-		parts = append(parts, fmt.Sprintf("%d info", i))
+		parts = append(parts, fmt.Sprintf(i18n.T("tui.report.info_count"), i))
 	}
 	if len(parts) == 0 {
 		return ""
@@ -350,8 +351,8 @@ func renderReportModal(width, height int, state *reportState) string {
 	modal := renderPaddedModalFrame(
 		boxW,
 		boxH,
-		"诊断报告",
-		"  ↑↓ 滚动 · Esc 关闭",
+		i18n.T("tui.modals.report_title"),
+		"  ↑↓ " + i18n.T("tui.modals.scroll") + " · Esc " + i18n.T("tui.modals.close"),
 		strings.Split(state.viewport.View(), "\n"),
 	)
 	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, modal)

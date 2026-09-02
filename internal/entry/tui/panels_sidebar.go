@@ -530,15 +530,15 @@ func formatTokensCompact(n int) string {
 func contextScopeLabel(scope string) string {
 	switch scope {
 	case "baseline":
-		return "基线"
+		return i18n.T("tui.sidebar.scope_baseline")
 	case "projected":
-		return "投影"
+		return i18n.T("tui.sidebar.scope_projected")
 	case "recovered":
-		return "恢复"
+		return i18n.T("tui.sidebar.scope_recovered")
 	case "committed":
-		return "已提交"
+		return i18n.T("tui.sidebar.scope_committed")
 	case "skipped":
-		return "熔断跳过"
+		return i18n.T("tui.sidebar.scope_skipped")
 	default:
 		return scope
 	}
@@ -549,11 +549,11 @@ func contextStrategyLabel(strategy string) string {
 	case "":
 		return ""
 	case "tool_result_microcompact":
-		return "工具结果微压缩"
+		return i18n.T("tui.sidebar.strategy_microcompact")
 	case "light_trim":
-		return "轻裁剪"
+		return i18n.T("tui.sidebar.strategy_light_trim")
 	case "full_summary":
-		return "完整摘要"
+		return i18n.T("tui.sidebar.strategy_full_summary")
 	default:
 		return strategy
 	}

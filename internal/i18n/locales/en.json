@@ -38,7 +38,9 @@
     "err_no_mix": "cannot be combined with other startup flags",
     "err_no_cli_prompt": "Passing novel prompt directly via CLI is not supported, please enter in TUI interface",
     "err_headless_setup": "Headless mode does not support setup wizard, please run in TUI mode first",
-    "err_headless_prompt_only": "--prompt / --prompt-file can only be used in --headless mode"
+    "err_headless_prompt_only": "--prompt / --prompt-file can only be used in --headless mode",
+    "flag_config": "Config",
+    "err_no_args": "does not accept arguments"
   },
   "setup": {
     "welcome": "Welcome to ainovel-cli!",
@@ -126,7 +128,9 @@
     "validating_saving": "Validating and saving configuration...",
     "test_cancelled": "Connection test cancelled",
     "no_available_options": "No options available",
-    "err_key_cannot_clear": "This Provider requires an API Key and cannot be cleared"
+    "err_key_cannot_clear": "This Provider requires an API Key and cannot be cleared",
+    "main_model": "Primary Model",
+    "test_success": "%s connection successful!"
   },
   "tui": {
     "welcome": {
@@ -285,7 +289,28 @@
       "synopsis": "Synopsis",
       "planned": "Planned",
       "current_arc": "Current Arc",
-      "global": "Global"
+      "global": "Global",
+      "state": "State",
+      "phase": "Phase",
+      "flow": "Flow",
+      "advance": "Advance",
+      "advance_auto": "Auto",
+      "advance_review": "Review Gate",
+      "advance_permit": "Ch %d approved",
+      "completed": "Completed",
+      "chapters_count": "%d chapters",
+      "last_commit": "Last Commit",
+      "last_review": "Last Review",
+      "summaries": "Recent Summaries",
+      "premise": "Premise",
+      "scope_baseline": "Baseline",
+      "scope_projected": "Projected",
+      "scope_recovered": "Recovered",
+      "scope_committed": "Committed",
+      "scope_skipped": "Circuit Skipped",
+      "strategy_microcompact": "Tool Microcompact",
+      "strategy_light_trim": "Light Trim",
+      "strategy_full_summary": "Full Summary"
     },
     "outline": {
       "in_progress_badge": "In Progress"
@@ -467,7 +492,14 @@
       "generating": "Generating Diagnostic Report...",
       "started_time": "Started Time",
       "loading_desc": "Reading novel outputs and analyzing workflow, quality, planning, and context issues. May take a few seconds for large projects.",
-      "loading_hint": "Press Esc to close modal. Background analysis will re-generate on next open."
+      "loading_hint": "Press Esc to close modal. Background analysis will re-generate on next open.",
+      "not_available": "Diagnostic report is unavailable",
+      "chapter_label": "Chapters",
+      "rework_label": "Rewrites",
+      "planning_label": "Planning",
+      "critical_count": "%d critical",
+      "warning_count": "%d warning",
+      "info_count": "%d info"
     },
     "update": {
       "notice": "New version %s is available",
@@ -489,5 +521,128 @@
     "file_log_unavailable": "File logging unavailable, falling back to terminal logging",
     "startup_failed_model": "Startup failed, please check model configuration or use /model to switch models",
     "prompt_read_failed": "Failed to read prompt"
+  },
+  "diag": {
+    "rules": {
+      "load_error": {
+        "title": "Artifact load failed: %s",
+        "sugg": "File may be corrupted or permission denied; diagnostic results may be incomplete."
+      },
+      "invalid_pending_rewrites": {
+        "title": "Rework queue contains unfinished chapters: [%s]",
+        "sugg": "State invariant corrupted. Stop execution and edit meta/progress.json to remove unfinished chapters from pending_rewrites; if queue is empty, set flow to writing and clear rewrite_reason."
+      },
+      "rewrite_pending_pressure": {
+        "title": "Pending rewrite chapters: [%s]",
+        "sugg": "Check if Editor review criteria are too strict or Writer rewrite prompt is effective. Engine will automatically remove repeatedly failing chapters."
+      },
+      "orphaned_steer": {
+        "title": "Unconsumed steering instruction exists",
+        "sugg": "Steer instruction was persisted but not consumed by intervention arbiter. Check recovery logic or overwrite by re-submitting."
+      },
+      "phase_flow_mismatch": {
+        "title": "Phase/flow state mismatch: phase=%s, flow=%s",
+        "evidence": "phase=%s should not have non-initial flow=%s",
+        "sugg": "State machine may be corrupted. Inspect meta/progress.json phase and flow fields."
+      },
+      "chapter_gaps": {
+        "title": "Chapter numbering gap: missing [%s]",
+        "sugg": "commit_chapter may have been interrupted. Check meta/pending_commit.json."
+      },
+      "chronic_low_dimension": {
+        "title": "Dimension [%s] chronically low (avg %.0f)",
+        "evidence": "%d reviews, avg score %.1f",
+        "sugg": "Check Writer prompt guidance for %s or Editor scoring criteria."
+      },
+      "contract_miss_pattern": {
+        "title": "Low contract fulfillment rate (%.0f%% missed)",
+        "evidence": "Missed: [%s], total %d/%d",
+        "sugg": "Writer may not have read contract or required_beats too aggressive. Check plan_chapter and writer.md."
+      },
+      "hook_weak_chain": {
+        "title": "Chapter end hook consecutively weak (%d chapters in a row)",
+        "sugg": "Check writer.md hook_goal execution, clarify reader hook in plan_chapter, calibrate Editor hook criteria."
+      },
+      "payoff_miss_pattern": {
+        "title": "Payoff delivery rate low (%.0f%% missed)",
+        "evidence": "Missed chapters: [%s], total %d/%d",
+        "sugg": "Check if plan_chapter payoff_points are overloaded or vague; ensure Writer delivers payoffs in chapter body."
+      },
+      "excessive_rewrites": {
+        "title": "Excessive rewrite rate (%d/%d = %.0f%%)",
+        "evidence": "%d reviews, %d rewrites",
+        "sugg": "Writer continuously outputs below Editor threshold. Align Writer prompt with Editor criteria."
+      },
+      "word_count_anomaly": {
+        "title": "Chapter word count anomaly (avg %d words)",
+        "sugg": "Extremely short chapters may indicate token truncation; long chapters consume extra context. Check model max_tokens."
+      },
+      "stale_foreshadow": {
+        "title": "Stagnant foreshadowing: %d items unprogressed for >%d chapters",
+        "evidence_item": "%s(planted ch%d, %d chapters passed)",
+        "sugg": "novel_context foreshadow reminder may not be effective or Writer prompt lacks guidance. Check foreshadow_ledger and context injection."
+      },
+      "compass_drift": {
+        "missing_title": "Missing compass in longform mode",
+        "missing_sugg": "Architect should create compass during initial planning. Check architect-long.md.",
+        "stale_title": "Compass not updated for %d chapters",
+        "stale_sugg": "Architect should update compass at arc/volume boundaries. Check architect-long.md."
+      },
+      "outline_exhausted": {
+        "title": "Outline exhausted: completed %d chapters >= planned %d chapters",
+        "sugg": "Arc expansion or new volume signal was not triggered. Check host commit strategy and recovery logic."
+      },
+      "missing_summaries": {
+        "title": "Missing summaries: %d chapters without summary",
+        "sugg": "Summaries are essential for context continuity. Check commit_chapter summary persistence."
+      },
+      "ghost_character": {
+        "title": "Missing character: %d core characters absent for long period",
+        "never_seen": "%s(never appeared in summary)",
+        "absent_long": "%s(last seen ch%d, absent for %d chapters)",
+        "sugg": "Writer may have lost character tracking. Steer in input box to re-introduce character or downgrade tier in characters.json."
+      },
+      "timeline_gaps": {
+        "empty_title": "Timeline is empty",
+        "empty_sugg": "commit_chapter timeline extraction may not have taken effect. Check Writer timeline output.",
+        "gap_title": "Timeline gaps: %d chapters without events",
+        "gap_sugg": "commit_chapter timeline extraction may be partially failing. Check Writer timeline output format."
+      },
+      "relationship_stagnation": {
+        "title": "Relationship data stagnant: latest update at chapter %d",
+        "sugg": "commit_chapter relationship updates may have stopped or story relationships have not changed."
+      },
+      "repeated_tool_error": {
+        "title": "Tool repeatedly returns same error",
+        "sugg": "Same tool repeatedly returns same error near tail; check agentcore tool validation / prompt parameter contract (#34)."
+      },
+      "args_invalid_loop": {
+        "title": "Parameters repeatedly failed to parse",
+        "sugg": "Model sent parameters that fail parsing yet continuously retries; check agentcore coercion (#34)."
+      },
+      "stuck_step": {
+        "title": "Checkpoint stuck on same step",
+        "evidence": "Stuck at `%s` ×%d",
+        "sugg": "Same step repeatedly written without advancing; locate stuck subagent from repeat signatures."
+      },
+      "stream_idle_storm": {
+        "title": "Frequent stream interruptions (stream_idle)",
+        "sugg": "Upstream delayed token generation killed by watchdog; increase streamIdleTimeout for reasoning models or check provider connection stability (#32)."
+      }
+    },
+    "actions": {
+      "state_machine_fix": {
+        "summary": "State machine fix",
+        "msg": "State machine anomaly: %s. Inspect and fix progress phase/flow before continuing."
+      },
+      "outline_exhausted": {
+        "summary": "Handle outline exhaustion",
+        "msg": "Completed chapters reached planned limit. Invoke Architect to expand next arc or append volume before writing."
+      },
+      "orphaned_steer": {
+        "summary": "Process unhandled user steering",
+        "msg": "Unconsumed user steering instruction exists. Process pending steer before resuming current task."
+      }
+    }
   }
 }

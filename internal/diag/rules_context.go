@@ -3,6 +3,8 @@ package diag
 import (
 	"fmt"
 	"strings"
+
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 // GhostCharacter 检测 core/important 角色长期未出现。
@@ -48,9 +50,9 @@ func GhostCharacter(snap *Snapshot) []Finding {
 		}
 		gap := latest - seen
 		if !ok {
-			ghosts = append(ghosts, fmt.Sprintf("%s(从未出现在摘要中)", c.Name))
+			ghosts = append(ghosts, fmt.Sprintf(i18n.T("diag.rules.ghost_character.never_seen"), c.Name))
 		} else if gap > threshold {
-			ghosts = append(ghosts, fmt.Sprintf("%s(最后出现ch%d,已缺席%d章)", c.Name, seen, gap))
+			ghosts = append(ghosts, fmt.Sprintf(i18n.T("diag.rules.ghost_character.absent_long"), c.Name, seen, gap))
 		}
 	}
 	if len(ghosts) == 0 {
@@ -63,9 +65,9 @@ func GhostCharacter(snap *Snapshot) []Finding {
 		Confidence: ConfMedium,
 		AutoLevel:  AutoNone,
 		Target:     "context.characters",
-		Title:      fmt.Sprintf("角色消失: %d 个核心角色长期缺席", len(ghosts)),
+		Title:      fmt.Sprintf(i18n.T("diag.rules.ghost_character.title"), len(ghosts)),
 		Evidence:   strings.Join(ghosts, "; "),
-		Suggestion: "Writer 可能丢失了该角色的追踪。考虑直接在输入框提交干预指令重新引入该角色，或在 characters.json 中降级其 tier。",
+		Suggestion: i18n.T("diag.rules.ghost_character.sugg"),
 	}}
 }
 
@@ -82,9 +84,9 @@ func TimelineGaps(snap *Snapshot) []Finding {
 			Confidence: ConfMedium,
 			AutoLevel:  AutoNone,
 			Target:     "context.timeline",
-			Title:      "时间线为空",
+			Title:      i18n.T("diag.rules.timeline_gaps.empty_title"),
 			Evidence:   fmt.Sprintf("completed=%d, timeline_events=0", snap.CompletedCount()),
-			Suggestion: "commit_chapter 的时间线提取可能未生效。检查 Writer 输出是否包含 timeline 字段。",
+			Suggestion: i18n.T("diag.rules.timeline_gaps.empty_sugg"),
 		}}
 	}
 
@@ -111,9 +113,9 @@ func TimelineGaps(snap *Snapshot) []Finding {
 		Confidence: ConfMedium,
 		AutoLevel:  AutoNone,
 		Target:     "context.timeline",
-		Title:      fmt.Sprintf("时间线缺口: %d 章无事件记录", len(missing)),
+		Title:      fmt.Sprintf(i18n.T("diag.rules.timeline_gaps.gap_title"), len(missing)),
 		Evidence:   fmt.Sprintf("missing=[%s]", intsToStr(missing)),
-		Suggestion: "commit_chapter 的时间线提取可能部分失效。检查 Writer 输出的 timeline 字段格式。",
+		Suggestion: i18n.T("diag.rules.timeline_gaps.gap_sugg"),
 	}}
 }
 
@@ -147,8 +149,8 @@ func RelationshipStagnation(snap *Snapshot) []Finding {
 		Confidence: ConfLow,
 		AutoLevel:  AutoNone,
 		Target:     "context.relationships",
-		Title:      fmt.Sprintf("关系数据停滞: 最新更新在第 %d 章", latestRelCh),
+		Title:      fmt.Sprintf(i18n.T("diag.rules.relationship_stagnation.title"), latestRelCh),
 		Evidence:   fmt.Sprintf("relationship_entries=%d, latest_update=ch%d, latest_completed=ch%d", len(snap.Relationships), latestRelCh, snap.LatestCompleted()),
-		Suggestion: "commit_chapter 的关系更新可能停止工作，或故事关系确实无变化。检查 Writer 输出的 relationships 字段。",
+		Suggestion: i18n.T("diag.rules.relationship_stagnation.sugg"),
 	}}
 }

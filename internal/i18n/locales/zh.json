@@ -38,7 +38,9 @@
     "err_no_mix": "不能与其他启动参数混用",
     "err_no_cli_prompt": "不支持直接通过命令行传递小说需求，请在 TUI 界面中输入",
     "err_headless_setup": "无界面模式不支持初始配置向导，请先在 TUI 交互模式下配置",
-    "err_headless_prompt_only": "--prompt / --prompt-file 仅可在 --headless 模式下使用"
+    "err_headless_prompt_only": "--prompt / --prompt-file 仅可在 --headless 模式下使用",
+    "flag_config": "配置文件",
+    "err_no_args": "不接受参数"
   },
   "setup": {
     "welcome": "欢迎使用 ainovel-cli！",
@@ -126,7 +128,9 @@
     "validating_saving": "正在校验并保存配置...",
     "test_cancelled": "连接测试已取消",
     "no_available_options": "没有可用选项",
-    "err_key_cannot_clear": "该 Provider 必须配置 API Key，不能清除"
+    "err_key_cannot_clear": "该 Provider 必须配置 API Key，不能清除",
+    "main_model": "主模型",
+    "test_success": "%s 连接成功！"
   },
   "tui": {
     "welcome": {
@@ -285,7 +289,28 @@
       "synopsis": "梗概",
       "planned": "滚动规划",
       "current_arc": "本弧",
-      "global": "全局"
+      "global": "全局",
+      "state": "状态",
+      "phase": "阶段",
+      "flow": "流程",
+      "advance": "推进",
+      "advance_auto": "自动",
+      "advance_review": "逐章验收",
+      "advance_permit": "已放行第 %d 章",
+      "completed": "已完成",
+      "chapters_count": "%d 章",
+      "last_commit": "最近提交",
+      "last_review": "最近评审",
+      "summaries": "最近摘要",
+      "premise": "前提设定",
+      "scope_baseline": "基线",
+      "scope_projected": "投影",
+      "scope_recovered": "恢复",
+      "scope_committed": "已提交",
+      "scope_skipped": "熔断跳过",
+      "strategy_microcompact": "工具结果微压缩",
+      "strategy_light_trim": "轻裁剪",
+      "strategy_full_summary": "完整摘要"
     },
     "outline": {
       "in_progress_badge": "进行中"
@@ -467,7 +492,14 @@
       "generating": "正在生成诊断报告",
       "started_time": "开始时间",
       "loading_desc": "正在读取当前小说 output 产物并分析流程、质量、规划和上下文问题。项目较大时可能需要几秒。",
-      "loading_hint": "Esc 可先关闭面板，后台分析完成后下次打开会重新生成。"
+      "loading_hint": "Esc 可先关闭面板，后台分析完成后下次打开会重新生成。",
+      "not_available": "诊断报告不可用",
+      "chapter_label": "章节",
+      "rework_label": "改写",
+      "planning_label": "规划",
+      "critical_count": "%d 严重",
+      "warning_count": "%d 警告",
+      "info_count": "%d 提示"
     },
     "update": {
       "notice": "新版本 %s 已发布",
@@ -489,5 +521,128 @@
     "file_log_unavailable": "文件日志不可用，已继续使用终端日志",
     "startup_failed_model": "启动失败，请检查模型配置或使用 /model 切换模型",
     "prompt_read_failed": "读取 prompt 失败"
+  },
+  "diag": {
+    "rules": {
+      "load_error": {
+        "title": "工件加载失败: %s",
+        "sugg": "文件可能损坏或权限不足，相关诊断规则的结果可能不完整。"
+      },
+      "invalid_pending_rewrites": {
+        "title": "返工队列包含未完成章节: [%s]",
+        "sugg": "这是状态不变量损坏。请停止运行后编辑 meta/progress.json，移除 pending_rewrites 中未完成章节；若队列为空，将 flow 改为 writing 并清空 rewrite_reason。"
+      },
+      "rewrite_pending_pressure": {
+        "title": "待改写章节: [%s]",
+        "sugg": "检查 Editor 评审标准是否过严，或 Writer 改写 prompt 是否有效。某章返工反复失败时引擎会自动将其移出队列并继续后续创作，无需人工清理。"
+      },
+      "orphaned_steer": {
+        "title": "存在未消费的转向指令",
+        "sugg": "该 steer 被持久化但未被干预裁定流程消费。检查中断恢复逻辑，或通过重新提交覆盖。"
+      },
+      "phase_flow_mismatch": {
+        "title": "阶段/流程状态不匹配: phase=%s, flow=%s",
+        "evidence": "phase=%s 不应出现非初始 flow=%s",
+        "sugg": "状态机可能损坏，需手动检查 meta/progress.json 的 phase 和 flow 字段。"
+      },
+      "chapter_gaps": {
+        "title": "章节跳号: 缺少 [%s]",
+        "sugg": "commit_chapter 可能中途中断。检查 meta/pending_commit.json 是否存在未完成提交。"
+      },
+      "chronic_low_dimension": {
+        "title": "维度 [%s] 持续低分 (均值 %.0f)",
+        "evidence": "共 %d 次评审，均分 %.1f",
+        "sugg": "检查 Writer prompt 中关于 %s 的指引是否清晰，或 Editor prompt 的 %s 评分标准是否合理。"
+      },
+      "contract_miss_pattern": {
+        "title": "合同履约率低 (%.0f%% 未达成)",
+        "evidence": "未达成: [%s]，共 %d/%d",
+        "sugg": "Writer 可能未读 contract，或 contract required_beats 过于激进。检查 plan_chapter 和 writer.md 的配合。"
+      },
+      "hook_weak_chain": {
+        "title": "章末钩子连续偏弱（连续 %d 章）",
+        "sugg": "检查 writer.md 中 hook_goal 的执行是否清晰，必要时在 plan_chapter 中明确本章追读欲望，并校准 Editor 对 hook 的举证标准。"
+      },
+      "payoff_miss_pattern": {
+        "title": "爽点/情节点兑现率偏低 (%.0f%% 未达成)",
+        "evidence": "未兑现章节: [%s]，共 %d/%d",
+        "sugg": "检查 plan_chapter 的 payoff_points 是否过多或过空，确保 Writer 在正文里明确兑现，而不是只做铺垫。"
+      },
+      "excessive_rewrites": {
+        "title": "改写率过高 (%d/%d = %.0f%%)",
+        "evidence": "共 %d 次评审，%d 次 rewrite",
+        "sugg": "Writer 持续产出低于 Editor 阈值的内容。检查 Writer prompt 的质量标准是否与 Editor 的评审标准对齐。"
+      },
+      "word_count_anomaly": {
+        "title": "章节字数异常 (均值 %d 字)",
+        "sugg": "极短章节可能是输出截断（token 限制），极长章节可能消耗过多上下文窗口。检查模型 max_tokens 配置。"
+      },
+      "stale_foreshadow": {
+        "title": "伏笔停滞: %d 条超过 %d 章未推进",
+        "evidence_item": "%s(ch%d埋下,已过%d章)",
+        "sugg": "novel_context 的伏笔提醒加载可能未生效，或 Writer prompt 缺少推进伏笔的指引。检查 foreshadow_ledger 与上下文注入逻辑。"
+      },
+      "compass_drift": {
+        "missing_title": "长篇模式缺少指南针",
+        "missing_sugg": "Architect 应在初始规划时创建 compass。检查 architect-long.md 是否包含 compass 创建指令。",
+        "stale_title": "指南针已 %d 章未更新",
+        "stale_sugg": "Architect 应在弧/卷边界更新 compass。检查 architect-long.md 中是否包含 compass 更新指令。"
+      },
+      "outline_exhausted": {
+        "title": "大纲耗尽: 已完成 %d 章 >= 已规划 %d 章",
+        "sugg": "展开/新卷信号可能未触发。检查宿主侧提交策略和恢复逻辑，确认弧边界检测、expand_arc 或 append_volume 是否正常执行。"
+      },
+      "missing_summaries": {
+        "title": "缺少摘要: %d 章无摘要",
+        "sugg": "摘要是上下文连续性的关键。检查 commit_chapter 的摘要写入逻辑是否正常工作。"
+      },
+      "ghost_character": {
+        "title": "角色消失: %d 个核心角色长期缺席",
+        "never_seen": "%s(从未出现在摘要中)",
+        "absent_long": "%s(最后出现ch%d,已缺席%d章)",
+        "sugg": "Writer 可能丢失了该角色的追踪。考虑直接在输入框提交干预指令重新引入该角色，或在 characters.json 中降级其 tier。"
+      },
+      "timeline_gaps": {
+        "empty_title": "时间线为空",
+        "empty_sugg": "commit_chapter 的时间线提取可能未生效。检查 Writer 输出是否包含 timeline 字段。",
+        "gap_title": "时间线缺口: %d 章无事件记录",
+        "gap_sugg": "commit_chapter 的时间线提取可能部分失效。检查 Writer 输出的 timeline 字段格式。"
+      },
+      "relationship_stagnation": {
+        "title": "关系数据停滞: 最新更新在第 %d 章",
+        "sugg": "commit_chapter 的关系更新可能停止工作，或故事关系确实无变化。检查 Writer 输出的 relationships 字段。"
+      },
+      "repeated_tool_error": {
+        "title": "工具反复报同一错误",
+        "sugg": "近端同一工具反复返回同一错误，多为模型参数不合规或工具契约不符；查 agentcore 工具校验 / prompt 参数约定（参见 #34）。"
+      },
+      "args_invalid_loop": {
+        "title": "参数反复无法解析",
+        "sugg": "模型发来的参数无法解析却不断重试；看 agentcore 是否对该类型做了宽松强转（参见 #34）。"
+      },
+      "stuck_step": {
+        "title": "checkpoint 停滞在同一 step",
+        "evidence": "连续停在 `%s` ×%d",
+        "sugg": "同一 step 反复写入而不推进；结合上面的重复签名定位是哪个子代理卡住。"
+      },
+      "stream_idle_storm": {
+        "title": "流式中断频发（stream_idle）",
+        "sugg": "上游长时间不吐 token 被 watchdog 误杀；慢思考模型调大 streamIdleTimeout，或排查 provider 连接稳定性（参见 #32）。"
+      }
+    },
+    "actions": {
+      "state_machine_fix": {
+        "summary": "状态机异常修复",
+        "msg": "状态机异常：%s。请先检查并修正 progress 的 phase/flow 状态，再继续运行。"
+      },
+      "outline_exhausted": {
+        "summary": "大纲耗尽处理",
+        "msg": "已完成章节数达到已规划上限。请优先调用 Architect 展开下一弧或追加新卷，再继续写作。"
+      },
+      "orphaned_steer": {
+        "summary": "消费未处理的用户干预",
+        "msg": "存在未消费的用户干预指令，请优先处理 pending steer 后再继续当前任务。"
+      }
+    }
   }
 }

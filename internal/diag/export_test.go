@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/voocel/agentcore"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 	"github.com/voocel/ainovel-cli/internal/store"
 )
 
@@ -91,7 +92,7 @@ func TestExport_DeathLoopShape(t *testing.T) {
 		t.Errorf("重复聚合未列出 ×14\n%s", out)
 	}
 	// Phase 2：运行时检测应把这个循环判成 critical 的 RepeatedToolError。
-	if !strings.Contains(out, "工具反复报同一错误") {
+	if !strings.Contains(out, i18n.T("diag.rules.repeated_tool_error.title")) {
 		t.Errorf("运行时检测未产出 RepeatedToolError\n%s", out)
 	}
 	if !strings.Contains(out, "[critical]") {
