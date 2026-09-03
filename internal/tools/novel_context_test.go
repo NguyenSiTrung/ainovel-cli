@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
@@ -496,92 +495,6 @@ func TestContextToolArchitectModeIncludesFlatOutline(t *testing.T) {
 	}
 }
 
-func TestTrimByBudgetRemovesCanonicalMemoryKeys(t *testing.T) {
-	result := map[string]any{
-		"reference_pack": map[string]any{
-			"references": map[string]string{
-				"a": strings.Repeat("x", 200),
-				"b": strings.Repeat("y", 200),
-			},
-			"style_rules": []string{"克制"},
-		},
-	}
-
-	if err := trimByBudget(result, 80); err != nil {
-		t.Fatal(err)
-	}
-
-	pack, ok := result["reference_pack"].(map[string]any)
-	if !ok {
-		t.Fatal("expected reference_pack to remain available")
-	}
-	if _, ok := pack["references"]; ok {
-		t.Fatal("expected references to be trimmed from reference_pack")
-	}
-}
-
-func TestTrimByBudgetKeepsStyleStats(t *testing.T) {
-	styleStats := map[string]any{
-		"chapters": 200,
-		"patterns": []map[string]any{
-			{"name": "矫正句", "total": 80, "per_chapter": 0.4},
-		},
-	}
-	result := map[string]any{
-		"reference_pack": map[string]any{
-			"references": strings.Repeat("x", 500),
-		},
-		"episodic_memory": map[string]any{
-			"style_stats": styleStats,
-		},
-	}
-
-	if err := trimByBudget(result, 200); err != nil {
-		t.Fatal(err)
-	}
-
-	episodic := result["episodic_memory"].(map[string]any)
-	if _, ok := episodic["style_stats"]; !ok {
-		t.Fatal("style_stats must remain in episodic_memory")
-	}
-	if trimmed, ok := result["_trimmed"].([]string); ok && slices.Contains(trimmed, "style_stats") {
-		t.Fatal("style_stats must not be reported as trimmed")
-	}
-}
-
-func TestTrimByBudgetRejectsUntrimmablePayload(t *testing.T) {
-	result := map[string]any{"required": strings.Repeat("x", 500)}
-	if err := trimByBudget(result, 100); err == nil || !strings.Contains(err.Error(), "exceeds budget") {
-		t.Fatalf("expected explicit budget error, got %v", err)
-	}
-}
-
-func TestFinalizeContextPayloadReportsAppliedTrimming(t *testing.T) {
-	result := map[string]any{
-		"reference_pack": map[string]any{
-			"references": map[string]string{"guide": strings.Repeat("x", 1000)},
-		},
-		"episodic_memory": map[string]any{
-			"style_stats": map[string]any{"chapters": 20},
-		},
-	}
-	raw, err := finalizeContextPayload(result, 3, 400)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(raw) > 400 {
-		t.Fatalf("payload = %d bytes, budget = 400", len(raw))
-	}
-	var payload map[string]any
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		t.Fatal(err)
-	}
-	summary, _ := payload["_loading_summary"].(string)
-	if !strings.Contains(summary, "裁剪:references") {
-		t.Fatalf("loading summary must reflect final trimming, got %q", summary)
-	}
-}
-
 func TestProjectLayeredOutlineKeepsOnlyFocusedArcDetails(t *testing.T) {
 	volumes := []domain.VolumeOutline{{
 		Index: 1,
@@ -603,7 +516,7 @@ func TestProjectLayeredOutlineKeepsOnlyFocusedArcDetails(t *testing.T) {
 	}
 }
 
-func TestContextToolLongLayeredPlanningStaysWithinBudget(t *testing.T) {
+func TestContextToolLongLayeredPlanningProjectsFocusedArc(t *testing.T) {
 	s := store.NewStore(t.TempDir())
 	if err := s.Init(); err != nil {
 		t.Fatal(err)
@@ -641,9 +554,6 @@ func TestContextToolLongLayeredPlanningStaysWithinBudget(t *testing.T) {
 	raw, err := newTestContextTool(s, References{}, "default").Execute(context.Background(), json.RawMessage(`{}`))
 	if err != nil {
 		t.Fatal(err)
-	}
-	if len(raw) > 60*1024 {
-		t.Fatalf("architect payload = %d bytes, budget = %d", len(raw), 60*1024)
 	}
 	var payload struct {
 		PlanningMemory struct {

@@ -13,7 +13,16 @@ import (
 	storepkg "github.com/voocel/ainovel-cli/internal/store"
 )
 
+// upgradeProject 把老项目数据升到当前格式，并把同一个根错误同时交给界面和日志。
 func upgradeProject(st *storepkg.Store) error {
+	if err := runProjectUpgrades(st); err != nil {
+		slog.Error("项目数据升级失败", "module", "migration", "err", err)
+		return err
+	}
+	return nil
+}
+
+func runProjectUpgrades(st *storepkg.Store) error {
 	version, err := st.LoadProjectFormatVersion()
 	if err != nil {
 		return fmt.Errorf("读取项目格式版本: %w", err)
