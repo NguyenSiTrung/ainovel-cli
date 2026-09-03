@@ -109,6 +109,9 @@ cd protocols/desktop-v1 && npm ci && node validate.mjs
 
 # Rust shell
 cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml
+# (No sidecar needed: build.rs generates a placeholder externalBin stub for
+#  the host triple on fresh checkouts; building real sidecars is only
+#  required to actually run or package the app.)
 
 # Frontend
 cd desktop/frontend && npm ci && npm run typecheck && npm test && npm run build
