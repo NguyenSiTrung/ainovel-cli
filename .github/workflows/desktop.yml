@@ -286,9 +286,18 @@ jobs:
           echo "updater signing: TAURI_SIGNING_PRIVATE_KEY secret absent; generating an ephemeral throwaway key"
           npx tauri signer generate -w "$RUNNER_TEMP/ephemeral-updater.key" --password "" --ci
           key=$(cat "$RUNNER_TEMP/ephemeral-updater.key" | tr -d '\r\n')
+          pub=$(cat "$RUNNER_TEMP/ephemeral-updater.key.pub" | tr -d '\r\n')
           echo "TAURI_SIGNING_PRIVATE_KEY=$key" >> "$GITHUB_ENV"
           echo "TAURI_SIGNING_PRIVATE_KEY_PATH=$RUNNER_TEMP/ephemeral-updater.key" >> "$GITHUB_ENV"
-
+          node -e '
+            const fs = require("fs");
+            const file = process.env.TAURI_VERSION_CONFIG;
+            const cfg = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {};
+            cfg.plugins = cfg.plugins || {};
+            cfg.plugins.updater = cfg.plugins.updater || {};
+            cfg.plugins.updater.pubkey = process.argv[1];
+            fs.writeFileSync(file, JSON.stringify(cfg, null, 2));
+          ' "$pub"
       - name: Bundle (tauri build)
         shell: bash
         working-directory: desktop
