@@ -61,8 +61,8 @@ func redactString(s string) string {
 		return groups[1] + groups[2] + masked
 	})
 	s = longTokenRe.ReplaceAllStringFunc(s, func(m string) string {
-		// 只遮“像密钥”的独立长串；普通长词（URL 路径段等含 '/' 的已排除在字符集外）。
-		if strings.ContainsAny(m, "://") {
+		// 只遮“像密钥”的独立长串；普通长词（URL 路径段含 '/' 或文件路径段相邻 '\'/'/' 的排除）。
+		if strings.ContainsAny(m, "://") || strings.Contains(s, "\\"+m) || strings.Contains(s, m+"\\") || strings.Contains(s, "/"+m) || strings.Contains(s, m+"/") {
 			return m
 		}
 		return host.MaskAPIKey(m)
@@ -78,6 +78,10 @@ func redactValue(v any) any {
 		for k, val := range t {
 			if isSecretKey(k) {
 				out[k] = maskWholeValue(val)
+				continue
+			}
+			if isPathKey(k) {
+				out[k] = val
 				continue
 			}
 			out[k] = redactValue(val)
@@ -107,6 +111,10 @@ func redactPayload(p map[string]any) map[string]any {
 			out[k] = maskWholeValue(v)
 			continue
 		}
+		if isPathKey(k) {
+			out[k] = v
+			continue
+		}
 		out[k] = redactValue(v)
 	}
 	return out
@@ -115,6 +123,15 @@ func redactPayload(p map[string]any) map[string]any {
 func isSecretKey(k string) bool {
 	_, ok := secretKeys[strings.ToLower(strings.TrimSpace(k))]
 	return ok
+}
+
+// isPathKey 报告字段名是否为文件系统路径字段（路径绝非凭证，不应被长串启发式误遮）。
+func isPathKey(k string) bool {
+	switch strings.ToLower(strings.TrimSpace(k)) {
+	case "path", "output_path", "source_path", "profile_path", "engine_source_dir", "dir", "project_dir", "file", "filepath", "target_path":
+		return true
+	}
+	return false
 }
 
 // maskWholeValue 把敏感字段的值替换为 "<redacted>"（布尔保持原值：

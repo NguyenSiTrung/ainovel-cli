@@ -86,3 +86,22 @@ func TestIsSecretKey(t *testing.T) {
 		}
 	}
 }
+
+func TestRedactPayloadPreservesPathFields(t *testing.T) {
+	winPath := `C:\Users\RUNNER~1\AppData\Local\Temp\TestDiagnosticsSnapshotAndExport3825987156\002\diag\bundle.md`
+	payload := map[string]any{
+		"output_path": winPath,
+		"path":        winPath,
+		"api_key":     "sk-12345678901234567890",
+	}
+	out := redactPayload(payload)
+	if out["output_path"] != winPath {
+		t.Fatalf("output_path 不应被修改: %v", out["output_path"])
+	}
+	if out["path"] != winPath {
+		t.Fatalf("path 不应被修改: %v", out["path"])
+	}
+	if out["api_key"] != "<redacted>" {
+		t.Fatalf("api_key 仍应被遮蔽: %v", out["api_key"])
+	}
+}
