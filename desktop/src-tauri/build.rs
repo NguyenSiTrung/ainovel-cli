@@ -11,7 +11,27 @@ fn main() {
     // even for `cargo check`/`cargo test`, and real sidecars are never
     // committed (gitignored cross-builds from scripts/build-sidecars.sh).
     ensure_sidecar_placeholder();
-    tauri_build::build();
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    let target_env = std::env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
+
+    if target_os == "windows" && target_env == "msvc" {
+        let attrs = tauri_build::Attributes::new()
+            .windows_attributes(tauri_build::WindowsAttributes::new_without_app_manifest());
+        tauri_build::try_build(attrs).expect("failed to run tauri-build");
+        embed_manifest_for_msvc();
+    } else {
+        tauri_build::build();
+    }
+}
+
+#[allow(dead_code)]
+fn embed_manifest_for_msvc() {
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR set");
+    let manifest = std::path::Path::new(&manifest_dir).join("windows-app-manifest.xml");
+
+    println!("cargo:rerun-if-changed={}", manifest.display());
+    println!("cargo:rustc-link-arg=/MANIFEST:EMBED");
+    println!("cargo:rustc-link-arg=/MANIFESTINPUT:{}", manifest.display());
 }
 
 fn ensure_sidecar_placeholder() {
