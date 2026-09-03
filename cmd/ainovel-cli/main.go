@@ -10,6 +10,7 @@ import (
 
 	"github.com/voocel/ainovel-cli/assets"
 	"github.com/voocel/ainovel-cli/internal/bootstrap"
+	"github.com/voocel/ainovel-cli/internal/entry/desktop"
 	"github.com/voocel/ainovel-cli/internal/entry/headless"
 	"github.com/voocel/ainovel-cli/internal/entry/startup"
 	"github.com/voocel/ainovel-cli/internal/entry/tui"
@@ -56,6 +57,13 @@ func main() {
 		return
 	}
 	headlessMode = opts.Headless
+
+	// 桌面端 sidecar 模式：在首次引导之前拦截——绝不能把交互式 wizard
+	// 拉进无终端的 stdin/stdout 协议流；缺失配置以结构化错误退出。
+	if opts.DesktopDaemon {
+		runDesktopDaemon(opts, args)
+		return
+	}
 
 	// 首次引导
 	if bootstrap.NeedsSetup() {
@@ -154,6 +162,48 @@ type cliOptions struct {
 	Version       bool
 	Update        bool
 	UpdateVersion string
+	DesktopDaemon bool
+}
+
+// runDesktopDaemon 启动 desktop-v1 sidecar 协议循环（stdin/stdout NDJSON）。
+// 配置加载与资产装配和 TUI/headless 同路径；stdout 从此只承载协议消息。
+func runDesktopDaemon(opts cliOptions, args []string) {
+	if len(args) > 0 {
+		fmt.Fprintf(os.Stderr, "desktop-daemon: unexpected arguments: %v\n", args)
+		os.Exit(1)
+	}
+	if bootstrap.NeedsSetup() {
+		msg := "engine setup is missing: run the interactive TUI once to configure providers, then relaunch the desktop app"
+		desktop.StartupError(os.Stdout, desktop.CodeOperationFailed, msg)
+		fmt.Fprintln(os.Stderr, "desktop-daemon:", msg)
+		os.Exit(1)
+	}
+	cfg, err := bootstrap.LoadConfig()
+	if err != nil {
+		desktop.StartupError(os.Stdout, desktop.CodeInvalidPayload, "load config: "+err.Error())
+		fmt.Fprintf(os.Stderr, "desktop-daemon: config: %v\n", err)
+		os.Exit(1)
+	}
+	if opts.Language != "" {
+		cfg.Language = opts.Language
+	}
+	if opts.StoryLanguage != "" {
+		cfg.StoryLanguage = opts.StoryLanguage
+	}
+	cfg.FillDefaults()
+	i18n.SetLanguage(cfg.Language)
+
+	loadOpts := assets.DefaultLoadOptions(cfg.OutputDir)
+	loadOpts.StoryLanguage = cfg.StoryLanguage
+	bundle := assets.Load(cfg.Style, loadOpts)
+
+	if err := desktop.Run(desktop.Options{Config: cfg, Bundle: bundle}); err != nil {
+		// Run 内部已按协议发过事件（engine.ready/exited）；此处不再向 stdout
+		// 追加事件行，避免与 daemon 的 sequence 冲突，细节只落 stderr/文件。
+		fmt.Fprintf(os.Stderr, "desktop-daemon: %v\n", err)
+		_ = bootstrap.WriteStartupError(err.Error())
+		os.Exit(1)
+	}
 }
 
 // parseCLIOptions 提取 CLI flag，返回选项和剩余参数。
@@ -198,6 +248,8 @@ func parseCLIOptions(argv []string) (cliOptions, []string, error) {
 			}
 		case "--headless":
 			opts.Headless = true
+		case "--desktop-daemon":
+			opts.DesktopDaemon = true
 		case "--prompt":
 			if i+1 >= len(argv) {
 				return opts, nil, errors.New("--prompt " + i18n.T("cli.err_missing_val"))
@@ -217,10 +269,13 @@ func parseCLIOptions(argv []string) (cliOptions, []string, error) {
 	if opts.Prompt != "" && opts.PromptFile != "" {
 		return opts, nil, errors.New(i18n.T("cli.err_prompt_conflict"))
 	}
-	if opts.Version && (opts.Update || opts.Headless || opts.Prompt != "" || opts.PromptFile != "" || len(args) > 0) {
+	if opts.DesktopDaemon && (opts.Headless || opts.Prompt != "" || opts.PromptFile != "") {
+		return opts, nil, errors.New("--desktop-daemon cannot be combined with --headless/--prompt/--prompt-file")
+	}
+	if opts.Version && (opts.Update || opts.Headless || opts.DesktopDaemon || opts.Prompt != "" || opts.PromptFile != "" || len(args) > 0) {
 		return opts, nil, errors.New("version " + i18n.T("cli.err_no_mix"))
 	}
-	if opts.Update && (opts.Headless || opts.Prompt != "" || opts.PromptFile != "" || len(args) > 0) {
+	if opts.Update && (opts.Headless || opts.DesktopDaemon || opts.Prompt != "" || opts.PromptFile != "" || len(args) > 0) {
 		return opts, nil, errors.New("update " + i18n.T("cli.err_no_mix"))
 	}
 	return opts, args, nil

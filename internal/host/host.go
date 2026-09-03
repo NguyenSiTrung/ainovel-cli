@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -1805,8 +1804,11 @@ func (h *Host) importModelRuntime(role string, model agentcore.ChatModel) imp.Mo
 	return rt
 }
 
-// Simulate 读取 simulate 目录并生成或增量更新仿写画像。
-func (h *Host) Simulate(ctx context.Context) (<-chan sim.Event, error) {
+// Simulate 读取 simulate 语料目录并生成或增量更新仿写画像。
+//
+// 可选项：WithSimulateSource(dir) 指定语料目录（绝对路径）；零选项保持既有
+// 行为（进程工作目录下的 simulate/），现有调用方 Simulate(ctx) 不受影响。
+func (h *Host) Simulate(ctx context.Context, opts ...SimulateOption) (<-chan sim.Event, error) {
 	if err := h.acquireExclusive("生成仿写画像"); err != nil {
 		return nil, err
 	}
@@ -1815,11 +1817,6 @@ func (h *Host) Simulate(ctx context.Context) (<-chan sim.Event, error) {
 	h.exclusiveCancel = cancel
 	h.mu.Unlock()
 
-	wd, err := os.Getwd()
-	if err != nil {
-		h.releaseExclusive()
-		return nil, fmt.Errorf("get working dir: %w", err)
-	}
 	deps := sim.Deps{
 		Store: h.store,
 		LLM:   h.models.ForRole("architect"),
@@ -1828,7 +1825,7 @@ func (h *Host) Simulate(ctx context.Context) (<-chan sim.Event, error) {
 			Merge:  h.bundle.Prompts.SimulationMerge,
 		},
 	}
-	ch, err := sim.Run(ctx, deps, sim.Options{SourceDir: filepath.Join(wd, "simulate")})
+	ch, err := sim.Run(ctx, deps, sim.Options{SourceDir: SimulateSourceDir(opts...)})
 	if err != nil {
 		h.releaseExclusive()
 		return nil, err

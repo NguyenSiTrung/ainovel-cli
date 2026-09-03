@@ -1,0 +1,1683 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ainovel-cli.dev/protocols/desktop-v1/commands.schema.json",
+  "title": "desktop-v1 request envelope",
+  "description": "Client-to-engine request envelope for the desktop-v1 sidecar protocol. One JSON object per line on the engine's stdin. The method catalog and payload field requirements are binding for the Go sidecar, the Rust/Tauri shell, and the Svelte frontend.",
+  "type": "object",
+  "required": [
+    "protocol",
+    "kind",
+    "id",
+    "method"
+  ],
+  "properties": {
+    "protocol": {
+      "const": "desktop-v1",
+      "description": "Protocol version identifier. Always the literal string desktop-v1."
+    },
+    "kind": {
+      "const": "request",
+      "description": "Message kind. Always the literal string request."
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Client-chosen correlation id. Must be unique among in-flight requests; echoed unchanged on the response."
+    },
+    "method": {
+      "enum": [
+        "engine.ping",
+        "engine.shutdown",
+        "project.create",
+        "project.open",
+        "project.close",
+        "project.snapshot",
+        "project.resume",
+        "project.replay_events",
+        "run.start",
+        "run.continue",
+        "run.steer",
+        "run.abort",
+        "run.pause",
+        "run.advance_one_chapter",
+        "run.set_advance_mode",
+        "run.retry",
+        "cocreate.start",
+        "cocreate.stage",
+        "cocreate.resume",
+        "cocreate.cancel",
+        "chapter.list",
+        "chapter.read",
+        "chapter.save",
+        "chapter.revisions.check",
+        "chapter.revisions.sync",
+        "chapter.export",
+        "artifacts.read",
+        "import.start",
+        "import.resume",
+        "import.cancel",
+        "simulation.start",
+        "simulation.resume",
+        "simulation.cancel",
+        "simulation.profile_import",
+        "config.get",
+        "config.update",
+        "config.providers",
+        "config.models",
+        "config.switch_model",
+        "config.thinking_levels",
+        "config.set_thinking",
+        "config.set_language",
+        "config.set_story_language",
+        "diagnostics.snapshot",
+        "diagnostics.export",
+        "usage.snapshot",
+        "logs.replay",
+        "runtime.queue"
+      ],
+      "description": "Method name from the desktop-v1 method catalog."
+    },
+    "payload": {
+      "type": "object",
+      "description": "Method arguments. Optional and defaults to {}; send {} for argument-less methods. Methods whose payload schema declares required fields must include payload. Unknown payload fields are allowed and must be ignored (open objects, forward compatibility)."
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "engine.ping"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/engine_ping_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "engine.shutdown"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/engine_shutdown_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "project.create"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/project_create_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "project.open"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/project_open_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "project.close"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/project_close_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "project.snapshot"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/project_snapshot_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "project.resume"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/project_resume_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "project.replay_events"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/project_replay_events_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "run.start"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/run_start_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "run.continue"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/run_continue_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "run.steer"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/run_steer_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "run.abort"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/run_abort_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "run.pause"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/run_pause_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "run.advance_one_chapter"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/run_advance_one_chapter_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "run.set_advance_mode"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/run_set_advance_mode_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "run.retry"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/run_retry_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "cocreate.start"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/cocreate_start_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "cocreate.stage"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/cocreate_stage_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "cocreate.resume"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/cocreate_resume_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "cocreate.cancel"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/cocreate_cancel_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "chapter.list"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/chapter_list_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "chapter.read"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/chapter_read_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "chapter.save"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/chapter_save_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "chapter.revisions.check"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/chapter_revisions_check_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "chapter.revisions.sync"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/chapter_revisions_sync_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "chapter.export"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/chapter_export_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "artifacts.read"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/artifacts_read_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "import.start"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/import_start_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "import.resume"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/import_resume_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "import.cancel"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/import_cancel_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "simulation.start"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/simulation_start_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "simulation.resume"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/simulation_resume_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "simulation.cancel"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/simulation_cancel_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "simulation.profile_import"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/simulation_profile_import_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "config.get"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/config_get_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "config.update"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/config_update_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "config.providers"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/config_providers_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "config.models"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/config_models_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "config.switch_model"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/config_switch_model_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "config.thinking_levels"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/config_thinking_levels_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "config.set_thinking"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/config_set_thinking_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "config.set_language"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/config_set_language_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "config.set_story_language"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/config_set_story_language_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "diagnostics.snapshot"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/diagnostics_snapshot_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "diagnostics.export"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/diagnostics_export_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "usage.snapshot"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/usage_snapshot_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "logs.replay"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/logs_replay_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "runtime.queue"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/runtime_queue_request"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "engine_ping_request": {
+      "title": "engine.ping request payload",
+      "description": "Liveness check. No arguments; send {}.",
+      "type": "object"
+    },
+    "engine_shutdown_request": {
+      "title": "engine.shutdown request payload",
+      "description": "Graceful shutdown request. The engine replies ok:true, flushes state, and exits; the supervisor waits out its grace period before force-termination.",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Optional human-readable reason recorded in logs."
+        }
+      }
+    },
+    "project_create_request": {
+      "title": "project.create request payload",
+      "description": "Create a new project at a directory chosen via the native file dialog.",
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Absolute path of the directory in which to create the project."
+        },
+        "name": {
+          "type": "string",
+          "description": "Optional project display name."
+        },
+        "options": {
+          "type": "object",
+          "description": "Optional loose bag of engine creation options; contents follow the Go engine and are not enumerated here."
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "project_open_request": {
+      "title": "project.open request payload",
+      "description": "Open an existing project directory.",
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Absolute path of the project directory."
+        }
+      },
+      "required": [
+        "path"
+      ]
+    },
+    "project_close_request": {
+      "title": "project.close request payload",
+      "description": "Close the open project. Unsaved-change protection is enforced by the engine.",
+      "type": "object",
+      "properties": {
+        "force": {
+          "type": "boolean",
+          "description": "Optional; true discards unsaved state without the protection flow."
+        }
+      }
+    },
+    "project_snapshot_request": {
+      "title": "project.snapshot request payload",
+      "description": "Request a full snapshot of the open project state. No arguments.",
+      "type": "object"
+    },
+    "project_resume_request": {
+      "title": "project.resume request payload",
+      "description": "Resume the open project after interruption or crash, using engine recovery semantics.",
+      "type": "object",
+      "properties": {
+        "checkpoint_id": {
+          "type": "string",
+          "description": "Optional specific checkpoint to resume from; default is the latest."
+        }
+      }
+    },
+    "project_replay_events_request": {
+      "title": "project.replay_events request payload",
+      "description": "Replay buffered project events after a sequence number, e.g. after reconnect or sidecar restart.",
+      "type": "object",
+      "properties": {
+        "after_sequence": {
+          "type": "integer",
+          "description": "Optional; replay events with sequence greater than this value (same engine session)."
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Optional; maximum number of events to replay. Minimum 1."
+        }
+      }
+    },
+    "run_start_request": {
+      "title": "run.start request payload",
+      "description": "Start a generation run. Returns an acceptance response; progress arrives as run.* and stream.* events.",
+      "type": "object",
+      "properties": {
+        "goal": {
+          "type": "string",
+          "description": "Optional natural-language goal for the run."
+        },
+        "options": {
+          "type": "object",
+          "description": "Optional loose bag of generation options (model, language, chapter plan, ...); not enumerated here."
+        }
+      }
+    },
+    "run_continue_request": {
+      "title": "run.continue request payload",
+      "description": "Continue the current run. No arguments.",
+      "type": "object"
+    },
+    "run_steer_request": {
+      "title": "run.steer request payload",
+      "description": "Steer the active run with a natural-language instruction.",
+      "type": "object",
+      "properties": {
+        "instruction": {
+          "type": "string",
+          "description": "The steering instruction to apply to the active run."
+        },
+        "context": {
+          "type": "object",
+          "description": "Optional loose context hints; not enumerated here."
+        }
+      },
+      "required": [
+        "instruction"
+      ]
+    },
+    "run_abort_request": {
+      "title": "run.abort request payload",
+      "description": "Abort the active run.",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Optional human-readable abort reason for logs."
+        }
+      }
+    },
+    "run_pause_request": {
+      "title": "run.pause request payload",
+      "description": "Pause the active run. No arguments.",
+      "type": "object"
+    },
+    "run_advance_one_chapter_request": {
+      "title": "run.advance_one_chapter request payload",
+      "description": "Advance exactly one chapter (explicit chapter authorization). No arguments.",
+      "type": "object"
+    },
+    "run_set_advance_mode_request": {
+      "title": "run.set_advance_mode request payload",
+      "description": "Set the chapter advance mode.",
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "description": "Advance mode name as understood by the engine (for example auto or manual)."
+        }
+      },
+      "required": [
+        "mode"
+      ]
+    },
+    "run_retry_request": {
+      "title": "run.retry request payload",
+      "description": "Retry the last failed step or run. No arguments.",
+      "type": "object"
+    },
+    "cocreate_start_request": {
+      "title": "cocreate.start request payload",
+      "description": "Start a co-create session with an opening user message.",
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "Opening user message of the co-create session."
+        },
+        "mode": {
+          "type": "string",
+          "description": "Optional co-create mode name as understood by the engine."
+        },
+        "options": {
+          "type": "object",
+          "description": "Optional loose bag of co-create options; not enumerated here."
+        }
+      },
+      "required": [
+        "message"
+      ]
+    },
+    "cocreate_stage_request": {
+      "title": "cocreate.stage request payload",
+      "description": "Submit user input for the current co-create stage (for example accepting or editing a proposal).",
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "User input for the current stage."
+        },
+        "options": {
+          "type": "object",
+          "description": "Optional loose stage options; not enumerated here."
+        }
+      },
+      "required": [
+        "message"
+      ]
+    },
+    "cocreate_resume_request": {
+      "title": "cocreate.resume request payload",
+      "description": "Resume a paused co-create session. No arguments.",
+      "type": "object"
+    },
+    "cocreate_cancel_request": {
+      "title": "cocreate.cancel request payload",
+      "description": "Cancel the co-create session.",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Optional human-readable cancel reason for logs."
+        }
+      }
+    },
+    "chapter_list_request": {
+      "title": "chapter.list request payload",
+      "description": "List chapters of the open project. No arguments.",
+      "type": "object"
+    },
+    "chapter_read_request": {
+      "title": "chapter.read request payload",
+      "description": "Read one chapter's content.",
+      "type": "object",
+      "properties": {
+        "chapter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Chapter identifier as used by the engine (chapter number or chapter id)."
+        }
+      },
+      "required": [
+        "chapter"
+      ]
+    },
+    "chapter_save_request": {
+      "title": "chapter.save request payload",
+      "description": "Save chapter content. Unsaved-change and revision protections are enforced by the engine.",
+      "type": "object",
+      "properties": {
+        "chapter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Chapter identifier as used by the engine (chapter number or chapter id)."
+        },
+        "content": {
+          "type": "string",
+          "description": "Full chapter text to save."
+        },
+        "base_version": {
+          "type": "integer",
+          "description": "Optional revision baseline the edit is based on, for conflict detection."
+        }
+      },
+      "required": [
+        "chapter",
+        "content"
+      ]
+    },
+    "chapter_revisions_check_request": {
+      "title": "chapter.revisions.check request payload",
+      "description": "Check for revised chapters on disk. Without chapter, checks all chapters.",
+      "type": "object",
+      "properties": {
+        "chapter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Optional; restrict the check to one chapter."
+        }
+      }
+    },
+    "chapter_revisions_sync_request": {
+      "title": "chapter.revisions.sync request payload",
+      "description": "Synchronize revised chapters from disk into the project. Without chapter, syncs all chapters.",
+      "type": "object",
+      "properties": {
+        "chapter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Optional; restrict the sync to one chapter."
+        }
+      }
+    },
+    "chapter_export_request": {
+      "title": "chapter.export request payload",
+      "description": "Export chapters to a file.",
+      "type": "object",
+      "properties": {
+        "chapters": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "description": "Optional; chapters to export. Default follows engine behavior (all chapters)."
+        },
+        "format": {
+          "type": "string",
+          "description": "Optional export format name as understood by the engine (for example epub, txt, docx)."
+        },
+        "output_path": {
+          "type": "string",
+          "description": "Optional absolute output file path chosen via the native file dialog."
+        }
+      }
+    },
+    "artifacts_read_request": {
+      "title": "artifacts.read request payload",
+      "description": "Read a read-only project artifact projection. Read-only; no method exists to write artifacts (the engine owns artifact mutation).",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "facts",
+            "world",
+            "summary"
+          ],
+          "description": "Artifact kind: facts (per-chapter accepted chapter facts), world (world rules), summary (chapter summaries)."
+        },
+        "chapter": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Optional; restricts facts/summary reads to one chapter. Rejected with invalid_payload for kind world (world rules are not chapter-scoped)."
+        }
+      },
+      "required": [
+        "kind"
+      ]
+    },
+    "import_start_request": {
+      "title": "import.start request payload",
+      "description": "Start an import from a source file chosen via the native file dialog.",
+      "type": "object",
+      "properties": {
+        "source_path": {
+          "type": "string",
+          "description": "Absolute path of the source file to import."
+        },
+        "options": {
+          "type": "object",
+          "description": "Optional loose bag of import options; not enumerated here."
+        }
+      },
+      "required": [
+        "source_path"
+      ]
+    },
+    "import_resume_request": {
+      "title": "import.resume request payload",
+      "description": "Resume a paused or interrupted import. No arguments.",
+      "type": "object"
+    },
+    "import_cancel_request": {
+      "title": "import.cancel request payload",
+      "description": "Cancel a running import.",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Optional human-readable cancel reason for logs."
+        }
+      }
+    },
+    "simulation_start_request": {
+      "title": "simulation.start request payload",
+      "description": "Start a simulation over a source file or directory chosen via the native file dialog.",
+      "type": "object",
+      "properties": {
+        "source_path": {
+          "type": "string",
+          "description": "Absolute path of the simulation source: a .txt/.md/.markdown file or a directory containing them. The engine stages sources into the project corpus directory (<project>/simulate, returned as engine_source_dir); staging accumulates and re-staging the same relative path replaces the prior copy."
+        },
+        "options": {
+          "type": "object",
+          "description": "Optional loose bag of simulation options; not enumerated here."
+        }
+      },
+      "required": [
+        "source_path"
+      ]
+    },
+    "simulation_resume_request": {
+      "title": "simulation.resume request payload",
+      "description": "Re-run the engine over the project's staged simulation corpus (incremental merge by content fingerprint). No arguments.",
+      "type": "object"
+    },
+    "simulation_cancel_request": {
+      "title": "simulation.cancel request payload",
+      "description": "Cancel a running simulation.",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Optional human-readable cancel reason for logs."
+        }
+      }
+    },
+    "simulation_profile_import_request": {
+      "title": "simulation.profile_import request payload",
+      "description": "Import a simulation profile file produced by a completed simulation.",
+      "type": "object",
+      "properties": {
+        "profile_path": {
+          "type": "string",
+          "description": "Absolute path of the profile file chosen via the native file dialog."
+        },
+        "options": {
+          "type": "object",
+          "description": "Optional loose bag of profile import options; not enumerated here."
+        }
+      },
+      "required": [
+        "profile_path"
+      ]
+    },
+    "config_get_request": {
+      "title": "config.get request payload",
+      "description": "Read configuration values. Secrets are always redacted in the response.",
+      "type": "object",
+      "properties": {
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional; restrict the response to these top-level configuration keys. Default is the full (redacted) configuration."
+        }
+      }
+    },
+    "config_update_request": {
+      "title": "config.update request payload",
+      "description": "Update configuration values. Never send secrets back; the engine keeps credentials in its own configuration paths.",
+      "type": "object",
+      "properties": {
+        "values": {
+          "type": "object",
+          "description": "Loose map of configuration key to new value; keys follow the engine configuration, not enumerated here."
+        }
+      },
+      "required": [
+        "values"
+      ]
+    },
+    "config_providers_request": {
+      "title": "config.providers request payload",
+      "description": "List configured providers (credentials redacted). No arguments.",
+      "type": "object"
+    },
+    "config_models_request": {
+      "title": "config.models request payload",
+      "description": "List models for a provider.",
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "Optional; restrict the list to one provider. Default is all providers."
+        }
+      }
+    },
+    "config_switch_model_request": {
+      "title": "config.switch_model request payload",
+      "description": "Switch the active provider and model.",
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "Provider name."
+        },
+        "model": {
+          "type": "string",
+          "description": "Model name."
+        }
+      },
+      "required": [
+        "provider",
+        "model"
+      ]
+    },
+    "config_thinking_levels_request": {
+      "title": "config.thinking_levels request payload",
+      "description": "List thinking levels for a provider/model pair.",
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "Optional provider name."
+        },
+        "model": {
+          "type": "string",
+          "description": "Optional model name."
+        }
+      }
+    },
+    "config_set_thinking_request": {
+      "title": "config.set_thinking request payload",
+      "description": "Set the active thinking level.",
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "string",
+          "description": "Thinking level name as returned by config.thinking_levels."
+        }
+      },
+      "required": [
+        "level"
+      ]
+    },
+    "config_set_language_request": {
+      "title": "config.set_language request payload",
+      "description": "Set the UI language.",
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string",
+          "description": "Language code, for example en, vi, zh."
+        }
+      },
+      "required": [
+        "language"
+      ]
+    },
+    "config_set_story_language_request": {
+      "title": "config.set_story_language request payload",
+      "description": "Set the story (output) language.",
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string",
+          "description": "Language code, for example en, vi, zh."
+        }
+      },
+      "required": [
+        "language"
+      ]
+    },
+    "diagnostics_snapshot_request": {
+      "title": "diagnostics.snapshot request payload",
+      "description": "Request the diagnostics snapshot (quality findings, runtime errors, sessions, checkpoints). No arguments.",
+      "type": "object"
+    },
+    "diagnostics_export_request": {
+      "title": "diagnostics.export request payload",
+      "description": "Export a sanitized diagnostics bundle.",
+      "type": "object",
+      "properties": {
+        "output_path": {
+          "type": "string",
+          "description": "Optional absolute output file path chosen via the native file dialog."
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional; sections to include (for example findings, sessions, checkpoints, queue). Default is all sections."
+        }
+      }
+    },
+    "usage_snapshot_request": {
+      "title": "usage.snapshot request payload",
+      "description": "Request the usage and budget snapshot. No arguments.",
+      "type": "object"
+    },
+    "logs_replay_request": {
+      "title": "logs.replay request payload",
+      "description": "Replay buffered structured log records.",
+      "type": "object",
+      "properties": {
+        "after_sequence": {
+          "type": "integer",
+          "description": "Optional; replay records with sequence greater than this value."
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Optional; maximum number of records to replay."
+        },
+        "level": {
+          "type": "string",
+          "description": "Optional minimum severity filter, for example info or debug."
+        }
+      }
+    },
+    "runtime_queue_request": {
+      "title": "runtime.queue request payload",
+      "description": "Request the runtime event queue state. No arguments.",
+      "type": "object"
+    }
+  }
+}

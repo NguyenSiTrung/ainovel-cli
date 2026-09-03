@@ -1,0 +1,2 @@
+{"protocol":"desktop-v1","kind":"response","id":"req-8f3a","ok":true,"payload":{}}
+{"protocol":"desktop-v1","kind":"response","id":"req-0c21","ok":true,"session":"sess-7f2c","payload":{"project_id":"project-123","state":"recovered"}}

@@ -1,0 +1,15 @@
+{
+  "name": "ainovel-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Build tooling for the AI Novel desktop app: pinned Tauri CLI (matches the tauri crate in src-tauri/Cargo.toml) plus sidecar/updater packaging scripts.",
+  "scripts": {
+    "tauri": "tauri",
+    "build:sidecars": "sh scripts/build-sidecars.sh",
+    "updater-manifest": "node scripts/updater-manifest.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4"
+  }
+}

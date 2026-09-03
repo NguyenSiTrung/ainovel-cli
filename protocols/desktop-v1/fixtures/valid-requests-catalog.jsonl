@@ -1,0 +1,48 @@
+{"protocol":"desktop-v1","kind":"request","id":"cat-001","method":"engine.ping","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-002","method":"engine.shutdown","payload":{"reason":"application closing"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-003","method":"project.create","payload":{"path":"/Users/demo/Novels/First-Novel","name":"First Novel","options":{}}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-004","method":"project.open","payload":{"path":"/Users/demo/Novels/First-Novel"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-005","method":"project.close","payload":{"force":false}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-006","method":"project.snapshot","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-007","method":"project.resume","payload":{"checkpoint_id":"ckpt-0042"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-008","method":"project.replay_events","payload":{"after_sequence":481,"limit":200}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-009","method":"run.start","payload":{"goal":"Draft the full novel","options":{"chapters":24}}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-010","method":"run.continue","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-011","method":"run.steer","payload":{"instruction":"Slow the pace and add a scene at the harbor"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-012","method":"run.abort","payload":{"reason":"user requested stop"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-013","method":"run.pause","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-014","method":"run.advance_one_chapter","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-015","method":"run.set_advance_mode","payload":{"mode":"manual"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-016","method":"run.retry","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-017","method":"cocreate.start","payload":{"message":"Let us refine the protagonist arc.","mode":"outline"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-018","method":"cocreate.stage","payload":{"message":"Accept the proposed three-act structure."}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-019","method":"cocreate.resume","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-020","method":"cocreate.cancel","payload":{"reason":"user closed the co-create panel"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-021","method":"chapter.list","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-022","method":"chapter.read","payload":{"chapter":3}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-023","method":"chapter.save","payload":{"chapter":3,"content":"Chapter three, revised text.","base_version":7}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-024","method":"chapter.revisions.check","payload":{"chapter":3}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-025","method":"chapter.revisions.sync","payload":{"chapter":3}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-026","method":"chapter.export","payload":{"chapters":[1,2,3],"format":"epub","output_path":"/Users/demo/Exports/first-novel.epub"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-027","method":"import.start","payload":{"source_path":"/Users/demo/Downloads/draft.txt","options":{}}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-028","method":"import.resume","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-029","method":"import.cancel","payload":{"reason":"user cancelled import"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-030","method":"simulation.start","payload":{"source_path":"/Users/demo/Novels/reference.pdf","options":{}}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-031","method":"simulation.resume","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-032","method":"simulation.cancel","payload":{"reason":"user cancelled simulation"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-033","method":"simulation.profile_import","payload":{"profile_path":"/Users/demo/Novels/profiles/style-profile.json"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-034","method":"config.get","payload":{"keys":["provider","model","language"]}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-035","method":"config.update","payload":{"values":{"budget_daily_usd":5}}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-036","method":"config.providers","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-037","method":"config.models","payload":{"provider":"anthropic"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-038","method":"config.switch_model","payload":{"provider":"anthropic","model":"claude-sonnet-4"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-039","method":"config.thinking_levels","payload":{"provider":"anthropic","model":"claude-sonnet-4"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-040","method":"config.set_thinking","payload":{"level":"high"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-041","method":"config.set_language","payload":{"language":"en"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-042","method":"config.set_story_language","payload":{"language":"vi"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-043","method":"diagnostics.snapshot","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-044","method":"diagnostics.export","payload":{"output_path":"/Users/demo/Exports/diagnostics.json","include":["findings","sessions","checkpoints"]}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-045","method":"usage.snapshot","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-046","method":"logs.replay","payload":{"after_sequence":400,"limit":100,"level":"info"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-047","method":"runtime.queue","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-048","method":"artifacts.read","payload":{"kind":"facts"}}

@@ -1,0 +1,1168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ainovel-cli.dev/protocols/desktop-v1/events.schema.json",
+  "title": "desktop-v1 response and event envelopes",
+  "description": "Engine-to-client output for the desktop-v1 sidecar protocol: one terminal response per request plus asynchronous events. One JSON object per line on the engine's stdout. Envelope field requirements and the event catalog are binding for the Go sidecar, the Rust/Tauri shell, and the Svelte frontend.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/response_envelope"
+    },
+    {
+      "$ref": "#/$defs/event_envelope"
+    }
+  ],
+  "$defs": {
+    "response_envelope": {
+      "title": "response envelope",
+      "description": "The exactly-one terminal response for a request. Success: ok true with an optional payload. Failure: ok false with a required error object and no payload.",
+      "type": "object",
+      "required": [
+        "protocol",
+        "kind",
+        "id",
+        "ok"
+      ],
+      "properties": {
+        "protocol": {
+          "const": "desktop-v1",
+          "description": "Protocol version identifier. Always the literal string desktop-v1."
+        },
+        "kind": {
+          "const": "response",
+          "description": "Message kind. Always the literal string response."
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Echoes the id of the request this response terminates."
+        },
+        "ok": {
+          "type": "boolean",
+          "description": "true for success, false for a structured error."
+        },
+        "session": {
+          "type": "string",
+          "description": "Optional engine session id. See the session/sequence rules in README.md: a changed session id signals a sidecar restart and a sequence reset."
+        },
+        "payload": {
+          "type": "object",
+          "description": "Result payload. Optional, defaults to {}. Present only on success responses (never together with error). Unknown fields are allowed and must be ignored."
+        },
+        "error": {
+          "$ref": "#/$defs/error"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "ok": {
+                "const": true
+              }
+            },
+            "required": [
+              "ok"
+            ]
+          },
+          "then": {
+            "dependentSchemas": {
+              "error": false
+            },
+            "description": "Success responses carry payload (optional), never error."
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ok": {
+                "const": false
+              }
+            },
+            "required": [
+              "ok"
+            ]
+          },
+          "then": {
+            "properties": {
+              "error": {
+                "$ref": "#/$defs/error"
+              }
+            },
+            "required": [
+              "error"
+            ],
+            "dependentSchemas": {
+              "payload": false
+            },
+            "description": "Failure responses carry error, never payload."
+          }
+        }
+      ]
+    },
+    "event_envelope": {
+      "title": "event envelope",
+      "description": "Asynchronous engine event. Sequences are monotonic per engine session; duplicates are tolerated (at-least-once delivery) and deduplicated by (session, sequence).",
+      "type": "object",
+      "required": [
+        "protocol",
+        "kind",
+        "event",
+        "sequence"
+      ],
+      "properties": {
+        "protocol": {
+          "const": "desktop-v1",
+          "description": "Protocol version identifier. Always the literal string desktop-v1."
+        },
+        "kind": {
+          "const": "event",
+          "description": "Message kind. Always the literal string event."
+        },
+        "event": {
+          "enum": [
+            "engine.ready",
+            "engine.status_changed",
+            "engine.error",
+            "engine.exited",
+            "engine.restarting",
+            "run.started",
+            "run.step_changed",
+            "run.progress",
+            "run.paused",
+            "run.completed",
+            "run.failed",
+            "run.aborted",
+            "stream.delta",
+            "stream.clear",
+            "checkpoint.created",
+            "artifact.updated",
+            "chapter.updated",
+            "outline.updated",
+            "usage.updated",
+            "cocreate.progress",
+            "import.progress",
+            "simulation.progress",
+            "diagnostics.completed",
+            "notification.info",
+            "notification.warning",
+            "notification.error"
+          ],
+          "description": "Event name from the desktop-v1 event catalog."
+        },
+        "project_id": {
+          "type": "string",
+          "description": "Optional; present when the event pertains to a specific open project."
+        },
+        "session": {
+          "type": "string",
+          "description": "Engine session id. A changed value signals a sidecar restart and a sequence reset; clients then refetch a snapshot and replay."
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Monotonic per engine session (see README.md). 0-based is allowed; sessions typically number from 1."
+        },
+        "payload": {
+          "type": "object",
+          "description": "Event data. Optional, defaults to {}. Unknown fields are allowed and must be ignored."
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "engine.ready"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/engine_ready_event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "engine.status_changed"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/engine_status_changed_event"
+              }
+            },
+            "required": [
+              "payload"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "engine.error"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/engine_error_event"
+              }
+            },
+            "required": [
+              "payload"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "engine.exited"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/engine_exited_event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "engine.restarting"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/engine_restarting_event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "run.started"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/run_started_event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "run.step_changed"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/run_step_changed_event"
+              }
+            },
+            "required": [
+              "payload"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "run.progress"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/run_progress_event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "run.paused"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/run_paused_event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "run.completed"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/run_completed_event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "run.failed"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/run_failed_event"
+              }
+            },
+            "required": [
+              "payload"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "run.aborted"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/run_aborted_event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "stream.delta"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/stream_delta_event"
+              }
+            },
+            "required": [
+              "payload"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "stream.clear"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/stream_clear_event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "checkpoint.created"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/checkpoint_created_event"
+              }
+            },
+            "required": [
+              "payload"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "artifact.updated"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/artifact_updated_event"
+              }
+            },
+            "required": [
+              "payload"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "chapter.updated"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/chapter_updated_event"
+              }
+            },
+            "required": [
+              "payload"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "outline.updated"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/outline_updated_event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "usage.updated"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/usage_updated_event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "cocreate.progress"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/cocreate_progress_event"
+              }
+            },
+            "required": [
+              "payload"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "import.progress"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/import_progress_event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "simulation.progress"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/simulation_progress_event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "diagnostics.completed"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/diagnostics_completed_event"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "notification.info"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/notification_info_event"
+              }
+            },
+            "required": [
+              "payload"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "notification.warning"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/notification_warning_event"
+              }
+            },
+            "required": [
+              "payload"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "event": {
+                "const": "notification.error"
+              }
+            },
+            "required": [
+              "event"
+            ]
+          },
+          "then": {
+            "properties": {
+              "payload": {
+                "$ref": "#/$defs/notification_error_event"
+              }
+            },
+            "required": [
+              "payload"
+            ]
+          }
+        }
+      ]
+    },
+    "error": {
+      "title": "structured error",
+      "description": "Machine-readable failure attached to ok:false responses. Also mirrored by engine.error events for uncorrelatable failures.",
+      "type": "object",
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/error_code"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable error description. Must be redacted of secrets."
+        },
+        "details": {
+          "description": "Optional structured context (any JSON value). Must be redacted of secrets."
+        }
+      }
+    },
+    "error_code": {
+      "title": "error code",
+      "description": "Stable machine-readable snake_case error codes. Binding for all desktop-v1 implementations; see README.md for trigger semantics.",
+      "enum": [
+        "malformed_json",
+        "invalid_payload",
+        "unknown_method",
+        "duplicate_request_id",
+        "project_unavailable",
+        "host_busy",
+        "operation_failed",
+        "cancelled",
+        "internal_error"
+      ]
+    },
+    "engine_ready_event": {
+      "title": "engine.ready event payload",
+      "description": "The engine session is ready. After a restart this carries recovered:true and a NEW session id with a reset sequence.",
+      "type": "object",
+      "properties": {
+        "recovered": {
+          "type": "boolean",
+          "description": "Optional; true when the engine recovered persisted state after a restart."
+        }
+      }
+    },
+    "engine_status_changed_event": {
+      "title": "engine.status_changed event payload",
+      "description": "Engine runtime status changed (idle, running, paused, recovered, ...).",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "New engine status name as understood by the engine."
+        }
+      },
+      "required": [
+        "status"
+      ]
+    },
+    "engine_error_event": {
+      "title": "engine.error event payload",
+      "description": "Asynchronous engine-level error, including malformed input lines that cannot be correlated to a request id.",
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "Human-readable error description. Must be redacted of secrets."
+        },
+        "code": {
+          "type": "string",
+          "description": "Optional stable machine-readable engine error identifier when available."
+        },
+        "details": {
+          "description": "Optional structured context. Must be redacted of secrets."
+        }
+      },
+      "required": [
+        "message"
+      ]
+    },
+    "engine_exited_event": {
+      "title": "engine.exited event payload",
+      "description": "The engine process exited.",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Optional human-readable exit reason."
+        },
+        "exit_code": {
+          "type": "integer",
+          "description": "Optional process exit code."
+        }
+      }
+    },
+    "engine_restarting_event": {
+      "title": "engine.restarting event payload",
+      "description": "The engine is being restarted by the supervisor.",
+      "type": "object",
+      "properties": {
+        "attempt": {
+          "type": "integer",
+          "description": "Optional restart attempt number."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Optional human-readable restart reason."
+        }
+      }
+    },
+    "run_started_event": {
+      "title": "run.started event payload",
+      "description": "A generation run started.",
+      "type": "object",
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "description": "Optional engine run identifier."
+        },
+        "goal": {
+          "type": "string",
+          "description": "Optional goal echoed from run.start."
+        }
+      }
+    },
+    "run_step_changed_event": {
+      "title": "run.step_changed event payload",
+      "description": "The run advanced to a new flow step.",
+      "type": "object",
+      "properties": {
+        "step": {
+          "type": "string",
+          "description": "Step name as understood by the engine flow."
+        }
+      },
+      "required": [
+        "step"
+      ]
+    },
+    "run_progress_event": {
+      "title": "run.progress event payload",
+      "description": "Periodic run progress.",
+      "type": "object",
+      "properties": {
+        "completed": {
+          "type": "integer",
+          "description": "Optional; completed units so far."
+        },
+        "total": {
+          "type": "integer",
+          "description": "Optional; total units when known."
+        },
+        "detail": {
+          "type": "string",
+          "description": "Optional human-readable progress detail."
+        }
+      }
+    },
+    "run_paused_event": {
+      "title": "run.paused event payload",
+      "description": "The run was paused.",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Optional human-readable pause reason."
+        }
+      }
+    },
+    "run_completed_event": {
+      "title": "run.completed event payload",
+      "description": "Terminal: the run completed successfully.",
+      "type": "object",
+      "properties": {
+        "summary": {
+          "type": "object",
+          "description": "Optional loose run summary (counts, identifiers); not enumerated here."
+        }
+      }
+    },
+    "run_failed_event": {
+      "title": "run.failed event payload",
+      "description": "Terminal: the run failed.",
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "Human-readable failure description. Must be redacted of secrets."
+        },
+        "code": {
+          "type": "string",
+          "description": "Optional stable machine-readable failure identifier when available."
+        }
+      },
+      "required": [
+        "message"
+      ]
+    },
+    "run_aborted_event": {
+      "title": "run.aborted event payload",
+      "description": "Terminal: the run was aborted.",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Optional human-readable abort reason."
+        }
+      }
+    },
+    "stream_delta_event": {
+      "title": "stream.delta event payload",
+      "description": "Incremental streamed content.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "The streamed text fragment appended to the current channel."
+        },
+        "channel": {
+          "type": "string",
+          "description": "Optional channel name, for example prose or activity. Default is the primary content channel."
+        }
+      },
+      "required": [
+        "text"
+      ]
+    },
+    "stream_clear_event": {
+      "title": "stream.clear event payload",
+      "description": "Clear the current streamed content (for example at a chapter boundary).",
+      "type": "object",
+      "properties": {
+        "channel": {
+          "type": "string",
+          "description": "Optional channel name to clear. Default is the primary content channel."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Optional human-readable clear reason."
+        }
+      }
+    },
+    "checkpoint_created_event": {
+      "title": "checkpoint.created event payload",
+      "description": "The engine persisted a checkpoint.",
+      "type": "object",
+      "properties": {
+        "checkpoint_id": {
+          "type": "string",
+          "description": "Engine checkpoint identifier."
+        },
+        "step": {
+          "type": "string",
+          "description": "Optional step or phase the checkpoint belongs to."
+        }
+      },
+      "required": [
+        "checkpoint_id"
+      ]
+    },
+    "artifact_updated_event": {
+      "title": "artifact.updated event payload",
+      "description": "A project artifact changed on disk (outline, characters, facts, world, ...).",
+      "type": "object",
+      "properties": {
+        "artifact": {
+          "type": "string",
+          "description": "Artifact name or kind, for example outline or characters."
+        },
+        "version": {
+          "type": "integer",
+          "description": "Optional artifact version when versioned."
+        },
+        "path": {
+          "type": "string",
+          "description": "Optional project-relative artifact path."
+        }
+      },
+      "required": [
+        "artifact"
+      ]
+    },
+    "chapter_updated_event": {
+      "title": "chapter.updated event payload",
+      "description": "A chapter's persisted state changed.",
+      "type": "object",
+      "properties": {
+        "chapter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "description": "Chapter identifier as used by the engine (chapter number or chapter id)."
+        },
+        "version": {
+          "type": "integer",
+          "description": "Optional chapter revision version."
+        },
+        "status": {
+          "type": "string",
+          "description": "Optional chapter status, for example saved or synced."
+        }
+      },
+      "required": [
+        "chapter"
+      ]
+    },
+    "outline_updated_event": {
+      "title": "outline.updated event payload",
+      "description": "The outline projection changed.",
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "description": "Optional outline version when versioned."
+        }
+      }
+    },
+    "usage_updated_event": {
+      "title": "usage.updated event payload",
+      "description": "Usage or budget counters changed.",
+      "type": "object",
+      "properties": {
+        "usage": {
+          "type": "object",
+          "description": "Optional loose usage counters (requests, input_tokens, output_tokens, ...); shape follows the engine."
+        },
+        "budget": {
+          "type": "object",
+          "description": "Optional loose budget state (limits and spend); shape follows the engine."
+        }
+      }
+    },
+    "cocreate_progress_event": {
+      "title": "cocreate.progress event payload",
+      "description": "Co-create session stage progress.",
+      "type": "object",
+      "properties": {
+        "stage": {
+          "type": "string",
+          "description": "Current co-create stage name as understood by the engine."
+        },
+        "message": {
+          "type": "string",
+          "description": "Optional human-readable stage message."
+        }
+      },
+      "required": [
+        "stage"
+      ]
+    },
+    "import_progress_event": {
+      "title": "import.progress event payload",
+      "description": "Import progress.",
+      "type": "object",
+      "properties": {
+        "completed": {
+          "type": "integer",
+          "description": "Optional; completed units so far."
+        },
+        "total": {
+          "type": "integer",
+          "description": "Optional; total units when known."
+        },
+        "detail": {
+          "type": "string",
+          "description": "Optional human-readable progress detail."
+        }
+      }
+    },
+    "simulation_progress_event": {
+      "title": "simulation.progress event payload",
+      "description": "Simulation progress.",
+      "type": "object",
+      "properties": {
+        "completed": {
+          "type": "integer",
+          "description": "Optional; completed units so far."
+        },
+        "total": {
+          "type": "integer",
+          "description": "Optional; total units when known."
+        },
+        "detail": {
+          "type": "string",
+          "description": "Optional human-readable progress detail."
+        }
+      }
+    },
+    "diagnostics_completed_event": {
+      "title": "diagnostics.completed event payload",
+      "description": "A diagnostics run or export completed.",
+      "type": "object",
+      "properties": {
+        "findings": {
+          "type": "integer",
+          "description": "Optional; number of findings when applicable."
+        },
+        "output_path": {
+          "type": "string",
+          "description": "Optional absolute path when an export file was produced."
+        }
+      }
+    },
+    "notification_info_event": {
+      "title": "notification.info event payload",
+      "description": "Informational notification.",
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "Human-readable notification text."
+        },
+        "details": {
+          "description": "Optional structured context. Must be redacted of secrets."
+        }
+      },
+      "required": [
+        "message"
+      ]
+    },
+    "notification_warning_event": {
+      "title": "notification.warning event payload",
+      "description": "Warning notification.",
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "Human-readable notification text."
+        },
+        "details": {
+          "description": "Optional structured context. Must be redacted of secrets."
+        }
+      },
+      "required": [
+        "message"
+      ]
+    },
+    "notification_error_event": {
+      "title": "notification.error event payload",
+      "description": "Error notification.",
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "Human-readable notification text."
+        },
+        "details": {
+          "description": "Optional structured context. Must be redacted of secrets."
+        }
+      },
+      "required": [
+        "message"
+      ]
+    }
+  }
+}

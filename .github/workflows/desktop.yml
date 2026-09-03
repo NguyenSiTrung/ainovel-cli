@@ -1,0 +1,438 @@
+name: Desktop
+
+# Desktop (Tauri) pipeline: all desktop gates plus three-platform packaging.
+#
+# Gates (run on every trigger):
+#   engine    - Go vet + tests for the engine (the sidecar is cmd/ainovel-cli)
+#   protocol  - desktop-v1 schema/fixture validation
+#   shell     - Rust tests for desktop/src-tauri (Linux needs webkit deps)
+#   frontend  - typecheck + tests + production build
+#
+# Packaging (needs all gates): one job per supported target triple, each
+# cross-building the Go sidecar first (naming must match what the shell
+# resolves; see desktop/src-tauri/src/paths.rs), verifying its checksum,
+# then bundling with the pinned Tauri CLI. Host-native packaging jobs also
+# run two smoke gates against the real sidecar: the app startup smoke
+# (engine.ready/ping/shutdown) and a full LLM-free protocol smoke over
+# desktop-v1 (see desktop/scripts/protocol-smoke.mjs).
+#
+# Release (tag pushes v*): aggregates artifacts, computes sha256 checksums,
+# assembles the updater manifest (latest.json) and attaches everything to
+# the GitHub release. Coexists with the GoReleaser Release workflow: it
+# attaches to an existing release and only creates one if missing.
+#
+# Signing is secret-driven and degrades gracefully: with no APPLE_* /
+# WINDOWS_* / TAURI_SIGNING_* secrets the installers are built unsigned
+# (macOS ad-hoc) and updater artifacts are signed with an ephemeral
+# throwaway key — see desktop/README.md "Signing and notarization".
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  engine:
+    name: Go engine tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Format check
+        shell: bash
+        run: test -z "$(gofmt -l .)"
+
+      - name: Vet
+        env:
+          GOWORK: "off"
+        run: go vet ./...
+
+      - name: Test
+        env:
+          GOWORK: "off"
+        run: go test -buildvcs=false -count=1 ./...
+
+  protocol:
+    name: desktop-v1 protocol validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: protocols/desktop-v1/package-lock.json
+
+      - name: Validate schemas and fixtures
+        working-directory: protocols/desktop-v1
+        run: |
+          npm ci
+          node validate.mjs
+
+  shell:
+    name: Rust shell tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: cargo test
+        run: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml
+
+  frontend:
+    name: Frontend typecheck, tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/frontend/package-lock.json
+
+      - name: Typecheck, test, build
+        working-directory: desktop/frontend
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+
+  package:
+    name: Bundle ${{ matrix.target }}
+    needs: [engine, protocol, shell, frontend]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS Apple Silicon (host build; runs the packaged smoke test)
+          - os: macos-14
+            target: aarch64-apple-darwin
+            smoke: true
+          # macOS Intel (cross-compiled from the arm64 runner via Xcode)
+          - os: macos-14
+            target: x86_64-apple-darwin
+            smoke: false
+          # Windows x64 (msi + NSIS)
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            smoke: true
+          # Linux x64 (AppImage + deb)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            smoke: true
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # git history for reproducible version metadata
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            desktop/package-lock.json
+            desktop/frontend/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+          key: ${{ matrix.target }}
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev \
+            xvfb
+
+      - name: Install npm tooling (tauri CLI + frontend deps)
+        run: |
+          npm --prefix desktop ci
+          npm --prefix desktop/frontend ci
+
+      - name: Compute version metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            APP_VERSION="${GITHUB_REF_NAME#v}"
+          else
+            APP_VERSION=$(node -p "require('./desktop/src-tauri/tauri.conf.json').version")
+          fi
+          COMMIT="$GITHUB_SHA"
+          DATE=$(git show -s --format=%cd --date=short "$GITHUB_SHA")
+          echo "Sidecar/app version metadata: version=$APP_VERSION commit=$COMMIT date=$DATE"
+          printf '{"version":"%s"}\n' "$APP_VERSION" > "$RUNNER_TEMP/tauri-version.json"
+          {
+            echo "DESKTOP_VERSION=$APP_VERSION"
+            echo "DESKTOP_COMMIT=$COMMIT"
+            echo "DESKTOP_DATE=$DATE"
+            echo "TAURI_VERSION_CONFIG=$RUNNER_TEMP/tauri-version.json"
+          } >> "$GITHUB_ENV"
+
+      - name: Build sidecar (cross-compile Go engine)
+        shell: bash
+        run: bash desktop/scripts/build-sidecars.sh "${{ matrix.target }}"
+
+      - name: Verify sidecar checksums
+        shell: bash
+        working-directory: desktop/src-tauri/binaries
+        run: |
+          if command -v shasum >/dev/null 2>&1; then
+            shasum -a 256 -c ./*.sha256
+          else
+            sha256sum -c ./*.sha256
+          fi
+
+      # Bridge repository secrets into the build environment. Only non-empty
+      # values are exported, so absent secrets leave signing disabled instead
+      # of breaking the build. Nothing is ever written to the repository.
+      - name: Configure signing (secrets or graceful skip)
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          WINDOWS_CERTIFICATE_THUMBPRINT: ${{ secrets.WINDOWS_CERTIFICATE_THUMBPRINT }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          bridge() {
+            local name="$1" value
+            value="$(printenv "$name" || true)"
+            if [ -z "$value" ]; then return 0; fi
+            {
+              echo "$name<<__SIGNING_EOF__"
+              printf '%s\n' "$value"
+              echo "__SIGNING_EOF__"
+            } >> "$GITHUB_ENV"
+            echo "signing: $name is configured (value hidden)"
+          }
+          for v in \
+            APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY \
+            APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID \
+            WINDOWS_CERTIFICATE_THUMBPRINT WINDOWS_CERTIFICATE_PASSWORD \
+            TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD; do
+            bridge "$v"
+          done
+
+      # createUpdaterArtifacts requires a minisign private key. Without the
+          # repository secret we generate an EPHEMERAL one so the bundle still
+      # builds and updater metadata is still produced; artifacts signed with
+      # it cannot be verified against any published key (documented in
+      # desktop/README.md).
+      - name: Ensure updater signing key (ephemeral fallback)
+        shell: bash
+        if: env.TAURI_SIGNING_PRIVATE_KEY == ''
+        working-directory: desktop
+        run: |
+          set -euo pipefail
+          echo "updater signing: TAURI_SIGNING_PRIVATE_KEY secret absent; generating an ephemeral throwaway key"
+          npx tauri signer generate -w "$RUNNER_TEMP/ephemeral-updater.key" --password "" --ci
+          {
+            echo "TAURI_SIGNING_PRIVATE_KEY<<__SIGNING_EOF__"
+            cat "$RUNNER_TEMP/ephemeral-updater.key"
+            echo "__SIGNING_EOF__"
+          } >> "$GITHUB_ENV"
+
+      - name: Bundle (tauri build)
+        shell: bash
+        working-directory: desktop
+        run: npx tauri build --target "${{ matrix.target }}" --config "$TAURI_VERSION_CONFIG"
+
+      # Startup smoke against the real engine sidecar (no LLM involved):
+      # boots the app, waits for engine.ready, round-trips engine.ping and
+      # shuts down (AINOVEL_DESKTOP_SMOKE_EXIT; see desktop/README.md). The
+      # sidecar is copied next to the app binary — the exact layout Tauri's
+      # externalBin bundling produces — so the packaged exe-sibling
+      # resolution is exercised. (No AINOVEL_SIDECAR override: an MSYS-style
+      # $PWD value would not survive hand-off to the native process on
+      # Windows and the resolver would fail fast.)
+      - name: Startup smoke (app + engine sidecar)
+        if: matrix.smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.ainovel"
+          cp config.example.jsonc "$HOME/.ainovel/config.json"
+          target="${{ matrix.target }}"
+          exe=""
+          if [[ "$RUNNER_OS" == "Windows" ]]; then exe=".exe"; fi
+          bin_dir="desktop/src-tauri/target/${target}/release"
+          cp "desktop/src-tauri/binaries/ainovel-engine-${target}${exe}" "$bin_dir/"
+          export AINOVEL_DESKTOP_SMOKE_EXIT=1
+          smoke_log="$RUNNER_TEMP/smoke.log"
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -a "$bin_dir/ainovel-desktop${exe}" >"$smoke_log" 2>&1
+          else
+            "$bin_dir/ainovel-desktop${exe}" >"$smoke_log" 2>&1
+          fi
+          echo "--- smoke log ---"
+          cat "$smoke_log"
+          grep -q "engine ready" "$smoke_log"
+          grep -q "engine.ping ok" "$smoke_log"
+          ! grep -q "engine NOT ready" "$smoke_log"
+          echo "startup smoke passed"
+
+      # Full LLM-free native flow, spoken directly over the desktop-v1
+      # protocol on the sidecar's stdio (see desktop/scripts/protocol-smoke.mjs
+      # for the covered method list). Runs on the same runners as the
+      # startup smoke; what it covers is documented in desktop/README.md
+      # ("Native smoke: automated vs manual").
+      - name: Protocol smoke (desktop-v1 flow, no LLM)
+        if: matrix.smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.ainovel"
+          if [ ! -f "$HOME/.ainovel/config.json" ]; then
+            cp config.example.jsonc "$HOME/.ainovel/config.json"
+          fi
+          target="${{ matrix.target }}"
+          exe=""
+          if [[ "$RUNNER_OS" == "Windows" ]]; then exe=".exe"; fi
+          node desktop/scripts/protocol-smoke.mjs \
+            --engine "desktop/src-tauri/binaries/ainovel-engine-${target}${exe}"
+
+      - name: Stage release artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="$RUNNER_TEMP/release-stage"
+          mkdir -p "$stage"
+          bundle="desktop/src-tauri/target/${{ matrix.target }}/release/bundle"
+          # Installers, updater archives and their .sig files (some formats
+          # only exist on one platform, so misses are tolerated per glob).
+          cp "$bundle"/dmg/*.dmg "$stage"/ 2>/dev/null || true
+          cp "$bundle"/macos/*.app.tar.gz "$stage"/ 2>/dev/null || true
+          cp "$bundle"/msi/*.msi "$stage"/ 2>/dev/null || true
+          cp "$bundle"/msi/*.msi.zip "$stage"/ 2>/dev/null || true
+          cp "$bundle"/nsis/*.exe "$stage"/ 2>/dev/null || true
+          cp "$bundle"/nsis/*.nsis.zip "$stage"/ 2>/dev/null || true
+          cp "$bundle"/appimage/*.AppImage "$stage"/ 2>/dev/null || true
+          cp "$bundle"/appimage/*.AppImage.sig "$stage"/ 2>/dev/null || true
+          cp "$bundle"/deb/*.deb "$stage"/ 2>/dev/null || true
+          cp "$bundle"/dmg/*.sig "$bundle"/macos/*.sig "$bundle"/msi/*.sig \
+             "$bundle"/nsis/*.sig "$stage"/ 2>/dev/null || true
+          cp desktop/src-tauri/binaries/*.sha256 "$stage"/
+          echo "--- staged artifacts ---"
+          ls -la "$stage"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.target }}
+          path: ${{ runner.temp }}/release-stage/*
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Release artifacts, checksums, updater manifest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: desktop-*
+          merge-multiple: true
+
+      - name: Assemble updater manifest (latest.json)
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          node desktop/scripts/updater-manifest.mjs \
+            --dir dist \
+            --version "${TAG#v}" \
+            --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}" \
+            --notes "AI Novel Desktop ${TAG}"
+
+      - name: Compute checksums
+        run: |
+          set -euo pipefail
+          cd dist
+          find . -maxdepth 1 -type f \
+            ! -name '*.sha256' \
+            ! -name 'desktop-release-checksums.txt' \
+            -print0 | sort -z | xargs -0 shasum -a 256 > desktop-release-checksums.txt
+          echo "--- checksums ---"
+          cat desktop-release-checksums.txt
+
+      - name: Attach artifacts to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          # Coexist with the GoReleaser Release workflow, which also creates
+          # tag releases: attach if it exists, create only if it never does.
+          if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            sleep 60
+            if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              gh release create "$TAG" -R "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes
+            fi
+          fi
+          gh release upload "$TAG" -R "$GITHUB_REPOSITORY" dist/* --clobber
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name'

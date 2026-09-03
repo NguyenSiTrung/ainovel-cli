@@ -1,0 +1,26 @@
+{"protocol":"desktop-v1","kind":"event","event":"engine.ready","session":"sess-catalog","sequence":1,"payload":{"recovered":false}}
+{"protocol":"desktop-v1","kind":"event","event":"engine.status_changed","session":"sess-catalog","sequence":2,"payload":{"status":"idle"}}
+{"protocol":"desktop-v1","kind":"event","event":"engine.error","session":"sess-catalog","sequence":3,"payload":{"code":"operation_failed","message":"provider rate limited; retry scheduled"}}
+{"protocol":"desktop-v1","kind":"event","event":"engine.exited","session":"sess-catalog","sequence":4,"payload":{"reason":"shutdown complete","exit_code":0}}
+{"protocol":"desktop-v1","kind":"event","event":"engine.restarting","session":"sess-catalog","sequence":5,"payload":{"attempt":1,"reason":"supervisor restart"}}
+{"protocol":"desktop-v1","kind":"event","event":"run.started","project_id":"project-demo","session":"sess-catalog","sequence":6,"payload":{"run_id":"run-0091","goal":"Draft chapter four"}}
+{"protocol":"desktop-v1","kind":"event","event":"run.step_changed","project_id":"project-demo","session":"sess-catalog","sequence":7,"payload":{"step":"outline_check"}}
+{"protocol":"desktop-v1","kind":"event","event":"run.progress","project_id":"project-demo","session":"sess-catalog","sequence":8,"payload":{"completed":12,"total":24,"detail":"chapters drafted"}}
+{"protocol":"desktop-v1","kind":"event","event":"run.paused","project_id":"project-demo","session":"sess-catalog","sequence":9,"payload":{"reason":"user requested pause"}}
+{"protocol":"desktop-v1","kind":"event","event":"run.completed","project_id":"project-demo","session":"sess-catalog","sequence":10,"payload":{"summary":{"chapters":24,"words":84213}}}
+{"protocol":"desktop-v1","kind":"event","event":"run.failed","project_id":"project-demo","session":"sess-catalog","sequence":11,"payload":{"code":"operation_failed","message":"provider unavailable after retries"}}
+{"protocol":"desktop-v1","kind":"event","event":"run.aborted","project_id":"project-demo","session":"sess-catalog","sequence":12,"payload":{"reason":"user requested stop"}}
+{"protocol":"desktop-v1","kind":"event","event":"stream.delta","project_id":"project-demo","session":"sess-catalog","sequence":13,"payload":{"text":"The lantern flickered twice.","channel":"prose"}}
+{"protocol":"desktop-v1","kind":"event","event":"stream.clear","project_id":"project-demo","session":"sess-catalog","sequence":14,"payload":{"channel":"prose","reason":"chapter boundary"}}
+{"protocol":"desktop-v1","kind":"event","event":"checkpoint.created","project_id":"project-demo","session":"sess-catalog","sequence":15,"payload":{"checkpoint_id":"ckpt-0042","step":"chapter_04"}}
+{"protocol":"desktop-v1","kind":"event","event":"artifact.updated","project_id":"project-demo","session":"sess-catalog","sequence":16,"payload":{"artifact":"outline","version":7,"path":"outline.json"}}
+{"protocol":"desktop-v1","kind":"event","event":"chapter.updated","project_id":"project-demo","session":"sess-catalog","sequence":17,"payload":{"chapter":3,"version":7,"status":"saved"}}
+{"protocol":"desktop-v1","kind":"event","event":"outline.updated","project_id":"project-demo","session":"sess-catalog","sequence":18,"payload":{"version":7}}
+{"protocol":"desktop-v1","kind":"event","event":"usage.updated","project_id":"project-demo","session":"sess-catalog","sequence":19,"payload":{"usage":{"requests":118,"input_tokens":210433,"output_tokens":58211},"budget":{"daily_usd":5,"spent_usd":1.24}}}
+{"protocol":"desktop-v1","kind":"event","event":"cocreate.progress","project_id":"project-demo","session":"sess-catalog","sequence":20,"payload":{"stage":"review","message":"Proposed structure ready for review."}}
+{"protocol":"desktop-v1","kind":"event","event":"import.progress","project_id":"project-demo","session":"sess-catalog","sequence":21,"payload":{"completed":40,"total":120,"detail":"sections imported"}}
+{"protocol":"desktop-v1","kind":"event","event":"simulation.progress","project_id":"project-demo","session":"sess-catalog","sequence":22,"payload":{"completed":3,"total":8,"detail":"passes complete"}}
+{"protocol":"desktop-v1","kind":"event","event":"diagnostics.completed","project_id":"project-demo","session":"sess-catalog","sequence":23,"payload":{"findings":4,"output_path":"/Users/demo/Exports/diagnostics.json"}}
+{"protocol":"desktop-v1","kind":"event","event":"notification.info","session":"sess-catalog","sequence":24,"payload":{"message":"Project saved."}}
+{"protocol":"desktop-v1","kind":"event","event":"notification.warning","session":"sess-catalog","sequence":25,"payload":{"message":"Daily budget 80% consumed."}}
+{"protocol":"desktop-v1","kind":"event","event":"notification.error","session":"sess-catalog","sequence":26,"payload":{"message":"Export failed: target directory not writable."}}

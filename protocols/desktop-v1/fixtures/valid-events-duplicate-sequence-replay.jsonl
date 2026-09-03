@@ -1,0 +1,3 @@
+{"protocol":"desktop-v1","kind":"event","event":"stream.delta","project_id":"project-123","session":"sess-7f2c","sequence":471,"payload":{"text":"The harbor lights ","channel":"prose"}}
+{"protocol":"desktop-v1","kind":"event","event":"stream.delta","project_id":"project-123","session":"sess-7f2c","sequence":471,"payload":{"text":"The harbor lights ","channel":"prose"}}
+{"protocol":"desktop-v1","kind":"event","event":"stream.delta","project_id":"project-123","session":"sess-7f2c","sequence":472,"payload":{"text":"drowned in fog.","channel":"prose"}}

@@ -1,0 +1,13 @@
+{
+  "name": "desktop-v1-protocol",
+  "private": true,
+  "version": "1.0.0",
+  "description": "desktop-v1 sidecar protocol: JSON schemas, fixtures, and deterministic validation for the Tauri desktop application's engine IPC contract.",
+  "type": "module",
+  "scripts": {
+    "validate": "node validate.mjs"
+  },
+  "devDependencies": {
+    "ajv": "8.17.1"
+  }
+}

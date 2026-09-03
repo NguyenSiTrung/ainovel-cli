@@ -1,0 +1,31 @@
+{
+  "name": "ainovel-desktop-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Svelte 5 frontend for the AI Novel desktop app. Passive projection of the desktop-v1 engine protocol; all engine interaction goes through the Tauri shell commands.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-dialog": "^2.7.3"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/svelte": "^5.4.2",
+    "@types/node": "^24.0.0",
+    "jsdom": "^30.0.1",
+    "svelte": "^5.57.0",
+    "svelte-check": "^4.7.6",
+    "typescript": "~5.9.3",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  }
+}

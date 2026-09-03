@@ -1,0 +1,5 @@
+{"protocol":"desktop-v1","kind":"event","event":"run.started","project_id":"project-123","session":"sess-7f2c","sequence":470,"payload":{"run_id":"run-0091","goal":"Draft chapter four"}}
+{"protocol":"desktop-v1","kind":"event","event":"stream.delta","project_id":"project-123","session":"sess-7f2c","sequence":471,"payload":{"text":"The harbor lights ","channel":"prose"}}
+{"protocol":"desktop-v1","kind":"event","event":"stream.delta","project_id":"project-123","session":"sess-7f2c","sequence":472,"payload":{"text":"drowned in fog.","channel":"prose"}}
+{"protocol":"desktop-v1","kind":"event","event":"stream.clear","project_id":"project-123","session":"sess-7f2c","sequence":473,"payload":{"channel":"prose","reason":"chapter boundary"}}
+{"protocol":"desktop-v1","kind":"event","event":"run.completed","project_id":"project-123","session":"sess-7f2c","sequence":474,"payload":{"summary":{"chapters":4,"words":3120}}}

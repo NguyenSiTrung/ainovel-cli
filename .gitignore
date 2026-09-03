@@ -51,3 +51,7 @@ workspace/
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+# Local worktrees and agent scratch space
+.worktrees/
+.superpowers/

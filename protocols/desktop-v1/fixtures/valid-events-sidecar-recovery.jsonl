@@ -1,0 +1,5 @@
+{"protocol":"desktop-v1","kind":"event","event":"stream.delta","project_id":"project-123","session":"sess-7f2c","sequence":481,"payload":{"text":"drowned in fog.","channel":"prose"}}
+{"protocol":"desktop-v1","kind":"event","event":"engine.exited","project_id":"project-123","session":"sess-7f2c","sequence":482,"payload":{"reason":"unexpected termination","exit_code":137}}
+{"protocol":"desktop-v1","kind":"event","event":"engine.restarting","project_id":"project-123","session":"sess-7f2c","sequence":483,"payload":{"attempt":1,"reason":"supervisor restart"}}
+{"protocol":"desktop-v1","kind":"event","event":"engine.ready","project_id":"project-123","session":"sess-91bd","sequence":1,"payload":{"recovered":true}}
+{"protocol":"desktop-v1","kind":"event","event":"engine.status_changed","project_id":"project-123","session":"sess-91bd","sequence":2,"payload":{"status":"recovered"}}

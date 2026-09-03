@@ -1,0 +1,14 @@
+{"protocol":"desktop-v2","kind":"request","id":"req-x-1","method":"engine.ping","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"req-x-2","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"req-x-3","method":"teleport.now","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"req-x-4","method":"run.steer","payload":{}}
+{"protocol":"desktop-v1","kind":"request","id":"req-x-5","method":"project.open","payload":{}}
+{"protocol":"desktop-v1","kind":"response","id":"req-x-6","payload":{}}
+{"protocol":"desktop-v1","kind":"response","id":"req-x-7","ok":"true","payload":{}}
+{"protocol":"desktop-v1","kind":"response","id":"req-x-8","ok":false,"error":{"message":"boom"}}
+{"protocol":"desktop-v1","kind":"response","id":"req-x-9","ok":false,"error":{"code":"VERY_BAD","message":"boom"}}
+{"protocol":"desktop-v1","kind":"response","id":"req-x-10","ok":true,"error":{"code":"internal_error","message":"boom"}}
+{"protocol":"desktop-v1","kind":"event","event":"engine.ready","payload":{}}
+{"protocol":"desktop-v1","kind":"event","event":"engine.teleported","sequence":5,"payload":{}}
+{"protocol":"desktop-v1","kind":"event","event":"stream.delta","sequence":10,"payload":{}}
+[1, 2, 3]

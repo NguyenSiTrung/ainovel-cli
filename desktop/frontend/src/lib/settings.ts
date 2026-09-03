@@ -1,0 +1,307 @@
+/**
+ * Settings orchestration for the task-8 Settings screen.
+ *
+ * Contract honored (task-2 adapter mapping + README §6/§8):
+ * - `config.get` returns a REDACTED view — provider metadata carries at most
+ *   `api_key_hint` (masked) and `has_api_key`; plaintext secrets never leave
+ *   the daemon. The UI renders exactly what arrives and never sends secrets
+ *   back (README §8: "Never send secrets back").
+ * - Mutations are EXPLICIT and one protocol request each:
+ *   `config.switch_model {provider, model}`, `config.set_thinking {level}`
+ *   (level names come from `config.thinking_levels`), `config.set_language`
+ *   and `config.set_story_language {language}`. The engine normalizes
+ *   language codes (vi/en/zh) and echoes the applied value back.
+ * - The engine exposes NO public setters for budget, style, or provider
+ *   libraries: `config.update` applies only language / story_language /
+ *   reasoning_effort and reports the rest as `unsupported` — never faked
+ *   (task-2 report). The Settings screen therefore shows budget read-only
+ *   and does not offer controls the engine would reject.
+ * - Notification preferences are a LOCAL UI concern (the engine has no such
+ *   setting); they live in stores/desktop.ts next to the toast layer.
+ */
+
+import { get, writable, type Writable } from 'svelte/store';
+
+import {
+  configGet,
+  configModels,
+  configSetLanguage,
+  configSetStoryLanguage,
+  configSetThinking,
+  configSwitchModel,
+  configThinkingLevels,
+  type ConfigGetResult,
+  type ModelOption,
+  type ThinkingLevelsResult,
+} from '$lib/api/desktop';
+import {
+  onEngineSessionChange,
+  projectSnapshot,
+  pushNotification,
+  reportError,
+} from '$lib/stores/desktop';
+import type { StructuredError } from '$lib/types/protocol';
+
+/** Engine-supported UI/story language codes (internal/i18n catalog: vi/en/zh). */
+export const LANGUAGE_CHOICES = ['en', 'vi', 'zh'] as const;
+
+// ---------------------------------------------------------------------------
+// Projection state
+// ---------------------------------------------------------------------------
+
+export type MutationStatus = 'idle' | 'applying';
+
+export interface SettingsState {
+  status: 'idle' | 'loading' | 'ready';
+  view: ConfigGetResult | null;
+  error: StructuredError | null;
+  fetchedAt: number | null;
+  thinking: {
+    status: 'idle' | 'loading' | 'ready';
+    levels: string[];
+    /** Active pair the engine reported the levels for. */
+    provider: string | undefined;
+    model: string | undefined;
+    error: StructuredError | null;
+  };
+  /** Model options for the provider currently under selection. */
+  modelOptions: {
+    status: 'idle' | 'loading' | 'ready';
+    provider: string | undefined;
+    options: ModelOption[];
+    error: StructuredError | null;
+  };
+  mutations: {
+    model: MutationStatus;
+    thinking: MutationStatus;
+    language: MutationStatus;
+    storyLanguage: MutationStatus;
+  };
+  /** Last applied-change confirmation (engine-echoed values). */
+  message: string | null;
+}
+
+function initialSettingsState(): SettingsState {
+  return {
+    status: 'idle',
+    view: null,
+    error: null,
+    fetchedAt: null,
+    thinking: { status: 'idle', levels: [], provider: undefined, model: undefined, error: null },
+    modelOptions: { status: 'idle', provider: undefined, options: [], error: null },
+    mutations: { model: 'idle', thinking: 'idle', language: 'idle', storyLanguage: 'idle' },
+    message: null,
+  };
+}
+
+export const settingsState: Writable<SettingsState> = writable(initialSettingsState());
+
+// ---------------------------------------------------------------------------
+// Actions
+// ---------------------------------------------------------------------------
+
+function isProjectUnavailable(structured: StructuredError): boolean {
+  return structured.code === 'project_unavailable';
+}
+
+/** Fetch the redacted configuration view (no secrets ever arrive). */
+export async function refreshConfig(): Promise<boolean> {
+  settingsState.update((s) => ({ ...s, status: 'loading', error: null }));
+  try {
+    const view = await configGet();
+    settingsState.update((s) => ({
+      ...s,
+      status: 'ready',
+      view,
+      fetchedAt: Date.now(),
+      error: null,
+    }));
+    return true;
+  } catch (raw) {
+    const structured = reportError(raw, 'config.get');
+    if (isProjectUnavailable(structured)) {
+      settingsState.set(initialSettingsState());
+      return false;
+    }
+    settingsState.update((s) => ({ ...s, status: 'idle', error: structured }));
+    return false;
+  }
+}
+
+/**
+ * Fetch the thinking levels for the ACTIVE model (the engine exposes levels
+ * only for the currently selected model; requested pairs are echoed back).
+ */
+export async function refreshThinkingLevels(): Promise<boolean> {
+  settingsState.update((s) => ({ ...s, thinking: { ...s.thinking, status: 'loading', error: null } }));
+  try {
+    const result: ThinkingLevelsResult = await configThinkingLevels();
+    settingsState.update((s) => ({
+      ...s,
+      thinking: {
+        status: 'ready',
+        levels: result.levels ?? [],
+        provider: result.provider,
+        model: result.model,
+        error: null,
+      },
+    }));
+    return true;
+  } catch (raw) {
+    const structured = reportError(raw, 'config.thinking_levels');
+    if (isProjectUnavailable(structured)) {
+      settingsState.update((s) => ({ ...s, thinking: initialSettingsState().thinking }));
+      return false;
+    }
+    settingsState.update((s) => ({ ...s, thinking: { ...s.thinking, status: 'idle', error: structured } }));
+    return false;
+  }
+}
+
+function noteApplied(message: string): void {
+  settingsState.update((s) => ({ ...s, message }));
+  pushNotification('info', message, { source: 'status' });
+}
+
+/**
+ * Load the selectable models for one provider (`config.models {provider}`).
+ * Read-only; used to populate the switch-model picker.
+ */
+export async function loadModelOptions(provider: string): Promise<boolean> {
+  if (provider === '') return false;
+  settingsState.update((s) => ({
+    ...s,
+    modelOptions: { ...s.modelOptions, status: 'loading', provider, error: null },
+  }));
+  try {
+    const result = await configModels(provider);
+    settingsState.update((s) => ({
+      ...s,
+      modelOptions: {
+        status: 'ready',
+        provider: result.provider ?? provider,
+        options: result.models ?? [],
+        error: null,
+      },
+    }));
+    return true;
+  } catch (raw) {
+    const structured = reportError(raw, 'config.models');
+    if (isProjectUnavailable(structured)) {
+      settingsState.update((s) => ({ ...s, modelOptions: initialSettingsState().modelOptions }));
+      return false;
+    }
+    settingsState.update((s) => ({
+      ...s,
+      modelOptions: { ...s.modelOptions, status: 'idle', error: structured },
+    }));
+    return false;
+  }
+}
+
+/** Switch the active provider/model — one explicit protocol request. */
+export async function switchModelFromUi(provider: string, model: string): Promise<boolean> {
+  if (get(settingsState).mutations.model !== 'idle' || provider === '' || model === '') return false;
+  settingsState.update((s) => ({
+    ...s,
+    mutations: { ...s.mutations, model: 'applying' },
+    message: null,
+  }));
+  try {
+    const result = await configSwitchModel(provider, model);
+    noteApplied(`model switched to ${result.provider ?? provider} / ${result.model ?? model}`);
+    // The redacted view + thinking levels are authoritative again.
+    await refreshConfig();
+    await refreshThinkingLevels();
+    return true;
+  } catch (raw) {
+    reportError(raw, 'config.switch_model');
+    return false;
+  } finally {
+    settingsState.update((s) => ({ ...s, mutations: { ...s.mutations, model: 'idle' } }));
+  }
+}
+
+/** Set the thinking level — one explicit request (level from the engine list). */
+export async function setThinkingFromUi(level: string): Promise<boolean> {
+  if (get(settingsState).mutations.thinking !== 'idle' || level === '') return false;
+  settingsState.update((s) => ({
+    ...s,
+    mutations: { ...s.mutations, thinking: 'applying' },
+    message: null,
+  }));
+  try {
+    const result = await configSetThinking(level);
+    noteApplied(`thinking level set to ${result.level ?? level}`);
+    await refreshConfig();
+    return true;
+  } catch (raw) {
+    reportError(raw, 'config.set_thinking');
+    return false;
+  } finally {
+    settingsState.update((s) => ({ ...s, mutations: { ...s.mutations, thinking: 'idle' } }));
+  }
+}
+
+/** Set the UI language — one explicit request; the engine normalizes. */
+export async function setLanguageFromUi(language: string): Promise<boolean> {
+  if (get(settingsState).mutations.language !== 'idle' || language.trim() === '') return false;
+  settingsState.update((s) => ({
+    ...s,
+    mutations: { ...s.mutations, language: 'applying' },
+    message: null,
+  }));
+  try {
+    const result = await configSetLanguage(language.trim());
+    noteApplied(`interface language set to ${result.language ?? language.trim()}`);
+    await refreshConfig();
+    return true;
+  } catch (raw) {
+    reportError(raw, 'config.set_language');
+    return false;
+  } finally {
+    settingsState.update((s) => ({ ...s, mutations: { ...s.mutations, language: 'idle' } }));
+  }
+}
+
+/** Set the story output language — one explicit request; the engine normalizes. */
+export async function setStoryLanguageFromUi(language: string): Promise<boolean> {
+  if (get(settingsState).mutations.storyLanguage !== 'idle' || language.trim() === '') return false;
+  settingsState.update((s) => ({
+    ...s,
+    mutations: { ...s.mutations, storyLanguage: 'applying' },
+    message: null,
+  }));
+  try {
+    const result = await configSetStoryLanguage(language.trim());
+    noteApplied(`story language set to ${result.story_language ?? language.trim()}`);
+    await refreshConfig();
+    return true;
+  } catch (raw) {
+    reportError(raw, 'config.set_story_language');
+    return false;
+  } finally {
+    settingsState.update((s) => ({ ...s, mutations: { ...s.mutations, storyLanguage: 'idle' } }));
+  }
+}
+
+/** Clear the last applied-change message. */
+export function dismissSettingsMessage(): void {
+  settingsState.update((s) => ({ ...s, message: null }));
+}
+
+/** Reset all module state (tests / disposal). */
+export function resetSettingsState(): void {
+  settingsState.set(initialSettingsState());
+}
+
+// Project closed: configuration views are project-scoped; drop them.
+projectSnapshot.subscribe((snapshot) => {
+  if (snapshot === null) resetSettingsState();
+});
+
+// Engine restart: the Host (and its in-memory configuration) was rebuilt;
+// cached views are stale. Reset — the screen refetches on mount/refresh.
+onEngineSessionChange(() => {
+  resetSettingsState();
+});

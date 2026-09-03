@@ -1,0 +1,2 @@
+{"protocol":"desktop-v1","kind":"response","id":"req-bad-1","ok":false,"error":{"code":"host_busy","message":"a generation run is already active","details":{"active_request":"run.start"}}}
+{"protocol":"desktop-v1","kind":"response","id":"req-bad-2","ok":false,"session":"sess-7f2c","error":{"code":"project_unavailable","message":"no project is open"}}
