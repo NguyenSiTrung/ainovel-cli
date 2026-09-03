@@ -256,6 +256,7 @@ mod tests {
     use super::*;
     use crate::error::CODE_INVALID_PATH;
 
+    #[cfg(unix)]
     #[test]
     fn absolute_normalized_accepts_and_normalizes() {
         let p = validate_absolute_normalized("/Users/demo/Novels/First-Novel/").unwrap();
@@ -263,6 +264,16 @@ mod tests {
         // CurDir segments are collapsed, not rejected.
         let p = validate_absolute_normalized("/a/./b").unwrap();
         assert_eq!(p, PathBuf::from("/a/b"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn absolute_normalized_accepts_and_normalizes() {
+        let p = validate_absolute_normalized("C:\\Users\\demo\\Novels\\First-Novel\\").unwrap();
+        assert_eq!(p, PathBuf::from("C:\\Users\\demo\\Novels\\First-Novel"));
+        // CurDir segments are collapsed, not rejected.
+        let p = validate_absolute_normalized("C:\\a\\.\\b").unwrap();
+        assert_eq!(p, PathBuf::from("C:\\a\\b"));
     }
 
     #[test]
@@ -310,7 +321,12 @@ mod tests {
         assert_eq!(resolved, SidecarSource::EnvOverride { path: bin.clone() });
 
         // Sibling lookup falls back to the plain name.
-        let plain = tmp.path().join("ainovel-engine");
+        let plain_filename = if cfg!(windows) {
+            "ainovel-engine.exe"
+        } else {
+            "ainovel-engine"
+        };
+        let plain = tmp.path().join(plain_filename);
         std::fs::write(&plain, b"#!/bin/sh\n").unwrap();
         #[cfg(unix)]
         {

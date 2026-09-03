@@ -393,6 +393,21 @@ func openFakeProject(d *Daemon, h *fakeHost) *projectState {
 	return p
 }
 
+// requestLineObj 便捷：以结构化对象序列化生成请求行（正确转义 Windows 路径中的反斜杠等特殊字符）。
+func requestLineObj(id, method string, payload any) string {
+	b, err := json.Marshal(map[string]any{
+		"protocol": ProtocolID,
+		"kind":     "request",
+		"id":       id,
+		"method":   method,
+		"payload":  payload,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
+
 // doRequest 便捷：一行请求 → 处理 → 返回最后一条响应（handleLine 同步写回）。
 func doRequest(t *testing.T, d *Daemon, line string) map[string]any {
 	t.Helper()

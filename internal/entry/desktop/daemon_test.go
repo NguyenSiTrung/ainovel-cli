@@ -18,7 +18,7 @@ func TestRunLifecyclePingAndCleanExit(t *testing.T) {
 	out := &lockedBuffer{}
 	input := strings.NewReader(
 		`{"protocol":"desktop-v1","kind":"request","id":"r1","method":"engine.ping","payload":{}}` + "\n" +
-			`{"protocol":"desktop-v1","kind":"request","id":"r2","method":"project.open","payload":{"path":"` + h.dir + `"}}` + "\n" +
+			requestLineObj("r2", "project.open", map[string]any{"path": h.dir}) + "\n" +
 			`{"protocol":"desktop-v1","kind":"request","id":"r3","method":"project.close","payload":{}}` + "\n")
 	err := Run(Options{
 		Stdin:   input,
@@ -372,7 +372,7 @@ func TestProjectOpenCloseAndUnavailable(t *testing.T) {
 		t.Fatalf("project.close 无项目也应 project_unavailable, got %s", code)
 	}
 
-	resp = doRequest(t, d, `{"protocol":"desktop-v1","kind":"request","id":"p1","method":"project.open","payload":{"path":"`+h.dir+`"}}`)
+	resp = doRequest(t, d, requestLineObj("p1", "project.open", map[string]any{"path": h.dir}))
 	if resp["ok"] != true {
 		t.Fatalf("project.open 失败: %v", resp)
 	}
@@ -382,7 +382,7 @@ func TestProjectOpenCloseAndUnavailable(t *testing.T) {
 	}
 
 	// 同路径幂等。
-	resp = doRequest(t, d, `{"protocol":"desktop-v1","kind":"request","id":"p2","method":"project.open","payload":{"path":"`+h.dir+`"}}`)
+	resp = doRequest(t, d, requestLineObj("p2", "project.open", map[string]any{"path": h.dir}))
 	if resp["ok"] != true || resp["payload"].(map[string]any)["project_id"] != pid1 {
 		t.Fatalf("幂等打开失败: %v", resp)
 	}

@@ -451,8 +451,13 @@ func TestImportStartProgressAndCancel(t *testing.T) {
 		close(ch)
 		return ch, nil
 	}
-	line := requestLine("im1", "import.start",
-		`{"source_path":"`+src+`","options":{"auto_confirm":true,"continue_after":true}}`)
+	line := requestLineObj("im1", "import.start", map[string]any{
+		"source_path": src,
+		"options": map[string]any{
+			"auto_confirm":   true,
+			"continue_after": true,
+		},
+	})
 	resp := doRequest(t, d, line)
 	if resp["ok"] != true {
 		t.Fatalf("import.start: %v", resp)
@@ -489,8 +494,12 @@ func TestImportStartRejectsBadOptions(t *testing.T) {
 	openFakeProject(d, h)
 	src := filepath.Join(t.TempDir(), "s.txt")
 	os.WriteFile(src, []byte("x"), 0o644)
-	resp := doRequest(t, d, requestLine("im3", "import.start",
-		`{"source_path":"`+src+`","options":{"story_resolution":"sideways"}}`))
+	resp := doRequest(t, d, requestLineObj("im3", "import.start", map[string]any{
+		"source_path": src,
+		"options": map[string]any{
+			"story_resolution": "sideways",
+		},
+	}))
 	if code := mustErrCode(t, resp); code != CodeInvalidPayload {
 		t.Fatalf("非法 story_resolution 应 invalid_payload, got %s", code)
 	}
@@ -519,7 +528,7 @@ func TestSimulationHandlers(t *testing.T) {
 	if err := os.WriteFile(simSrc, []byte("参考语料正文"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	resp := doRequest(t, d, requestLine("sm1", "simulation.start", `{"source_path":"`+simSrc+`"}`))
+	resp := doRequest(t, d, requestLineObj("sm1", "simulation.start", map[string]any{"source_path": simSrc}))
 	if resp["ok"] != true {
 		t.Fatalf("simulation.start: %v", resp)
 	}
@@ -547,7 +556,7 @@ func TestSimulationHandlers(t *testing.T) {
 
 	profile := filepath.Join(t.TempDir(), "profile.json")
 	os.WriteFile(profile, []byte(`{}`), 0o644)
-	resp = doRequest(t, d, requestLine("sm3", "simulation.profile_import", `{"profile_path":"`+profile+`"}`))
+	resp = doRequest(t, d, requestLineObj("sm3", "simulation.profile_import", map[string]any{"profile_path": profile}))
 	if resp["ok"] != true {
 		t.Fatalf("simulation.profile_import: %v", resp)
 	}
@@ -569,7 +578,7 @@ func TestSimulationStagingSemantics(t *testing.T) {
 	os.WriteFile(filepath.Join(srcDir, "sub", "b.md"), []byte("B"), 0o644)
 	os.WriteFile(filepath.Join(srcDir, "c.pdf"), []byte("C"), 0o644)
 
-	resp := doRequest(t, d, requestLine("ss1", "simulation.start", `{"source_path":"`+srcDir+`"}`))
+	resp := doRequest(t, d, requestLineObj("ss1", "simulation.start", map[string]any{"source_path": srcDir}))
 	if resp["ok"] != true {
 		t.Fatalf("目录语料 start: %v", resp)
 	}
@@ -588,7 +597,7 @@ func TestSimulationStagingSemantics(t *testing.T) {
 
 	// 同名替换：再次 start 覆盖 a.txt，既有语料保留（累积语义）。
 	os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("A2"), 0o644)
-	resp = doRequest(t, d, requestLine("ss2", "simulation.start", `{"source_path":"`+srcDir+`"}`))
+	resp = doRequest(t, d, requestLineObj("ss2", "simulation.start", map[string]any{"source_path": srcDir}))
 	if resp["ok"] != true {
 		t.Fatalf("二次 start: %v", resp)
 	}
@@ -602,7 +611,7 @@ func TestSimulationStagingSemantics(t *testing.T) {
 	// 不支持的单文件 → operation_failed（绝不静默空跑）。
 	pdf := filepath.Join(t.TempDir(), "book.pdf")
 	os.WriteFile(pdf, []byte("x"), 0o644)
-	resp = doRequest(t, d, requestLine("ss3", "simulation.start", `{"source_path":"`+pdf+`"}`))
+	resp = doRequest(t, d, requestLineObj("ss3", "simulation.start", map[string]any{"source_path": pdf}))
 	if code := mustErrCode(t, resp); code != CodeOperationFailed {
 		t.Fatalf("pdf 语料应 operation_failed, got %s", code)
 	}
@@ -1114,7 +1123,7 @@ func TestDiagnosticsSnapshotAndExport(t *testing.T) {
 	}
 
 	target := filepath.Join(t.TempDir(), "diag", "bundle.md")
-	resp = doRequest(t, d, requestLine("ds2", "diagnostics.export", `{"output_path":"`+target+`"}`))
+	resp = doRequest(t, d, requestLineObj("ds2", "diagnostics.export", map[string]any{"output_path": target}))
 	if resp["ok"] != true {
 		t.Fatalf("diagnostics.export: %v", resp)
 	}
@@ -1212,13 +1221,13 @@ func TestProjectCreateGuards(t *testing.T) {
 	seedChapterStore(t, h.dir) // h.dir 已是现成工程
 	d, _ := newTestDaemon(t, h)
 
-	resp := doRequest(t, d, requestLine("pc1", "project.create", `{"path":"`+h.dir+`"}`))
+	resp := doRequest(t, d, requestLineObj("pc1", "project.create", map[string]any{"path": h.dir}))
 	if code := mustErrCode(t, resp); code != CodeOperationFailed {
 		t.Fatalf("已有工程目录应拒绝 create, got %s", code)
 	}
 
 	fresh := filepath.Join(t.TempDir(), "NewNovel")
-	resp = doRequest(t, d, requestLine("pc2", "project.create", `{"path":"`+fresh+`","name":"My Book"}`))
+	resp = doRequest(t, d, requestLineObj("pc2", "project.create", map[string]any{"path": fresh, "name": "My Book"}))
 	if resp["ok"] != true {
 		t.Fatalf("project.create: %v", resp)
 	}
