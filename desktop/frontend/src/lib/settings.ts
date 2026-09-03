@@ -34,6 +34,7 @@ import {
   type ModelOption,
   type ThinkingLevelsResult,
 } from '$lib/api/desktop';
+import { setLocale } from '$lib/locale';
 import {
   onEngineSessionChange,
   projectSnapshot,
@@ -45,6 +46,14 @@ import type { StructuredError } from '$lib/types/protocol';
 /** Engine-supported UI/story language codes (internal/i18n catalog: vi/en/zh). */
 export const LANGUAGE_CHOICES = ['en', 'vi', 'zh'] as const;
 
+/**
+ * Adopt the engine-reported UI language as the chrome locale. The engine is
+ * the normalizer/echo authority (trim-only sends, echoed codes displayed);
+ * unknown or missing codes keep the current locale.
+ */
+function syncLocaleFromView(view: ConfigGetResult | null): void {
+  if (view?.language !== undefined) setLocale(view.language);
+}
 // ---------------------------------------------------------------------------
 // Projection state
 // ---------------------------------------------------------------------------
@@ -109,6 +118,7 @@ export async function refreshConfig(): Promise<boolean> {
   settingsState.update((s) => ({ ...s, status: 'loading', error: null }));
   try {
     const view = await configGet();
+    syncLocaleFromView(view);
     settingsState.update((s) => ({
       ...s,
       status: 'ready',

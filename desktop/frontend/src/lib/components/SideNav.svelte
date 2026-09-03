@@ -4,9 +4,15 @@
    * `navigate` so registered guards (unsaved chapter edits) can block a route
    * change and demand an explicit user decision first.
    */
-  import { ROUTES, currentRoute, navigate } from '$lib/routes';
+  import { currentRoute, navigate, routeStrings, ROUTES } from '$lib/routes';
+  import { currentLanguage } from '$lib/locale';
 
   let active = $derived($currentRoute);
+  // Subscribe to locale switches so labels re-render; strings resolve live.
+  let labels = $derived.by(() => {
+    void $currentLanguage;
+    return new Map(ROUTES.map((r) => [r.id, routeStrings(r.id)] as const));
+  });
 </script>
 
 <nav class="side-nav" data-testid="side-nav" aria-label="Primary">
@@ -22,7 +28,7 @@
           }}
           data-testid={`nav-${route.id}`}
         >
-          {route.label}
+          {labels.get(route.id)?.label ?? route.label}
         </a>
       </li>
     {/each}

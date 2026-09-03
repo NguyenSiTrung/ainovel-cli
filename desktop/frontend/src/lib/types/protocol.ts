@@ -19,6 +19,7 @@
  * - Errors are structured `{code, message, details?}`; the 9 protocol codes
  *   plus the 4 shell-extension codes are first-class.
  */
+import { t } from '$lib/locale';
 
 // ---------------------------------------------------------------------------
 // Protocol identity
@@ -801,16 +802,30 @@ export const ERROR_CATALOG: Record<ErrorCode, ErrorPresentation> = {
   },
 };
 
-const UNKNOWN_CODE_PRESENTATION: ErrorPresentation = {
-  title: 'Unexpected error',
-  description: 'An unrecognized error code arrived from the engine.',
-  severity: 'warning',
-};
-
-/** Presentation for any code, including additive unknown codes (§9). */
+/**
+ * Presentation for any code, including additive unknown codes (§9).
+ *
+ * Strings resolve through the tiny en/vi/zh chrome catalog (`$lib/locale`);
+ * severity stays here beside the stable code contract. `ERROR_CATALOG`
+ * remains the English reference table (and the severity source); the empty
+ * action (`''`) means "no suggested action" and is omitted like before.
+ */
 export function presentError(code: AnyErrorCode): ErrorPresentation {
   if (Object.prototype.hasOwnProperty.call(ERROR_CATALOG, code)) {
-    return ERROR_CATALOG[code as ErrorCode];
+    const known = code as ErrorCode;
+    const action = t(`error.${known}.action`);
+    return {
+      title: t(`error.${known}.title`),
+      description: t(`error.${known}.description`),
+      severity: ERROR_CATALOG[known].severity,
+      ...(action === '' ? {} : { action }),
+    };
   }
-  return UNKNOWN_CODE_PRESENTATION;
+  const fallbackAction = t('error.unknown.action');
+  return {
+    title: t('error.unknown.title'),
+    description: t('error.unknown.description'),
+    severity: 'warning',
+    ...(fallbackAction === '' ? {} : { action: fallbackAction }),
+  };
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/voocel/ainovel-cli/assets"
 	"github.com/voocel/ainovel-cli/internal/bootstrap"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 // Command 是 `ainovel-cli eval` 子命令入口，返回进程退出码：
@@ -27,6 +28,8 @@ func Command(argv []string) int {
 	timeout := fs.Duration("timeout", 30*time.Minute, "单 case 墙钟上限（0=不限）")
 	repeat := fs.Int("repeat", 1, "每个 case 重复运行次数（降低模型随机性影响）")
 	ci := fs.Bool("ci", false, "CI 模式：抑制逐事件进度输出，仅打印最终结论（退出码已反映门禁，无需此 flag 也生效）")
+	langFlag := fs.String("lang", "", "界面语言覆盖 (vi/en/zh，缺省跟随配置与系统探测)")
+	storyLangFlag := fs.String("story-lang", "", "创作语言覆盖 (vi/en/zh，缺省跟随配置)")
 	if err := fs.Parse(argv); err != nil {
 		return 2
 	}
@@ -51,7 +54,17 @@ func Command(argv []string) int {
 		fmt.Fprintf(os.Stderr, "eval: 加载配置失败: %v\n", err)
 		return 2
 	}
-
+	// 与生产路径一致：flags 覆盖 → FillDefaults（系统探测 + 归一化）→ 锁定 UI 语言，
+	// 创作语言透传给 assets.Load 追加方向指令（--lang/--story-lang 均经 NormalizeLanguage）。
+	if strings.TrimSpace(*langFlag) != "" {
+		cfg.Language = i18n.NormalizeLanguage(*langFlag)
+	}
+	if strings.TrimSpace(*storyLangFlag) != "" {
+		cfg.StoryLanguage = i18n.NormalizeLanguage(*storyLangFlag)
+	}
+	cfg.FillDefaults()
+	i18n.SetLanguage(cfg.Language)
+	loadOpts := assets.LoadOptions{StoryLanguage: cfg.StoryLanguage}
 	cases, err := LoadCases(*casesPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "eval: 加载 case 失败: %v\n", err)
@@ -91,6 +104,13 @@ func Command(argv []string) int {
 		if style == "" {
 			style = cfg.Style
 		}
+		// 本 case 创作语言：case 覆盖 > 命令行 flag > 配置；Load 时追加方向指令。
+		// case prompt 本体是 authored 内容（保持 zh），指令只约束模型输出语言。
+		caseStory := c.StoryLanguage
+		if caseStory == "" {
+			caseStory = cfg.StoryLanguage
+		}
+		caseLoadOpts := assets.LoadOptions{StoryLanguage: caseStory}
 		var progressW io.Writer
 		if !*ci {
 			progressW = os.Stderr // CI 模式静默逐事件输出，保持日志干净
@@ -99,7 +119,7 @@ func Command(argv []string) int {
 		if variantName == "" {
 			runs := make([]RunResult, 0, *repeat)
 			for i := 1; i <= *repeat; i++ {
-				bundle := assets.Load(style, assets.LoadOptions{}) // 纯内置,确定性 baseline,不受本机覆盖污染
+				bundle := assets.Load(style, caseLoadOpts) // 纯内置 + 创作语言方向指令,不受本机覆盖污染
 				dir := runDir(*outDir, c.ID, ArmSingle, i, *repeat)
 				res := runOne(cfg, bundle, c, dir, *timeout, progressW)
 				res.Arm, res.Repeat = ArmSingle, i
@@ -113,18 +133,22 @@ func Command(argv []string) int {
 		runs := make([]RunResult, 0, *repeat*2)
 		deltas := make([]Delta, 0, *repeat)
 		for i := 1; i <= *repeat; i++ {
-			baseBundle := assets.Load(style, assets.LoadOptions{})
+			baseBundle := assets.Load(style, caseLoadOpts)
 			baseDir := runDir(*outDir, c.ID, ArmBaseline, i, *repeat)
 			base := runOne(cfg, baseBundle, c, baseDir, *timeout, progressW)
 			base.Arm, base.Repeat = ArmBaseline, i
 			runs = append(runs, RunResult{Arm: ArmBaseline, Repeat: i, Result: base})
 			fmt.Fprintf(os.Stderr, "  → baseline#%d %s\n", i, base.Outcome)
 
-			varBundle := assets.Load(style, assets.LoadOptions{})
+			varBundle := assets.Load(style, caseLoadOpts)
 			if err := applyVariant(&varBundle, variantPrompts); err != nil {
 				fmt.Fprintf(os.Stderr, "eval: variant 覆盖失败: %v\n", err)
 				return 2
 			}
+			// variant 覆盖 writer.md 等核心提示词会整体替换模板并丢掉
+			// 已追加的 story directive；按同一 case 语言重新追加，保证
+			// A/B 两臂走同一创作语言约束。
+			varBundle.AppendStoryDirective(caseStory)
 			varDir := runDir(*outDir, c.ID, ArmVariant, i, *repeat)
 			variant := runOne(cfg, varBundle, c, varDir, *timeout, progressW)
 			variant.Arm, variant.Repeat = ArmVariant, i

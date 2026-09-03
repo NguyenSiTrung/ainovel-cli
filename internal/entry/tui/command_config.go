@@ -21,6 +21,7 @@ type configStep int
 const (
 	configStepProvider configStep = iota
 	configStepLanguage
+	configStepStoryLanguage
 	configStepAddPicker
 	configStepCustomName
 	configStepHub // Provider 详情：列出各项当前值，挑一项进子编辑器，保存也在此
@@ -389,7 +390,7 @@ func (s *modelConfigState) finishInlineEdit() bool {
 // 模型名和窗口直接在模型列表内编辑，不再增加详情层级。
 func (s *modelConfigState) escapeBack() (configStep, bool) {
 	switch s.step {
-	case configStepLanguage, configStepAddPicker, configStepHub:
+	case configStepLanguage, configStepStoryLanguage, configStepAddPicker, configStepHub:
 		return configStepProvider, true
 	case configStepCustomName:
 		return configStepAddPicker, true
@@ -620,8 +621,16 @@ func (m Model) handleModelConfigKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case configStepLanguage:
 		supported := i18n.SupportedLanguages()
-		moveConfigCursor(state, msg, len(supported))
-		if msg.Type == tea.KeyEnter && state.cursor >= 0 && state.cursor < len(supported) {
+		moveConfigCursor(state, msg, len(supported)+1)
+		lastIdx := len(supported)
+		if msg.Type == tea.KeyEnter && state.cursor >= 0 && state.cursor <= lastIdx {
+			if state.cursor == lastIdx {
+				// “下一步：创作语言…”——进入 story picker，本步不落盘。
+				state.step = configStepStoryLanguage
+				state.cursor = 0
+				state.message = ""
+				return m, nil
+			}
 			selected := supported[state.cursor]
 			// 只切界面语言：创作语言指令在启动时已烘进各系统提示词，
 			// 会话中途改 story_language 不会生效，静默改写反而让下一本书变语言。
@@ -641,6 +650,25 @@ func (m Model) handleModelConfigKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if m.mode == modeNew {
 				m.textarea.Placeholder = placeholderForNewMode(m.startupMode)
 			}
+			m.refreshDetailViewport()
+			m.refreshStateViewport()
+			m.refreshEventViewport()
+		}
+	case configStepStoryLanguage:
+		supported := i18n.SupportedLanguages()
+		moveConfigCursor(state, msg, len(supported))
+		if msg.Type == tea.KeyEnter && state.cursor >= 0 && state.cursor < len(supported) {
+			selected := supported[state.cursor]
+			// 创作语言只持久化 + 更新 snapshot 预览：已烘进系统提示词的
+			// 当前会话不受影响，下一本书（下次启动加载 bundle）生效。
+			if m.runtime != nil {
+				_ = m.runtime.ConfigureLanguage("", selected)
+				state.snapshot = m.runtime.ModelConfiguration()
+			}
+			state.buildProviderMenus()
+			state.step = configStepProvider
+			state.cursor = 0
+			state.message = fmt.Sprintf(i18n.T("config.story_lang_set"), i18n.LanguageName(selected))
 			m.refreshDetailViewport()
 			m.refreshStateViewport()
 			m.refreshEventViewport()
@@ -850,20 +878,38 @@ func renderModelConfigModal(width int, state *modelConfigState) string {
 	case configStepLanguage:
 		lines = append(lines, configHeading(i18n.T("config.ui_language")))
 		supported := i18n.SupportedLanguages()
-		labels := make([]string, len(supported))
-		for i, lang := range supported {
+		labels := make([]string, 0, len(supported)+1)
+		for _, lang := range supported {
 			prefix := "  "
 			if lang == i18n.CurrentLanguage() {
 				prefix = "✓ "
 			}
-			labels[i] = prefix + i18n.LanguageName(lang) + " (" + lang + ")"
+			labels = append(labels, prefix+i18n.LanguageName(lang)+" ("+lang+")")
 		}
+		labels = append(labels, "→ "+i18n.T("config.story_language"))
 		lines = append(lines, renderConfigChoices(labels, state.cursor, contentW, 10)...)
 		storyLang := state.snapshot.StoryLanguage
 		if storyLang == "" {
 			storyLang = i18n.CurrentLanguage()
 		}
 		hint = fmt.Sprintf(i18n.T("config.story_lang_note"), i18n.LanguageName(storyLang))
+	case configStepStoryLanguage:
+		lines = append(lines, configHeading(i18n.T("config.story_language")))
+		supported := i18n.SupportedLanguages()
+		current := state.snapshot.StoryLanguage
+		if current == "" {
+			current = i18n.CurrentLanguage()
+		}
+		labels := make([]string, len(supported))
+		for i, lang := range supported {
+			prefix := "  "
+			if lang == current {
+				prefix = "✓ "
+			}
+			labels[i] = prefix + i18n.LanguageName(lang) + " (" + lang + ")"
+		}
+		lines = append(lines, renderConfigChoices(labels, state.cursor, contentW, 10)...)
+		hint = i18n.T("config.story_lang_pick_note")
 	case configStepAddPicker:
 		lines = append(lines, configHeading(i18n.T("setup.provider_select")))
 		lines = append(lines, renderConfigChoices(labelsForProviderChoices(state.presetChoices), state.cursor, contentW, 12)...)

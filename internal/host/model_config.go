@@ -9,6 +9,7 @@ import (
 
 	"github.com/voocel/agentcore"
 	"github.com/voocel/ainovel-cli/internal/bootstrap"
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 type APIKeyAction string
@@ -423,6 +424,9 @@ func (h *Host) modelReferencesLocked(provider, model string) []string {
 }
 
 // ConfigureLanguage updates UI language and story language in Host config and saves to config file.
+// Both codes funnel through i18n.NormalizeLanguage so raw locales ("EN_us",
+// "vi-VN.UTF-8") and unknown codes (fallback zh) never persist unnormalized.
+// Empty args leave the corresponding field untouched.
 func (h *Host) ConfigureLanguage(uiLang, storyLang string) error {
 	if h == nil {
 		return nil
@@ -430,11 +434,11 @@ func (h *Host) ConfigureLanguage(uiLang, storyLang string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	if uiLang != "" {
-		h.cfg.Language = uiLang
+	if strings.TrimSpace(uiLang) != "" {
+		h.cfg.Language = i18n.NormalizeLanguage(uiLang)
 	}
-	if storyLang != "" {
-		h.cfg.StoryLanguage = storyLang
+	if strings.TrimSpace(storyLang) != "" {
+		h.cfg.StoryLanguage = i18n.NormalizeLanguage(storyLang)
 	}
 
 	if h.configPath == "" {

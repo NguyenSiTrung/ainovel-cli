@@ -105,7 +105,9 @@ type projectState struct {
 	id         string
 	path       string
 	host       HostAPI
-	bridgeDone chan struct{} // host 事件桥接 goroutine 退出信号
+	cfg        bootstrap.Config // 本项目打开时的配置快照（含 story_language）
+	storyLang  string           // 本项目 bundle 实际烘入的创作语言
+	bridgeDone chan struct{}    // host 事件桥接 goroutine 退出信号
 }
 
 // runState 是桥接层为本会话 run 终态分类保留的意图标记。
@@ -858,13 +860,25 @@ func (d *Daemon) openProject(req *Request, path string, created bool) *Response 
 	// Host 持目录独占锁：先关旧再开新。
 	d.closeProject()
 
-	h, err := d.opts.NewHost(d.opts.Config, d.opts.Bundle, abs)
+	// 本项目 bundle 按当前 story_language 重建：daemon 启动时的 bundle
+	// 只反映启动瞬间，set_story_language 持久化后必须对新打开项目生效；
+	// 测试注入的 NewHost 照常收到重建后的 bundle（fakeHost 忽略内容）。
+	projCfg := d.opts.Config
+	projCfg.OutputDir = abs
+	projCfg.FillDefaults()
+	bundle := d.opts.Bundle
+	if strings.TrimSpace(projCfg.StoryLanguage) != "" {
+		loadOpts := assets.DefaultLoadOptions(abs)
+		loadOpts.StoryLanguage = projCfg.StoryLanguage
+		bundle = assets.Load(projCfg.Style, loadOpts)
+	}
+	h, err := d.opts.NewHost(projCfg, bundle, abs)
 	if err != nil {
 		d.log("error", "project", "open host failed", "dir", abs, "err", err.Error())
 		return errorResponse(req.ID, d.session, CodeOperationFailed,
 			"open project host failed: "+redactString(err.Error()), nil)
 	}
-	p := &projectState{id: projectID(abs), path: abs, host: h}
+	p := &projectState{id: projectID(abs), path: abs, host: h, cfg: projCfg, storyLang: projCfg.StoryLanguage}
 	d.stateMu.Lock()
 	d.proj = p
 	d.stateMu.Unlock()

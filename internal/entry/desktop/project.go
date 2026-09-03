@@ -593,10 +593,27 @@ func (d *Daemon) handleConfigUpdate(req *Request) *Response {
 		}
 		var err error
 		switch key {
-		case "language":
-			err = p.host.ConfigureLanguage(normalizeLanguageCode(str), "")
-		case "story_language":
-			err = p.host.ConfigureLanguage("", normalizeLanguageCode(str))
+		case "language", "story_language":
+			if strings.TrimSpace(str) == "" {
+				return errorResponse(req.ID, d.session, CodeInvalidPayload, "language is required", nil)
+			}
+			norm := normalizeLanguageCode(str)
+			if key == "language" {
+				err = p.host.ConfigureLanguage(norm, "")
+			} else {
+				err = p.host.ConfigureLanguage("", norm)
+				if err == nil {
+					// 与 set_story_language 同语义：刷新 daemon 快照，
+					// 资产指令下次打开项目重建 bundle 时生效。
+					d.stateMu.Lock()
+					d.opts.Config.StoryLanguage = norm
+					if d.proj != nil {
+						d.proj.storyLang = norm
+						d.proj.cfg.StoryLanguage = norm
+					}
+					d.stateMu.Unlock()
+				}
+			}
 		case "reasoning_effort":
 			err = p.host.SetRoleThinking("default", str)
 		default:
@@ -742,11 +759,19 @@ func (d *Daemon) setLanguage(req *Request, ui bool) *Response {
 		}
 		return successResponse(req.ID, d.session, map[string]any{"language": lang})
 	}
-	// story_language 影响随资产包加载的提示词方向；持久化即时生效于共创/运行时
-	// 配置，资产级指令在下次打开项目（重建 Host/bundle）时全面生效（报告有记载）。
+	// story_language 持久化后同步刷新 daemon 侧配置快照：资产级指令在下次
+	// 打开项目（重建 Host/bundle，见 openProject）时全面生效；当前会话的
+	// 共创对话语言经 coCreateLang 即时跟随，无需重建。
 	if err := p.host.ConfigureLanguage("", lang); err != nil {
 		return d.opFailed(req, err)
 	}
+	d.stateMu.Lock()
+	d.opts.Config.StoryLanguage = lang
+	if d.proj != nil {
+		d.proj.storyLang = lang
+		d.proj.cfg.StoryLanguage = lang
+	}
+	d.stateMu.Unlock()
 	return successResponse(req.ID, d.session, map[string]any{"story_language": lang})
 }
 

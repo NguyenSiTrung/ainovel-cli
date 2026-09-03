@@ -5,8 +5,8 @@
    * presentation over the desktop stores; commands fire only on user
    * gesture. Task 5-8 screens mount inside the workspace slot.
    */
-  import { currentRoute, routeById } from '$lib/routes';
-
+  import { currentRoute, routeById, routeStrings } from '$lib/routes';
+  import { currentLanguage } from '$lib/locale';
   import ActivityPanel from './ActivityPanel.svelte';
   import HeaderBar from './HeaderBar.svelte';
   import NotificationToasts from './NotificationToasts.svelte';
@@ -16,8 +16,14 @@
   import StreamPanel from './StreamPanel.svelte';
   import UnsavedGuardCard from './UnsavedGuardCard.svelte';
 
+  // Component identity comes from the static registry; chrome strings
+  // re-resolve live on locale switch.
   let route = $derived(routeById($currentRoute));
   const Screen = $derived(route.component);
+  let strings = $derived.by(() => {
+    void $currentLanguage;
+    return routeStrings($currentRoute);
+  });
 </script>
 
 <div class="app-shell" data-testid="app-shell">
@@ -28,7 +34,7 @@
       <SnapshotErrorBanner />
       <RecoveryCard />
       <UnsavedGuardCard />
-      <Screen title={route.label} description={route.description} owner={route.owner} />
+      <Screen title={strings.label} description={strings.description} owner={route.owner} />
     </main>
     <aside class="side-panels" data-testid="side-panels">
       <StreamPanel />

@@ -85,6 +85,8 @@
     "cancel": "Cancel",
     "saved_notice": "Configuration saved successfully!",
     "lang_switched": "UI language switched. Story language remains %s.",
+    "story_lang_set": "Story language set to %s. Takes effect on next launch.",
+    "story_lang_pick_note": "Story language applies to the next book (prompts are baked at launch).",
     "story_lang_note": "Story language: %s (change it via story_language in the config file or --story-lang; takes effect on next launch)",
     "custom_provider_name": "Custom Provider Name",
     "new_badge": "New",

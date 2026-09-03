@@ -85,6 +85,8 @@
     "cancel": "取消",
     "saved_notice": "配置已成功保存！",
     "lang_switched": "界面语言已切换，小说创作语言保持 %s 不变",
+    "story_lang_set": "创作语言已设为 %s，重启后生效",
+    "story_lang_pick_note": "创作语言作用于下一本书（提示词在启动时已固化）",
     "story_lang_note": "小说创作语言：%s（如需修改请编辑配置文件 story_language 或使用 --story-lang，重启后生效）",
     "custom_provider_name": "自定义 Provider 名称",
     "new_badge": "新增",

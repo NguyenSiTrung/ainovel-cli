@@ -98,6 +98,25 @@ func Load(style string, opts LoadOptions) Bundle {
 	}
 }
 
+// AppendStoryDirective 给已组装的 bundle 重新追加创作语言方向指令——eval 做
+// variant 覆盖（OverridePrompt 整体替换模板）后调用，保证 A/B 两臂走同一
+// 创作语言约束。空语言不做任何事；Load 内已归一化，此处同样归一化。
+func (b *Bundle) AppendStoryDirective(storyLang string) {
+	if b == nil || storyLang == "" {
+		return
+	}
+	var directive string
+	switch i18n.NormalizeLanguage(storyLang) {
+	case i18n.LangVI:
+		directive = viStoryLanguageDirective
+	case i18n.LangEN:
+		directive = enStoryLanguageDirective
+	default:
+		directive = zhStoryLanguageDirective
+	}
+	b.Prompts = applyStoryLanguageDirectives(b.Prompts, directive)
+}
+
 // voicePlaceholder 是 writer 协议模板中文风段的原位插入点。
 const voicePlaceholder = "{{VOICE}}"
 

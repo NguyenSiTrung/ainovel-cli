@@ -14,6 +14,7 @@
   import { onMount } from 'svelte';
 
   import { getPaths } from '$lib/api/desktop';
+  import { currentLanguage, t } from '$lib/locale';
   import {
     dismissSettingsMessage,
     LANGUAGE_CHOICES,
@@ -37,6 +38,9 @@
   let prefs = $derived($notificationPrefs);
 
   let configError = $derived(settings.error ? presentError(settings.error.code) : null);
+  // Chrome strings resolve through the tiny en/vi/zh catalog; passing the
+  // store value explicitly keeps each lookup reactive to locale switches.
+  let lang = $derived($currentLanguage);
 
   // Selection state for the switch-model flow (explicit Apply, one request).
   let selectedProvider = $state('');
@@ -155,8 +159,8 @@
 
   {#if snapshot === null}
     <div class="empty-state" data-testid="settings-empty">
-      <h3>No project open</h3>
-      <p>Configuration is project-scoped — open or create a project from the Overview screen.</p>
+      <h3>{t('common.noProject.title', lang)}</h3>
+      <p>{t('settings.empty.hint', lang)}</p>
     </div>
   {:else}
     <div class="actions-row">
@@ -258,9 +262,9 @@
       </article>
 
       <article class="card" data-testid="settings-languages">
-        <h3>Languages</h3>
+        <h3>{t('settings.languages.title', lang)}</h3>
         <label>
-          interface language
+          {t('settings.languages.interfaceLabel', lang)}
           <select value={selectedLanguage} onchange={changeLanguage} data-testid="settings-language-select">
             {#each languageChoices as code (code)}
               <option value={code}>{LANGUAGE_LABELS[code] ?? code}</option>
@@ -274,10 +278,10 @@
           disabled={selectedLanguage === '' || settings.mutations.language !== 'idle'}
           data-testid="settings-language-apply"
         >
-          {settings.mutations.language === 'applying' ? 'Applying…' : 'Set interface language'}
+          {settings.mutations.language === 'applying' ? t('settings.languages.applying', lang) : t('settings.languages.setInterface', lang)}
         </button>
         <label class="form-gap">
-          story language
+          {t('settings.languages.storyLabel', lang)}
           <select value={selectedStoryLanguage} onchange={changeStoryLanguage} data-testid="settings-story-language-select">
             {#each languageChoices as code (code)}
               <option value={code}>{LANGUAGE_LABELS[code] ?? code}</option>
@@ -291,9 +295,9 @@
           disabled={selectedStoryLanguage === '' || settings.mutations.storyLanguage !== 'idle'}
           data-testid="settings-story-language-apply"
         >
-          {settings.mutations.storyLanguage === 'applying' ? 'Applying…' : 'Set story language'}
+          {settings.mutations.storyLanguage === 'applying' ? t('settings.languages.applying', lang) : t('settings.languages.setStory', lang)}
         </button>
-        <p class="meta">The engine normalizes codes (en / vi / zh) and echoes the applied value.</p>
+        <p class="meta">{t('settings.languages.hint', lang)}</p>
       </article>
 
       <article class="card" data-testid="settings-notifications">

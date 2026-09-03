@@ -17,6 +17,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/voocel/ainovel-cli/internal/i18n"
 )
 
 // caseIDPattern 限制 case id 为安全字符：id 会拼进输出目录并被 RunCase 的 RemoveAll 清理，
@@ -33,6 +35,7 @@ type Case struct {
 	Description   string   `json:"description,omitempty"`
 	Prompt        string   `json:"prompt"`                   // 用户创作需求
 	Style         string   `json:"style,omitempty"`          // 覆盖配置风格
+	StoryLanguage string   `json:"story_language,omitempty"` // 本 case 创作语言覆盖 (vi/en/zh)，缺省跟随配置
 	MaxChapters   int      `json:"max_chapters"`             // 章数上限；0 表示只跑到规划完成（进入 writing）
 	TargetPrompts []string `json:"target_prompts,omitempty"` // 本 case 主要验证的 prompt 文件（信息性）
 	Rubric        string   `json:"rubric,omitempty"`         // LLM Judge 评分表（Phase 3 启用）
@@ -58,7 +61,6 @@ type Gate struct {
 	StylestatRegression   string   `json:"stylestat_regression,omitempty"`
 }
 
-// Validate 校验 case 必填字段。
 func (c *Case) Validate() error {
 	if strings.TrimSpace(c.ID) == "" {
 		return fmt.Errorf("case 缺少 id")
@@ -68,6 +70,9 @@ func (c *Case) Validate() error {
 	}
 	if strings.TrimSpace(c.Prompt) == "" {
 		return fmt.Errorf("case %q 缺少 prompt", c.ID)
+	}
+	if strings.TrimSpace(c.StoryLanguage) != "" {
+		c.StoryLanguage = i18n.NormalizeLanguage(c.StoryLanguage)
 	}
 	if c.Gate.MaxSeverity == "" {
 		c.Gate.MaxSeverity = "warning"
