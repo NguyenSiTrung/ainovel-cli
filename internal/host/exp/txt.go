@@ -2,10 +2,10 @@ package exp
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
 	"github.com/voocel/ainovel-cli/internal/domain"
 	"github.com/voocel/ainovel-cli/internal/i18n"
+	"regexp"
+	"strings"
 )
 
 // chapterTitleIndex 给定章号查标题，缺失返回空串。
@@ -58,6 +58,7 @@ func buildLocations(volumes []domain.VolumeOutline) map[int]chapterLocation {
 
 // chapterHeaderRe 匹配带章号的 Markdown 标题首行（# 第N章 / ## 第 12 章 / # Chương 1 / ## Chapter 1 ...）。
 var chapterHeaderRe = regexp.MustCompile(`^#+\s+(第.+?章|Chương\s+\d+|Chapter\s+\d+)`)
+
 // atxTitleRe 提取 ATX 标题（# 标题）的文字部分。
 var atxTitleRe = regexp.MustCompile(`^#{1,6}\s+(.+?)\s*$`)
 

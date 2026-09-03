@@ -352,7 +352,7 @@ func renderReportModal(width, height int, state *reportState) string {
 		boxW,
 		boxH,
 		i18n.T("tui.modals.report_title"),
-		"  ↑↓ " + i18n.T("tui.modals.scroll") + " · Esc " + i18n.T("tui.modals.close"),
+		"  ↑↓ "+i18n.T("tui.modals.scroll")+" · Esc "+i18n.T("tui.modals.close"),
 		strings.Split(state.viewport.View(), "\n"),
 	)
 	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, modal)

@@ -15,6 +15,7 @@ import (
 	"github.com/voocel/ainovel-cli/internal/notify"
 	"github.com/voocel/ainovel-cli/internal/utils"
 )
+
 // DefaultContextWindow 模型未在 registry 登记时的兜底窗口大小。
 const DefaultContextWindow = 200000
 
@@ -449,6 +450,7 @@ func (c *Config) FillDefaults() {
 		c.Budget.WarnRatio = 0.8
 	}
 }
+
 // ContextWindowSource 标记窗口取值的来源，供日志/诊断使用。
 type ContextWindowSource string
 

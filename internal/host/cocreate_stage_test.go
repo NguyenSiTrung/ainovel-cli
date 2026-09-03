@@ -107,7 +107,6 @@ func TestResumeFromCoCreate_TimesOutWaitingForEngineStop(t *testing.T) {
 	}
 }
 
-
 func TestAcquireExclusive(t *testing.T) {
 	cases := []struct {
 		name       string

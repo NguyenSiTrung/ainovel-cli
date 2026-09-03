@@ -108,7 +108,6 @@ func (f *fakeHost) Reopen(direction string) error {
 	return nil
 }
 
-
 func (f *fakeHost) Steer(text string) error {
 	if f.steerFn != nil {
 		return f.steerFn(text)

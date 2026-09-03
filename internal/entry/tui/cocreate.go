@@ -3,12 +3,12 @@ package tui
 import (
 	"context"
 	"fmt"
-	"strings"
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/voocel/ainovel-cli/internal/entry/startup"
 	"github.com/voocel/ainovel-cli/internal/host"
 	"github.com/voocel/ainovel-cli/internal/i18n"
+	"strings"
 )
 
 type startupMode int
@@ -539,7 +539,7 @@ func renderCoCreateConversationPanel(width, height int, state *cocreateState, er
 		Width(contentW).
 		Height(height).
 		Padding(0, 1)
-	return style.Render(panelTitleStyle.Render(":: " + i18n.T("tui.cocreate.dialog_title")) + "\n" + state.convVP.View())
+	return style.Render(panelTitleStyle.Render(":: "+i18n.T("tui.cocreate.dialog_title")) + "\n" + state.convVP.View())
 }
 
 func renderCoCreatePromptPanel(width, height int, state *cocreateState) string {

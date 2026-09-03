@@ -5,6 +5,7 @@ import (
 
 	"github.com/voocel/ainovel-cli/internal/i18n"
 )
+
 type commandRegistry struct {
 	specs []slashCommandSpec
 }

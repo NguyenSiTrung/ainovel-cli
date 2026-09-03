@@ -75,6 +75,7 @@ var allThinkingOptions = []thinkingOption{
 	{"xhigh", "xhigh"},
 	{"max", "max"},
 }
+
 func thinkingOptionsFor(rt modelRuntime, role string) []thinkingOption {
 	levels := rt.AvailableThinking(role)
 	if len(levels) == 0 {

@@ -344,6 +344,7 @@ func (d *Daemon) handleRunContinue(req *Request) *Response {
 		"resumed": true, "instruction": instruction, "via": "run.continue",
 	})
 }
+
 // handleRunRetry 重试最近失败步骤：TUI 无独立 retry 命令；失败后的恢复动作
 // 是从落盘事实重启引擎（Resume，见 task-2 报告的映射论证）。
 func (d *Daemon) handleRunRetry(req *Request) *Response {
