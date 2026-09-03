@@ -285,11 +285,9 @@ jobs:
           set -euo pipefail
           echo "updater signing: TAURI_SIGNING_PRIVATE_KEY secret absent; generating an ephemeral throwaway key"
           npx tauri signer generate -w "$RUNNER_TEMP/ephemeral-updater.key" --password "" --ci
-          {
-            echo "TAURI_SIGNING_PRIVATE_KEY<<__SIGNING_EOF__"
-            cat "$RUNNER_TEMP/ephemeral-updater.key"
-            echo "__SIGNING_EOF__"
-          } >> "$GITHUB_ENV"
+          key=$(cat "$RUNNER_TEMP/ephemeral-updater.key" | tr -d '\r\n')
+          echo "TAURI_SIGNING_PRIVATE_KEY=$key" >> "$GITHUB_ENV"
+          echo "TAURI_SIGNING_PRIVATE_KEY_PATH=$RUNNER_TEMP/ephemeral-updater.key" >> "$GITHUB_ENV"
 
       - name: Bundle (tauri build)
         shell: bash

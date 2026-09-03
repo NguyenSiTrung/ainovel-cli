@@ -46,16 +46,33 @@ pub fn run() {
         .expect("error while running the desktop application");
 
     if std::env::var_os(SMOKE_EXIT_ENV).is_some() {
+        use std::sync::atomic::{AtomicI32, Ordering};
+        use std::sync::Arc;
+
         // The setup hook runs on the event loop's Ready event, so the smoke
         // checks run there too and exit the loop immediately after.
         log::info!(target: "smoke", "smoke mode: entering event loop");
-        let code = app.run_return(|handle, event| {
+        let exit_code = Arc::new(AtomicI32::new(0));
+        let exit_code_clone = Arc::clone(&exit_code);
+        let code = app.run_return(move |handle, event| {
             if matches!(event, tauri::RunEvent::Ready) {
-                smoke_exit_checks(handle);
-                handle.exit(0);
+                if !smoke_exit_checks(handle) {
+                    exit_code_clone.store(1, Ordering::SeqCst);
+                    handle.exit(1);
+                } else {
+                    handle.exit(0);
+                }
             }
         });
-        log::info!(target: "smoke", "smoke exit complete (exit code {code})");
+        let final_code = if code != 0 {
+            code
+        } else {
+            exit_code.load(Ordering::SeqCst)
+        };
+        log::info!(target: "smoke", "smoke exit complete (exit code {final_code})");
+        if final_code != 0 {
+            std::process::exit(final_code);
+        }
         return;
     }
 
@@ -174,12 +191,13 @@ pub fn configure_app<R: tauri::Runtime>(builder: tauri::Builder<R>) -> tauri::Bu
 
 /// One-shot startup smoke (see [`SMOKE_EXIT_ENV`]): wait for engine
 /// readiness, round-trip a request, and shut down, logging each step.
-fn smoke_exit_checks<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+fn smoke_exit_checks<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> bool {
     use std::time::Duration;
 
     let provider = app.state::<DesktopState>().provider.clone();
-    let report = tauri::async_runtime::block_on(async {
+    let (report, success) = tauri::async_runtime::block_on(async {
         let mut report = Vec::new();
+        let mut ok = true;
         match provider.wait_ready(Duration::from_secs(10)).await {
             Ok(()) => {
                 let status = provider.status();
@@ -188,7 +206,10 @@ fn smoke_exit_checks<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
                     status.health, status.session
                 ));
             }
-            Err(e) => report.push(format!("engine NOT ready: {e}")),
+            Err(e) => {
+                report.push(format!("engine NOT ready: {e}"));
+                ok = false;
+            }
         }
         match provider
             .request("engine.ping", serde_json::Map::new())
@@ -198,25 +219,35 @@ fn smoke_exit_checks<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
                 "engine.ping ok: {}",
                 serde_json::to_string(&payload).unwrap_or_default()
             )),
-            Err(e) => report.push(format!("engine.ping FAILED: {e}")),
+            Err(e) => {
+                report.push(format!("engine.ping FAILED: {e}"));
+                ok = false;
+            }
         }
         let status = provider.status();
         report.push(format!(
             "status: health={:?} restarts_total={} malformed_output_lines={}",
             status.health, status.restarts_total, status.malformed_output_lines
         ));
+        if status.malformed_output_lines > 0 {
+            ok = false;
+        }
         match provider.shutdown(Some("smoke exit".into())).await {
             Ok(()) => report.push(format!(
                 "shutdown ok: final health={:?}",
                 provider.status().health
             )),
-            Err(e) => report.push(format!("shutdown FAILED: {e}")),
+            Err(e) => {
+                report.push(format!("shutdown FAILED: {e}"));
+                ok = false;
+            }
         }
-        report
+        (report, ok)
     });
     for line in report {
         log::info!(target: "smoke", "{line}");
     }
+    success
 }
 
 /// Minimal logger: stderr with timestamps. The engine's own logs arrive on
