@@ -6,6 +6,7 @@
   "description": "Build tooling for the AI Novel desktop app: pinned Tauri CLI (matches the tauri crate in src-tauri/Cargo.toml) plus sidecar/updater packaging scripts.",
   "scripts": {
     "tauri": "tauri",
+    "dev": "sh scripts/dev.sh",
     "build:sidecars": "sh scripts/build-sidecars.sh",
     "updater-manifest": "node scripts/updater-manifest.mjs"
   },

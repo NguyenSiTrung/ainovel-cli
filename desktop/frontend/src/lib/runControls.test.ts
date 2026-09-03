@@ -31,6 +31,7 @@ import {
   lastRunControlOutcome,
   pauseRunFromUi,
   pendingRunControls,
+  reopenProjectFromUi,
   resetRunControls,
   retryRunFromUi,
   setAdvanceModeFromUi,
@@ -84,7 +85,7 @@ function scriptEngine(snap: ProjectSnapshot | null = null): void {
     if (method === 'project.replay_events') return { replayed: 0, last_sequence: 0 };
     if (method === 'usage.snapshot') return { usage: {} };
     if (method?.startsWith('run.')) return { accepted: true };
-    if (method === 'project.resume') return { resumed: true };
+    if (method === 'project.resume' || method === 'project.reopen') return { resumed: true, reopened: true };
     throw { code: 'unknown_method', message: `unexpected ${method}` };
   });
 }
@@ -163,6 +164,15 @@ describe('deriveRunControls — backend state decides availability', () => {
     expect(avail.canRetry).toBe(true);
     expect(avail.canContinue).toBe(true);
   });
+  it('completed book offers reopen (explicit Host.Reopen path)', () => {
+    const fromPhase = deriveRunControls(snapshot({ phase: 'complete' }), { status: 'idle' }, 'ready');
+    expect(fromPhase.canReopen).toBe(true);
+    const fromRun = deriveRunControls(snapshot(), { status: 'completed' }, 'ready');
+    expect(fromRun.canReopen).toBe(true);
+    const inProgress = deriveRunControls(snapshot({ phase: 'writing' }), { status: 'paused' }, 'ready');
+    expect(inProgress.canReopen).toBe(false);
+  });
+
 
   it('chapter gate: advance hold from snapshot or run.paused enables one-chapter authorization', () => {
     const fromSnapshot = deriveRunControls(snapshot({ has_advance_hold: true }), { status: 'paused' }, 'ready');
@@ -255,12 +265,23 @@ describe('run control actions', () => {
     expect(await continueRunFromUi()).toBe(true);
     expect(requestPayloadsOf('run.continue')).toEqual([{}]);
 
+    expect(await continueRunFromUi('add a twist')).toBe(true);
+    expect(requestPayloadsOf('run.continue')).toEqual([{}, { instruction: 'add a twist' }]);
+
     apply('run.started', 12, {});
     apply('run.failed', 13, { message: 'provider outage' });
     expect(await retryRunFromUi()).toBe(true);
     expect(requestPayloadsOf('run.retry')).toEqual([{}]);
   });
 
+  it('reopen is offered for completed books and sends direction when provided', async () => {
+    await bootReady(snapshot({ phase: 'complete' }));
+    expect(await reopenProjectFromUi()).toBe(true);
+    expect(requestPayloadsOf('project.reopen')).toEqual([{}]);
+
+    expect(await reopenProjectFromUi('open volume two')).toBe(true);
+    expect(requestPayloadsOf('project.reopen')).toEqual([{}, { direction: 'open volume two' }]);
+  });
   it('one-chapter authorization requires a backend-reported hold', async () => {
     await bootReady(snapshot());
     expect(await authorizeOneChapterFromUi()).toBe(false);

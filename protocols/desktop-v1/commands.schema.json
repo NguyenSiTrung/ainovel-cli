@@ -33,6 +33,7 @@
         "project.close",
         "project.snapshot",
         "project.resume",
+        "project.reopen",
         "project.replay_events",
         "run.start",
         "run.continue",
@@ -219,6 +220,25 @@
         "properties": {
           "payload": {
             "$ref": "#/$defs/project_resume_request"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "project.reopen"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/project_reopen_request"
           }
         }
       }
@@ -1128,6 +1148,17 @@
         }
       }
     },
+    "project_reopen_request": {
+      "title": "project.reopen request payload",
+      "description": "Reopen a completed novel project for further writing, optionally providing a continuation direction.",
+      "type": "object",
+      "properties": {
+        "direction": {
+          "type": "string",
+          "description": "Optional continuation direction (evaluated by Arbiter before resuming the engine)."
+        }
+      }
+    },
     "project_replay_events_request": {
       "title": "project.replay_events request payload",
       "description": "Replay buffered project events after a sequence number, e.g. after reconnect or sidecar restart.",
@@ -1160,8 +1191,14 @@
     },
     "run_continue_request": {
       "title": "run.continue request payload",
-      "description": "Continue the current run. No arguments.",
-      "type": "object"
+      "description": "Continue the current run, optionally with a natural-language instruction.",
+      "type": "object",
+      "properties": {
+        "instruction": {
+          "type": "string",
+          "description": "Optional instruction to direct continuation (evaluated by Arbiter before restarting the engine)."
+        }
+      }
     },
     "run_steer_request": {
       "title": "run.steer request payload",

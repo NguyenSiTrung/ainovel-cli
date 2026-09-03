@@ -48,6 +48,14 @@ only adds packaging on top of it.
 ## Local development
 
 ```bash
+npm --prefix desktop run dev
+```
+
+That resolves `AINOVEL_SIDECAR` to the host sidecar in
+`src-tauri/binaries/` (building it on demand) and runs `tauri dev`.
+Manual equivalent when you need explicit control:
+
+```bash
 # 1. Build the sidecar for your host (creates src-tauri/binaries/ainovel-engine-<triple>)
 npm --prefix desktop run build:sidecars        # or: desktop/scripts/build-sidecars.sh
 

@@ -30,6 +30,7 @@
 import { get, writable, type Writable } from 'svelte/store';
 
 import {
+  projectReopen,
   runAbort,
   runAdvanceOneChapter,
   runContinue,
@@ -62,8 +63,10 @@ export interface RunControlAvailability {
   engineRunning: boolean;
   /** Start a fresh run with a goal. */
   canStart: boolean;
-  /** Continue after pause/completion (engine resume-from-facts). */
+  /** Continue after pause/completion (engine resume-from-facts or instruction). */
   canContinue: boolean;
+  /** Reopen a completed book for further writing (Host.Reopen). */
+  canReopen: boolean;
   /** Send a steering instruction mid-run. */
   canSteer: boolean;
   /** Pause the engine (gentle stop; resumable). */
@@ -98,8 +101,9 @@ export function deriveRunControls(
   // snapshot flag and the observed run.started (…terminal) event facts.
   const engineRunning = snapshot?.running === true || run.status === 'running';
   const holdPresent = snapshot?.has_advance_hold === true || run.pause?.advanceHold === true;
+  const isCompleted = snapshot?.phase === 'complete' || run.status === 'completed';
   // Has the project produced (or resumed into) work the engine could pick
-  // up with a no-arg continue? Backend fields only: observed prior run
+  // up with a continue? Backend fields only: observed prior run
   // state, completed chapters, or the engine's own recovery label.
   const hasResumableWork =
     run.status === 'paused' ||
@@ -115,6 +119,7 @@ export function deriveRunControls(
     engineRunning,
     canStart: projectOpen && engineReady && !engineRunning,
     canContinue: projectOpen && engineReady && !engineRunning && hasResumableWork,
+    canReopen: projectOpen && engineReady && !engineRunning && isCompleted,
     canSteer: projectOpen && engineReady && engineRunning,
     canPause: projectOpen && engineReady && engineRunning,
     canAbort: projectOpen && engineReady && engineRunning,
@@ -136,9 +141,9 @@ export type RunControlKind =
   | 'pause'
   | 'abort'
   | 'retry'
+  | 'reopen'
   | 'authorize-chapter'
   | 'advance-mode';
-
 /** Which controls have a request in flight (button busy state). */
 export const pendingRunControls: Writable<Partial<Record<RunControlKind, boolean>>> = writable({});
 
@@ -203,9 +208,26 @@ export function startRunFromUi(goal: string): Promise<boolean> {
   );
 }
 
-/** Continue the story (engine resume-from-facts; no text argument in v1). */
-export function continueRunFromUi(): Promise<boolean> {
-  return issue('continue', availability().canContinue, 'continue accepted', () => runContinue());
+/** Continue the story (engine resume-from-facts or with optional instruction). */
+export function continueRunFromUi(instruction?: string): Promise<boolean> {
+  const trimmed = instruction?.trim();
+  return issue(
+    'continue',
+    availability().canContinue,
+    'continue accepted',
+    () => runContinue(trimmed && trimmed !== '' ? trimmed : undefined),
+  );
+}
+
+/** Reopen a completed book for further writing (optionally with continuation direction). */
+export function reopenProjectFromUi(direction?: string): Promise<boolean> {
+  const trimmed = direction?.trim();
+  return issue(
+    'reopen',
+    availability().canReopen,
+    'reopen accepted',
+    () => projectReopen(trimmed && trimmed !== '' ? trimmed : undefined),
+  );
 }
 
 /** Retry after failure ≈ resume from persisted state (same engine control). */

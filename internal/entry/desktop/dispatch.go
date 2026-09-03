@@ -35,6 +35,7 @@ func (d *Daemon) registerDispatch() {
 		"project.close":         d.handleProjectClose,
 		"project.snapshot":      d.handleProjectSnapshot,
 		"project.resume":        d.handleProjectResume,
+		"project.reopen":        d.handleProjectReopen,
 		"project.replay_events": d.handleReplayEvents,
 
 		// run 控制
@@ -189,6 +190,42 @@ func (d *Daemon) handleProjectResume(req *Request) *Response {
 	return successResponse(req.ID, d.session, map[string]any{"resumed": true, "label": label})
 }
 
+// handleProjectReopen 镜像 TUI 的 /reopen 命令（internal/entry/tui/commands.go:213-228）：
+// 重开已完结的小说继续创作。可选 direction 登记为待处理干预（经 Arbiter 裁定注入），
+// 再调用 Host.Resume() 续跑引擎。
+func (d *Daemon) handleProjectReopen(req *Request) *Response {
+	p, errResp := d.requireProject(req)
+	if errResp != nil {
+		return errResp
+	}
+	if p.host.Snapshot().IsRunning {
+		return errorResponse(req.ID, d.session, CodeHostBusy,
+			"a generation run is already active", map[string]any{"active_request": "project.reopen"})
+	}
+
+	direction := strings.TrimSpace(payloadString(req.Payload, "direction"))
+	if err := p.host.Reopen(direction); err != nil {
+		d.log("warn", "project", "reopen failed", "err", err.Error())
+		return errorResponse(req.ID, d.session, classifyCode(err), err.Error(), nil)
+	}
+
+	label, err := p.host.Resume()
+	if err != nil {
+		d.log("warn", "project", "resume after reopen failed", "err", err.Error())
+		return errorResponse(req.ID, d.session, classifyCode(err), err.Error(), nil)
+	}
+	via := "project.reopen"
+	if direction != "" {
+		via += ": " + direction
+	}
+	d.markRunActive(p, newID("run"), via)
+	payload := map[string]any{"reopened": true, "label": label}
+	if direction != "" {
+		payload["direction"] = direction
+	}
+	return successResponse(req.ID, d.session, payload)
+}
+
 // handleReplayEvents 重放本会话内存事件环（保留原 sequence，供去重/续传）。
 func (d *Daemon) handleReplayEvents(req *Request) *Response {
 	after, hasAfter, err := payloadInt64(req.Payload, "after_sequence")
@@ -280,12 +317,33 @@ func (d *Daemon) handleRunStart(req *Request) *Response {
 	return successResponse(req.ID, d.session, map[string]any{"accepted": true, "run_id": runID})
 }
 
-// handleRunContinue 协议无参数续跑。Host.Continue 需要非空文本，引擎侧
-// “无参数重启引擎”的等价控制是 Resume（从 store 事实续跑；PendingSteer 自动重放）。
+// handleRunContinue 续跑引擎。若携带 instruction，镜像 TUI 停机态输入
+// （internal/entry/tui/model_update.go:325 经 Host.Continue(text) 进入 Arbiter
+// 裁定并在必要时重启引擎）；若无 instruction，保持既有行为：从 store 事实续跑（Resume）。
 func (d *Daemon) handleRunContinue(req *Request) *Response {
-	return d.restartFromStoppedState(req, "run.continue")
-}
+	instruction := strings.TrimSpace(payloadString(req.Payload, "instruction"))
+	if instruction == "" {
+		return d.restartFromStoppedState(req, "run.continue")
+	}
 
+	p, errResp := d.requireProject(req)
+	if errResp != nil {
+		return errResp
+	}
+	if p.host.Snapshot().IsRunning {
+		return errorResponse(req.ID, d.session, CodeHostBusy,
+			"a generation run is already active", map[string]any{"active_request": "run.continue"})
+	}
+
+	if err := p.host.Continue(instruction); err != nil {
+		d.log("warn", "run", "continue with instruction failed", "err", err.Error())
+		return errorResponse(req.ID, d.session, classifyCode(err), err.Error(), nil)
+	}
+	d.markRunActive(p, newID("run"), "run.continue: "+instruction)
+	return successResponse(req.ID, d.session, map[string]any{
+		"resumed": true, "instruction": instruction, "via": "run.continue",
+	})
+}
 // handleRunRetry 重试最近失败步骤：TUI 无独立 retry 命令；失败后的恢复动作
 // 是从落盘事实重启引擎（Resume，见 task-2 报告的映射论证）。
 func (d *Daemon) handleRunRetry(req *Request) *Response {

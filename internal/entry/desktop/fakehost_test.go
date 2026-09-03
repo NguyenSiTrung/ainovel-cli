@@ -36,6 +36,8 @@ type fakeHost struct {
 	prepareUserRulesFn func(string) error
 	startPreparedFn    func(string) error
 	resumeFn           func() (string, error)
+	continueFn         func(string) error
+	reopenFn           func(string) error
 	steerFn            func(string) error
 	abortFn            func() bool
 	setAdvanceModeFn   func(domain.ChapterAdvanceMode) error
@@ -92,6 +94,20 @@ func (f *fakeHost) Resume() (string, error) {
 	}
 	return "checkpoint: chapter 3", nil
 }
+func (f *fakeHost) Continue(text string) error {
+	if f.continueFn != nil {
+		return f.continueFn(text)
+	}
+	return nil
+}
+
+func (f *fakeHost) Reopen(direction string) error {
+	if f.reopenFn != nil {
+		return f.reopenFn(direction)
+	}
+	return nil
+}
+
 
 func (f *fakeHost) Steer(text string) error {
 	if f.steerFn != nil {

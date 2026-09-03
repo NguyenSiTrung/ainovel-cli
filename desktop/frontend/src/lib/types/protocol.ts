@@ -28,7 +28,7 @@ import { t } from '$lib/locale';
 export const PROTOCOL_ID = 'desktop-v1' as const;
 
 // ---------------------------------------------------------------------------
-// Method catalog (48 methods, README §6)
+// Method catalog (49 methods, README §6)
 // ---------------------------------------------------------------------------
 
 export type MethodName =
@@ -41,6 +41,7 @@ export type MethodName =
   | 'project.close'
   | 'project.snapshot'
   | 'project.resume'
+  | 'project.reopen'
   | 'project.replay_events'
   // run
   | 'run.start'

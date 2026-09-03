@@ -29,7 +29,7 @@ pub struct DesktopState {
 
 /// Send one desktop-v1 request to the engine and await its response.
 ///
-/// - `method`: one of the 48 catalog method names.
+/// - `method`: one of the 49 catalog method names.
 /// - `payload`: optional method arguments object (defaults to `{}`).
 ///
 /// Resolves with the response payload; rejects with

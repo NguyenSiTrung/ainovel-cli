@@ -38,6 +38,8 @@ type HostAPI interface {
 	PrepareUserRules(rawPrompt string) error
 	StartPrepared(rawRequirement string) error
 	Resume() (string, error)
+	Continue(text string) error
+	Reopen(direction string) error
 	Steer(text string) error
 	Abort() bool
 	SetAdvanceMode(mode domain.ChapterAdvanceMode) error

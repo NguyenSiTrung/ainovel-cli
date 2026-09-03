@@ -175,6 +175,109 @@ func TestRunContinueAndRetryMapToResume(t *testing.T) {
 	}
 }
 
+func TestRunContinueWithInstruction(t *testing.T) {
+	h := newFakeHost(t)
+	d, _ := newTestDaemon(t, h)
+	openFakeProject(d, h)
+
+	// 1. 运行中 → host_busy
+	h.setSnapshot(host.UISnapshot{RuntimeState: "running", IsRunning: true})
+	resp := doRequest(t, d, requestLine("ci0", "run.continue", `{"instruction":"加快节奏"}`))
+	if code := mustErrCode(t, resp); code != CodeHostBusy {
+		t.Fatalf("want host_busy, got %s", code)
+	}
+
+	// 2. 停机态带 instruction → 调用 Continue(instruction)
+	h.setSnapshot(host.UISnapshot{RuntimeState: "idle", IsRunning: false})
+	var continuedText string
+	h.continueFn = func(text string) error {
+		continuedText = text
+		return nil
+	}
+	resp = doRequest(t, d, requestLine("ci1", "run.continue", `{"instruction":"加快节奏，让主角遇到劲敌"}`))
+	if resp["ok"] != true {
+		t.Fatalf("run.continue with instruction 应成功: %v", resp)
+	}
+	payload := resp["payload"].(map[string]any)
+	if payload["resumed"] != true || payload["instruction"] != "加快节奏，让主角遇到劲敌" {
+		t.Fatalf("unexpected payload: %v", payload)
+	}
+	if continuedText != "加快节奏，让主角遇到劲敌" {
+		t.Fatalf("Continue 应收到指令: %q", continuedText)
+	}
+
+	// 3. Continue 失败 → 返回错误响应
+	h.continueFn = func(string) error { return errors.New("干预持久化失败") }
+	resp = doRequest(t, d, requestLine("ci2", "run.continue", `{"instruction":"fail"}`))
+	if resp["ok"] != false {
+		t.Fatalf("Continue 失败应返回 ok:false: %v", resp)
+	}
+}
+
+func TestProjectReopen(t *testing.T) {
+	h := newFakeHost(t)
+	d, _ := newTestDaemon(t, h)
+
+	// 1. 无项目 → project_unavailable
+	resp := doRequest(t, d, requestLine("ro0", "project.reopen", `{}`))
+	if code := mustErrCode(t, resp); code != CodeProjectUnavailable {
+		t.Fatalf("want project_unavailable, got %s", code)
+	}
+	openFakeProject(d, h)
+
+	// 2. 运行中 → host_busy
+	h.setSnapshot(host.UISnapshot{RuntimeState: "running", IsRunning: true})
+	resp = doRequest(t, d, requestLine("ro1", "project.reopen", `{}`))
+	if code := mustErrCode(t, resp); code != CodeHostBusy {
+		t.Fatalf("want host_busy, got %s", code)
+	}
+
+	// 3. 正常重开（无方向）
+	h.setSnapshot(host.UISnapshot{RuntimeState: "idle", IsRunning: false, Phase: "complete"})
+	reopenCalled := false
+	var reopenDir string
+	h.reopenFn = func(dir string) error {
+		reopenCalled = true
+		reopenDir = dir
+		return nil
+	}
+	h.resumeFn = func() (string, error) {
+		return "reopened novel", nil
+	}
+	resp = doRequest(t, d, requestLine("ro2", "project.reopen", `{}`))
+	if resp["ok"] != true {
+		t.Fatalf("reopen 应成功: %v", resp)
+	}
+	payload := resp["payload"].(map[string]any)
+	if payload["reopened"] != true || payload["label"] != "reopened novel" {
+		t.Fatalf("unexpected reopen payload: %v", payload)
+	}
+	if !reopenCalled || reopenDir != "" {
+		t.Fatalf("reopen 应以空方向被调用: called=%v dir=%q", reopenCalled, reopenDir)
+	}
+
+	// 4. 带方向重开
+	reopenCalled = false
+	resp = doRequest(t, d, requestLine("ro3", "project.reopen", `{"direction":"开启第二部修仙篇"}`))
+	if resp["ok"] != true {
+		t.Fatalf("reopen 带方向应成功: %v", resp)
+	}
+	payload = resp["payload"].(map[string]any)
+	if payload["direction"] != "开启第二部修仙篇" {
+		t.Fatalf("direction 应回显: %v", payload)
+	}
+	if reopenDir != "开启第二部修仙篇" {
+		t.Fatalf("reopenFn 应收到方向: %q", reopenDir)
+	}
+
+	// 5. Reopen 失败
+	h.reopenFn = func(string) error { return errors.New("创作引擎运行中，无需重开") }
+	resp = doRequest(t, d, requestLine("ro4", "project.reopen", `{}`))
+	if resp["ok"] != false {
+		t.Fatalf("Reopen 失败应返回 ok:false: %v", resp)
+	}
+}
+
 // ── 共创 ──
 
 // TestOverlappingRunStartsDoNotClobberRunIntent —— StartPrepared 的启动裁定

@@ -25,6 +25,7 @@
     lastRunControlOutcome,
     pauseRunFromUi,
     pendingRunControls,
+    reopenProjectFromUi,
     retryRunFromUi,
     setAdvanceModeFromUi,
     startRunFromUi,
@@ -34,6 +35,8 @@
 
   let goal = $state('');
   let steerInstruction = $state('');
+  let continueInstruction = $state('');
+  let reopenDirection = $state('');
 
   let snapshot = $derived($projectSnapshot);
   let run = $derived($runState);
@@ -53,6 +56,14 @@
 
   async function submitSteer(): Promise<void> {
     if (await steerRunFromUi(steerInstruction)) steerInstruction = '';
+  }
+
+  async function submitContinue(): Promise<void> {
+    if (await continueRunFromUi(continueInstruction)) continueInstruction = '';
+  }
+
+  async function submitReopen(): Promise<void> {
+    if (await reopenProjectFromUi(reopenDirection)) reopenDirection = '';
   }
 </script>
 
@@ -112,14 +123,42 @@
     {/if}
 
     {#if avail.canContinue}
-      <button
-        type="button"
-        onclick={() => continueRunFromUi()}
-        disabled={pending.continue}
-        data-testid="run-control-continue"
-      >
-        {pending.continue ? 'Continuing…' : 'Continue'}
-      </button>
+      <div class="continue-group" data-testid="continue-group">
+        <input
+          type="text"
+          placeholder="Instruction for continuation (optional)…"
+          bind:value={continueInstruction}
+          data-testid="run-continue-instruction-input"
+        />
+        <button
+          type="button"
+          onclick={() => submitContinue()}
+          disabled={pending.continue}
+          data-testid="run-control-continue"
+        >
+          {pending.continue ? 'Continuing…' : 'Continue'}
+        </button>
+      </div>
+    {/if}
+
+    {#if avail.canReopen}
+      <div class="reopen-group" data-testid="reopen-group">
+        <input
+          type="text"
+          placeholder="Continuation direction (optional)…"
+          bind:value={reopenDirection}
+          data-testid="run-reopen-direction-input"
+        />
+        <button
+          type="button"
+          class="primary"
+          onclick={() => submitReopen()}
+          disabled={pending.reopen}
+          data-testid="run-control-reopen"
+        >
+          {pending.reopen ? 'Reopening…' : 'Reopen book'}
+        </button>
+      </div>
     {/if}
 
     {#if avail.canRetry}
@@ -278,12 +317,16 @@
     flex: 1 1 16rem;
     resize: vertical;
   }
-  .steer-group {
+  .steer-group,
+  .continue-group,
+  .reopen-group {
     display: flex;
     gap: 0.5rem;
     flex: 1 1 14rem;
   }
-  .steer-group input {
+  .steer-group input,
+  .continue-group input,
+  .reopen-group input {
     flex: 1;
     min-width: 10rem;
   }

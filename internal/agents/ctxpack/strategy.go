@@ -68,8 +68,8 @@ func (s *StoreSummaryCompactStrategy) apply(_ context.Context, msgs []agentcore.
 		return msgs, corecontext.StrategyResult{Name: s.Name()}, nil
 	}
 
-	cut := corecontext.FindCutPoint(msgs, s.keepRecentTokens)
-	if cut.FirstKeptIndex <= 0 {
+	cut := findCutPoint(msgs, s.keepRecentTokens)
+	if cut.firstKeptIndex <= 0 {
 		return msgs, corecontext.StrategyResult{Name: s.Name()}, nil
 	}
 	summary := storeSummaryPreamble
@@ -78,7 +78,7 @@ func (s *StoreSummaryCompactStrategy) apply(_ context.Context, msgs []agentcore.
 	}
 	summary += "\n\n" + sections
 
-	toKeep := append([]agentcore.AgentMessage(nil), msgs[cut.FirstKeptIndex:]...)
+	toKeep := append([]agentcore.AgentMessage(nil), msgs[cut.firstKeptIndex:]...)
 	tokensBefore := corecontext.EstimateTotal(msgs)
 	result := make([]agentcore.AgentMessage, 0, 1+len(toKeep))
 	result = append(result, corecontext.ContextSummary{
@@ -98,9 +98,9 @@ func (s *StoreSummaryCompactStrategy) apply(_ context.Context, msgs []agentcore.
 		TokensAfter:    tokensAfter,
 		MessagesBefore: len(msgs),
 		MessagesAfter:  len(result),
-		CompactedCount: cut.FirstKeptIndex,
+		CompactedCount: cut.firstKeptIndex,
 		KeptCount:      len(toKeep),
-		IsSplitTurn:    cut.IsSplitTurn,
+		IsSplitTurn:    cut.isSplitTurn,
 		SummaryLen:     len([]rune(summary)),
 		Duration:       time.Millisecond,
 	}
@@ -136,4 +136,63 @@ func leadingTask(msgs []agentcore.AgentMessage) string {
 		}
 	}
 	return ""
+}
+
+// cutPoint 描述一次压缩的切分位置：firstKeptIndex 之后的消息原文保留，
+// 之前的内容折进 store 摘要。agentcore 仅导出 EstimateTokens，未导出其
+// 内部 findCutPoint，此处按同样三条规则本地实现：
+// ① 从尾向前累计 keepTokens；② 不切在 tool 结果中间（assistant tool_calls
+// 与其后续 tool 结果同属一轮）；③ 优先切在 user 消息边界。
+type cutPoint struct {
+	firstKeptIndex int
+	isSplitTurn    bool
+}
+
+func findCutPoint(msgs []agentcore.AgentMessage, keepTokens int) cutPoint {
+	cut := len(msgs)
+	accumulated := 0
+	for i := len(msgs) - 1; i >= 0; i-- {
+		accumulated += corecontext.EstimateTokens(msgs[i])
+		if accumulated >= keepTokens {
+			cut = i
+			break
+		}
+	}
+	if cut >= len(msgs) {
+		return cutPoint{}
+	}
+	for cut < len(msgs) {
+		m, ok := msgs[cut].(agentcore.Message)
+		if !ok {
+			break
+		}
+		if m.Role == agentcore.RoleTool {
+			cut++
+			continue
+		}
+		if m.Role == agentcore.RoleUser {
+			break
+		}
+		if m.Role == agentcore.RoleAssistant && m.HasToolCalls() {
+			cut++
+			for cut < len(msgs) {
+				next, ok := msgs[cut].(agentcore.Message)
+				if ok && next.Role == agentcore.RoleTool {
+					cut++
+				} else {
+					break
+				}
+			}
+			continue
+		}
+		break
+	}
+	if cut >= len(msgs) {
+		return cutPoint{}
+	}
+	split := true
+	if m, ok := msgs[cut].(agentcore.Message); ok && m.Role == agentcore.RoleUser {
+		split = false
+	}
+	return cutPoint{firstKeptIndex: cut, isSplitTurn: split}
 }

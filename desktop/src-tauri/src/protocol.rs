@@ -31,7 +31,7 @@ use serde_json::{Map, Value};
 /// The literal protocol identifier; anything else on the wire is rejected.
 pub const PROTOCOL_ID: &str = "desktop-v1";
 
-/// The 48 desktop-v1 method names (commands.schema.json `method` enum).
+/// The 49 desktop-v1 method names (commands.schema.json `method` enum).
 pub const METHODS: &[&str] = &[
     "engine.ping",
     "engine.shutdown",
@@ -40,6 +40,7 @@ pub const METHODS: &[&str] = &[
     "project.close",
     "project.snapshot",
     "project.resume",
+    "project.reopen",
     "project.replay_events",
     "run.start",
     "run.continue",
@@ -498,7 +499,7 @@ mod tests {
 
     #[test]
     fn catalog_sizes_match_protocol_readme() {
-        assert_eq!(METHODS.len(), 48, "48 binding methods");
+        assert_eq!(METHODS.len(), 49, "49 binding methods");
         assert_eq!(EVENTS.len(), 26, "26 binding events");
         assert_eq!(ERROR_CODES.len(), 9, "9 binding error codes");
     }

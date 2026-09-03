@@ -242,6 +242,12 @@ export function projectResume(checkpointId?: string): Promise<JsonObject> {
     ? request('project.resume')
     : request('project.resume', { checkpoint_id: checkpointId });
 }
+export function projectReopen(direction?: string): Promise<JsonObject> {
+  return direction === undefined || direction.trim() === ''
+    ? request('project.reopen')
+    : request('project.reopen', { direction: direction.trim() });
+}
+
 
 /** Replay result payload: `{replayed, last_sequence, advise?}` (Go adapter). */
 export interface ReplayResult {
@@ -285,8 +291,10 @@ export function runStart(goal?: string): Promise<JsonObject> {
     : request('run.start', { goal });
 }
 
-export function runContinue(): Promise<JsonObject> {
-  return request('run.continue');
+export function runContinue(instruction?: string): Promise<JsonObject> {
+  return instruction === undefined || instruction.trim() === ''
+    ? request('run.continue')
+    : request('run.continue', { instruction: instruction.trim() });
 }
 
 export function runSteer(instruction: string, context?: string): Promise<JsonObject> {

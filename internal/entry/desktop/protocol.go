@@ -211,7 +211,7 @@ func init() {
 	for _, m := range []string{
 		"engine.ping", "engine.shutdown",
 		"project.create", "project.open", "project.close", "project.snapshot",
-		"project.resume", "project.replay_events",
+		"project.resume", "project.reopen", "project.replay_events",
 		"run.start", "run.continue", "run.steer", "run.abort", "run.pause",
 		"run.advance_one_chapter", "run.set_advance_mode", "run.retry",
 		"cocreate.start", "cocreate.stage", "cocreate.resume", "cocreate.cancel",

@@ -79,7 +79,7 @@ Required: `protocol`, `kind`, `event`, `sequence`. Optional: `project_id`,
 | `protocol` | required | required | required | const `"desktop-v1"` |
 | `kind` | required | required | required | `"request"` / `"response"` / `"event"` |
 | `id` | required | required | — | non-empty string; response echoes its request |
-| `method` | required | — | — | one of the 48 method names (section 6) |
+| `method` | required | — | — | one of the 49 method names (section 6) |
 | `ok` | — | required | — | boolean |
 | `error` | — | required iff `ok:false` | — | `{code, message, details?}` |
 | `payload` | optional | success only | optional | object; open (unknown fields allowed) |
@@ -192,7 +192,7 @@ Codes are stable snake_case strings and are binding for all implementations.
   not as responses; the triggering request, if any, already received its
   acceptance response.
 
-## 6. Method catalog (48 methods, binding)
+## 6. Method catalog (49 methods, binding)
 
 Payload schemas are named `<method>_request` in `commands.schema.json`. "req"
 fields must be present inside `payload`; "opt" fields are documented optional
@@ -215,6 +215,7 @@ enumerated.
 | `project.close` | — | `force` | Unsaved-change protection enforced by engine. |
 | `project.snapshot` | — | — | Full snapshot of open project state. |
 | `project.resume` | — | `checkpoint_id` | Crash/interruption recovery. |
+| `project.reopen` | — | `direction` | Reopen a completed book; direction optionally passed to Arbiter. |
 | `project.replay_events` | — | `after_sequence`, `limit` | Replay after reconnect/restart. |
 
 ### run
@@ -222,7 +223,7 @@ enumerated.
 | Method | req | opt | Notes |
 |---|---|---|---|
 | `run.start` | — | `goal`, `options` | Acceptance response; progress via events. |
-| `run.continue` | — | — | |
+| `run.continue` | — | `instruction` | Continue run; instruction optionally passed to Arbiter before restart. |
 | `run.steer` | `instruction` | `context` | Natural-language steering. |
 | `run.abort` | — | `reason` | |
 | `run.pause` | — | — | |
@@ -414,7 +415,7 @@ must validate line-by-line.
 | `valid-events-stream-lifecycle.jsonl` | `run.started`, `stream.delta` x2, `stream.clear`, `run.completed` (completion). | accept |
 | `valid-events-duplicate-sequence-replay.jsonl` | Same-session duplicate sequence 471 re-delivered, then 472. | accept |
 | `valid-events-sidecar-recovery.jsonl` | Old session events, exit/restart, `engine.ready` with new session id and reset sequence. | accept |
-| `valid-requests-catalog.jsonl` | One valid request per method (48 lines). | accept |
+| `valid-requests-catalog.jsonl` | One valid request per method (49 lines). | accept |
 | `valid-events-catalog.jsonl` | One valid event per event name (26 lines). | accept |
 | `invalid-malformed-line.jsonl` | Truncated JSON and garbage lines. | reject |
 | `invalid-schema-violations.jsonl` | Wrong protocol, missing required fields, unknown method/event, bad error shapes, non-object line. | reject |

@@ -46,3 +46,4 @@
 {"protocol":"desktop-v1","kind":"request","id":"cat-046","method":"logs.replay","payload":{"after_sequence":400,"limit":100,"level":"info"}}
 {"protocol":"desktop-v1","kind":"request","id":"cat-047","method":"runtime.queue","payload":{}}
 {"protocol":"desktop-v1","kind":"request","id":"cat-048","method":"artifacts.read","payload":{"kind":"facts"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-049","method":"project.reopen","payload":{"direction":"续写后续冒险"}}

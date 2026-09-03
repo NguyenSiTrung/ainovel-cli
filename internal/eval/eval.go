@@ -64,7 +64,6 @@ func Command(argv []string) int {
 	}
 	cfg.FillDefaults()
 	i18n.SetLanguage(cfg.Language)
-	loadOpts := assets.LoadOptions{StoryLanguage: cfg.StoryLanguage}
 	cases, err := LoadCases(*casesPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "eval: 加载 case 失败: %v\n", err)
