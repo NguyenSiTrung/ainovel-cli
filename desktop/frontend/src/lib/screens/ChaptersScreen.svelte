@@ -38,6 +38,7 @@
 
   let editing = $state(false);
   let editorError = $derived(editor.error ? presentError(editor.error.code) : null);
+  let filterQuery = $state('');
 
   // Opening a different chapter always starts in read mode.
   let seenChapter: number | null = null;
@@ -59,6 +60,20 @@
       editing = true;
     }
   }
+
+  let filteredItems = $derived.by(() => {
+    const q = filterQuery.trim().toLowerCase();
+    if (!q) return list.items;
+    return list.items.filter((item) => {
+      const ch = String(item.chapter ?? '');
+      const title = (item.title ?? '').toLowerCase();
+      return ch.includes(q) || title.includes(q);
+    });
+  });
+
+  let editWordCount = $derived(
+    editor.draft ? editor.draft.trim().split(/\s+/).filter(Boolean).length : 0,
+  );
 </script>
 
 <section class="chapters-screen screen" data-testid="chapters-screen">
@@ -75,7 +90,12 @@
   {:else}
     <div class="chapters-body">
       <aside class="pane list-pane" data-testid="chapters-list-pane">
-        <h3>Chapters</h3>
+        <div class="pane-header-row">
+          <h3>Chapters</h3>
+          {#if list.items.length > 0}
+            <span class="chapter-count-pill">{list.items.length}</span>
+          {/if}
+        </div>
         <dl class="facts" data-testid="chapters-progress">
           <div><dt>Saved</dt><dd>{list.completed ?? 0}/{list.total ?? snapshot.total_chapters ?? '?'}</dd></div>
           {#if list.inProgress}
@@ -85,6 +105,17 @@
             <div class="hold"><dt>Rewrites</dt><dd>{list.pendingRewrites} pending</dd></div>
           {/if}
         </dl>
+
+        {#if list.items.length > 3}
+          <div class="chapter-search-box">
+            <input
+              type="text"
+              placeholder="Filter chapters..."
+              bind:value={filterQuery}
+              class="search-input"
+            />
+          </div>
+        {/if}
 
         {#if list.loading && list.items.length === 0}
           <p class="meta" data-testid="chapters-list-loading">loading chapters…</p>
@@ -96,7 +127,7 @@
           </p>
         {:else}
           <ol class="chapter-list" data-testid="chapters-list">
-            {#each list.items as item (item.chapter ?? 0)}
+            {#each filteredItems as item (item.chapter ?? 0)}
               {@const n = item.chapter ?? 0}
               <li>
                 <button
@@ -250,7 +281,7 @@
                 disabled={editor.saving}
               ></textarea>
               <p class="meta" data-testid="chapter-editor-meta">
-                {dirty ? 'modified — save sends your text with the version you started from (base_version)' : 'unmodified'}
+                {dirty ? 'modified — save sends your text with the version you started from (base_version)' : 'unmodified'} · {editWordCount.toLocaleString()} words
               </p>
             {:else}
               {#if editor.baseline.content === ''}
@@ -272,70 +303,113 @@
   .screen {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.9rem 1rem 1.5rem;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem 2rem;
     flex: 1;
     min-height: 0;
   }
   .screen-header h2 {
     margin: 0;
-    font-size: 1.2rem;
+    font-size: 1.35rem;
+    font-weight: 700;
   }
   .screen-description {
-    margin: 0.1rem 0 0;
-    color: var(--text-faint);
-    font-size: 0.82rem;
+    margin: 0.15rem 0 0;
+    color: var(--text-dim);
+    font-size: 0.84rem;
   }
   .owner {
     font-style: italic;
+    display: none;
   }
   .empty-state {
-    padding: 2.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.85rem;
+    padding: 3.5rem 2rem;
     border: 1px dashed var(--border);
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--surface-1) 80%, transparent);
   }
   .empty-state h3 {
-    margin: 0 0 0.3rem;
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text);
   }
   .empty-state p {
     margin: 0;
     color: var(--text-dim);
+    font-size: 0.88rem;
   }
   .chapters-body {
     display: grid;
-    grid-template-columns: minmax(15rem, 22rem) minmax(0, 1fr);
-    gap: 0.75rem;
+    grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
+    gap: 0.85rem;
     flex: 1;
-    min-height: 22rem;
+    min-height: 26rem;
   }
   .pane {
     background: var(--surface-1);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.7rem 0.85rem;
+    border-radius: var(--radius-md);
+    padding: 1rem 1.15rem;
     overflow-y: auto;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .pane-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.65rem;
   }
   .pane h3 {
-    margin: 0 0 0.6rem;
-    font-size: 0.78rem;
+    margin: 0;
+    font-size: 0.74rem;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     color: var(--text-faint);
+    font-weight: 700;
+  }
+  .chapter-count-pill {
+    font-size: 0.68rem;
+    font-family: var(--mono);
+    background: var(--surface-2);
+    padding: 0.1rem 0.45rem;
+    border-radius: var(--radius-full);
+    color: var(--text-dim);
+  }
+  .chapter-search-box {
+    margin-bottom: 0.6rem;
+  }
+  .chapter-search-box .search-input {
+    width: 100%;
+    font-size: 0.8rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: var(--radius-sm);
   }
   .meta {
     margin: 0.2rem 0;
     color: var(--text-faint);
-    font-size: 0.8rem;
+    font-size: 0.82rem;
   }
   .meta.error {
     color: var(--danger);
   }
   .facts {
-    margin: 0 0 0.6rem;
+    margin: 0 0 0.75rem;
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.3rem;
+    padding: 0.6rem 0.8rem;
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
   }
   .facts div {
     display: flex;
@@ -344,11 +418,12 @@
     font-size: 0.8rem;
   }
   .facts dt {
-    color: var(--text-faint);
+    color: var(--text-dim);
     flex: none;
   }
   .facts dd {
     margin: 0;
+    font-weight: 500;
   }
   .facts div.hold dd {
     color: var(--warn);
@@ -359,18 +434,19 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.35rem;
   }
   .chapter-row {
     display: flex;
-    gap: 0.6rem;
+    gap: 0.65rem;
     width: 100%;
     text-align: left;
-    padding: 0.45rem 0.6rem;
-    border-radius: 6px;
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--radius-sm);
     background: transparent;
     border: 1px solid transparent;
     cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
   }
   .chapter-row:hover {
     background: var(--surface-2);
@@ -378,6 +454,7 @@
   .chapter-row.active {
     background: var(--surface-2);
     border-color: var(--accent);
+    box-shadow: inset 2px 0 0 var(--accent);
   }
   .chapter-row.dirty {
     border-color: var(--warn);
@@ -386,31 +463,34 @@
     font-family: var(--mono);
     color: var(--accent);
     flex: none;
-    min-width: 3rem;
+    min-width: 3.2rem;
     font-size: 0.78rem;
+    font-weight: 600;
   }
   .row-body {
     display: flex;
     flex-direction: column;
-    gap: 0.05rem;
+    gap: 0.1rem;
     min-width: 0;
   }
   .row-title {
     color: var(--text);
-    font-size: 0.84rem;
+    font-size: 0.85rem;
+    font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .row-meta {
     color: var(--text-faint);
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     font-family: var(--mono);
   }
   .chapter-view {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.85rem;
+    flex: 1;
   }
   .view-header {
     display: flex;
@@ -418,70 +498,80 @@
     justify-content: space-between;
     gap: 0.75rem;
     flex-wrap: wrap;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-subtle);
   }
   .view-title {
     font-family: var(--mono);
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     color: var(--text-dim);
+    font-weight: 600;
   }
   .view-actions {
     display: flex;
-    gap: 0.4rem;
+    gap: 0.45rem;
     align-items: center;
     flex-wrap: wrap;
   }
   .dirty-badge {
-    font-size: 0.68rem;
+    font-size: 0.7rem;
     color: var(--warn);
-    border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
-    border-radius: 999px;
-    padding: 0.05rem 0.5rem;
+    background: var(--warn-subtle);
+    border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+    border-radius: var(--radius-full);
+    padding: 0.1rem 0.55rem;
+    font-weight: 500;
   }
   .stale-note {
     margin: 0;
-    font-size: 0.8rem;
-    padding: 0.3rem 0.6rem;
-    border-radius: 6px;
-    background: color-mix(in srgb, var(--warn) 12%, transparent);
+    font-size: 0.82rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--radius-sm);
+    background: var(--warn-subtle);
     color: var(--warn);
+    border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent);
   }
   .conflict {
     border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent);
-    background: color-mix(in srgb, var(--danger) 7%, var(--surface-1));
-    border-radius: 8px;
-    padding: 0.6rem 0.8rem;
+    background: var(--danger-subtle);
+    border-radius: var(--radius-md);
+    padding: 0.8rem 1rem;
   }
   .conflict h4 {
-    margin: 0 0 0.25rem;
+    margin: 0 0 0.3rem;
     color: var(--danger);
-    font-size: 0.88rem;
+    font-size: 0.9rem;
+    font-weight: 600;
   }
   .conflict p {
     margin: 0.1rem 0;
-    font-size: 0.82rem;
+    font-size: 0.84rem;
   }
   .conflict-actions {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
-    margin-top: 0.4rem;
+    margin-top: 0.5rem;
   }
   .engine-content {
-    margin-top: 0.3rem;
-    max-height: 10rem;
+    margin-top: 0.35rem;
+    max-height: 12rem;
     overflow-y: auto;
     white-space: pre-wrap;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     color: var(--text-dim);
     background: var(--surface-2);
     border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.75rem;
+    font-family: var(--font-serif);
+    line-height: 1.6;
   }
   .error-box {
     border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent);
-    border-radius: 8px;
-    padding: 0.5rem 0.7rem;
+    border-radius: var(--radius-md);
+    padding: 0.65rem 0.85rem;
+    background: var(--danger-subtle);
     color: var(--danger);
     font-size: 0.84rem;
   }
@@ -494,9 +584,31 @@
   }
   .editor {
     width: 100%;
+    flex: 1;
+    min-height: 22rem;
     resize: vertical;
-    font-family: var(--mono);
-    font-size: 0.84rem;
-    line-height: 1.55;
+    font-family: var(--font-serif);
+    font-size: 0.95rem;
+    line-height: 1.7;
+    padding: 1rem 1.15rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+  :global([data-testid='chapter-content']) {
+    font-family: var(--font-serif);
+    font-size: 1.02rem;
+    line-height: 1.8;
+    max-width: 68ch;
+    margin: 0 auto;
+    width: 100%;
+  }
+  :global([data-testid='chapter-content'] p) {
+    margin: 0 0 1.15rem;
+  }
+  :global([data-testid='chapter-content'] h1, [data-testid='chapter-content'] h2) {
+    font-family: var(--font-sans);
+    letter-spacing: -0.02em;
+    margin: 1.5rem 0 0.8rem;
   }
 </style>

@@ -366,95 +366,122 @@
   .screen {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.9rem 1rem 1.5rem;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem 2rem;
     flex: 1;
     min-height: 0;
     overflow-y: auto;
   }
   .screen-header h2 {
     margin: 0;
-    font-size: 1.2rem;
+    font-size: 1.35rem;
+    font-weight: 700;
   }
   .screen-description {
-    margin: 0.1rem 0 0;
-    color: var(--text-faint);
-    font-size: 0.82rem;
+    margin: 0.15rem 0 0;
+    color: var(--text-dim);
+    font-size: 0.84rem;
   }
   .owner {
     font-style: italic;
+    display: none;
   }
   .empty-state {
-    padding: 2.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.85rem;
+    padding: 3.5rem 2rem;
     border: 1px dashed var(--border);
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--surface-1) 80%, transparent);
   }
   .empty-state h3 {
-    margin: 0 0 0.3rem;
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text);
   }
   .empty-state p {
     margin: 0;
     color: var(--text-dim);
+    font-size: 0.88rem;
   }
   .actions-row {
     display: flex;
-    gap: 0.6rem;
+    gap: 0.75rem;
     align-items: center;
     flex-wrap: wrap;
   }
   .applied {
     color: var(--ok);
     font-size: 0.82rem;
+    font-weight: 500;
+    background: var(--ok-subtle);
+    padding: 0.25rem 0.65rem;
+    border-radius: var(--radius-full);
   }
   .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: 0.85rem;
     align-items: start;
   }
   .card {
     background: var(--surface-1);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.75rem 0.9rem;
+    border-radius: var(--radius-md);
+    padding: 1.1rem 1.25rem;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.65rem;
+    box-shadow: var(--shadow-sm);
   }
   .card h3 {
     margin: 0;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-faint);
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    font-weight: 700;
   }
   label {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.25rem;
     font-size: 0.8rem;
     color: var(--text-dim);
+    font-weight: 500;
   }
   label.check {
     flex-direction: row;
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.55rem;
+    cursor: pointer;
   }
   label.form-gap {
-    margin-top: 0.4rem;
+    margin-top: 0.5rem;
   }
   select {
-    font-size: 0.82rem;
+    font-size: 0.84rem;
+    width: 100%;
   }
   button.primary {
     align-self: flex-start;
+    margin-top: 0.2rem;
   }
   .facts {
-    margin: 0;
+    margin: 0.35rem 0 0;
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.35rem;
+    padding: 0.65rem 0.8rem;
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
   }
   .facts div {
     display: flex;
@@ -463,13 +490,14 @@
     font-size: 0.82rem;
   }
   .facts dt {
-    color: var(--text-faint);
+    color: var(--text-dim);
     flex: none;
   }
   .facts dd {
     margin: 0;
     text-align: right;
     overflow-wrap: anywhere;
+    font-weight: 500;
   }
   .mono {
     font-family: var(--mono);
@@ -478,12 +506,13 @@
   .meta {
     margin: 0;
     color: var(--text-faint);
-    font-size: 0.78rem;
+    font-size: 0.8rem;
   }
   .error-box {
     border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent);
-    border-radius: 8px;
-    padding: 0.5rem 0.7rem;
+    background: var(--danger-subtle);
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 0.85rem;
     color: var(--danger);
     font-size: 0.84rem;
   }
@@ -496,6 +525,7 @@
   }
   button.small {
     font-size: 0.75rem;
-    padding: 0.2rem 0.55rem;
+    padding: 0.2rem 0.65rem;
+    border-radius: var(--radius-full);
   }
 </style>

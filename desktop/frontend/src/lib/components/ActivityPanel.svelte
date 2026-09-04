@@ -37,25 +37,30 @@
   .activity-panel {
     display: flex;
     flex-direction: column;
+    flex: 1;
     min-height: 0;
     overflow: hidden;
+    background: var(--surface-1);
   }
   h3 {
     margin: 0 0 0.4rem;
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-faint);
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.45rem;
+    font-weight: 700;
   }
   .count {
-    font-size: 0.72rem;
+    font-size: 0.68rem;
+    background: var(--surface-2);
     border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 0 0.4rem;
+    border-radius: var(--radius-full);
+    padding: 0.05rem 0.45rem;
     color: var(--text-dim);
+    font-weight: 600;
   }
   ul {
     list-style: none;
@@ -65,37 +70,45 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.2rem;
   }
   li {
     display: flex;
     gap: 0.45rem;
-    align-items: baseline;
+    align-items: center;
     font-size: 0.76rem;
     font-family: var(--mono);
-    padding: 0.1rem 0.2rem;
-    border-radius: 4px;
+    padding: 0.2rem 0.35rem;
+    border-radius: var(--radius-xs);
+    border: 1px solid transparent;
+    transition: background var(--transition-fast);
   }
   li:hover {
     background: var(--surface-2);
+    border-color: var(--border-subtle);
   }
   .seq {
     color: var(--text-faint);
-    min-width: 2.5rem;
+    min-width: 2.2rem;
     text-align: right;
+    font-size: 0.7rem;
   }
   .name {
     color: var(--accent);
+    font-weight: 500;
     white-space: nowrap;
+    font-size: 0.74rem;
   }
   .summary {
     color: var(--text-dim);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: 0.72rem;
   }
   .empty {
     color: var(--text-faint);
-    font-size: 0.8rem;
+    font-size: 0.78rem;
+    font-style: italic;
   }
 </style>

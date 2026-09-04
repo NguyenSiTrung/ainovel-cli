@@ -136,11 +136,12 @@
   .revisions {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.8rem 1rem;
+    gap: 0.65rem;
+    padding: 0.95rem 1.15rem;
     background: var(--surface-1);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
   }
   .revisions-header {
     display: flex;
@@ -150,39 +151,44 @@
   }
   h3 {
     margin: 0;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-faint);
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    font-weight: 700;
   }
   .meta {
     margin: 0;
     color: var(--text-faint);
-    font-size: 0.78rem;
+    font-size: 0.8rem;
   }
   .meta.ok {
     color: var(--ok);
+    font-weight: 500;
   }
   .rev-error {
     margin: 0;
     color: var(--danger);
     font-size: 0.82rem;
+    background: var(--danger-subtle);
+    padding: 0.4rem 0.65rem;
+    border-radius: var(--radius-xs);
   }
   .code {
     font-family: var(--mono);
     font-size: 0.72rem;
   }
   .changed p {
-    margin: 0 0 0.3rem;
+    margin: 0 0 0.4rem;
     font-size: 0.85rem;
   }
   .changed ul {
     list-style: none;
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.6rem;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.35rem;
   }
   .changed li {
     display: flex;
@@ -190,26 +196,30 @@
     justify-content: space-between;
     gap: 0.5rem;
     font-size: 0.84rem;
+    padding: 0.3rem 0.5rem;
+    background: var(--surface-2);
+    border-radius: var(--radius-xs);
   }
   .confirm {
     border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
-    background: color-mix(in srgb, var(--warn) 8%, var(--surface-1));
-    border-radius: 8px;
-    padding: 0.6rem 0.8rem;
+    background: var(--warn-subtle);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
   }
   .confirm h4 {
-    margin: 0 0 0.25rem;
-    font-size: 0.88rem;
+    margin: 0 0 0.3rem;
+    font-size: 0.9rem;
     color: var(--warn);
+    font-weight: 600;
   }
   .confirm p {
-    margin: 0.1rem 0;
+    margin: 0.15rem 0;
     font-size: 0.84rem;
   }
   .confirm-actions {
     display: flex;
     gap: 0.5rem;
-    margin-top: 0.4rem;
+    margin-top: 0.5rem;
   }
   .sync-progress p {
     margin: 0;
@@ -218,27 +228,30 @@
   .applied {
     color: var(--ok);
     font-family: var(--mono);
-    font-size: 0.78rem;
+    font-size: 0.8rem;
+    font-weight: 600;
   }
   .sync-result {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    border-radius: 8px;
-    padding: 0.45rem 0.7rem;
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.8rem;
   }
   .sync-result p {
     margin: 0;
     font-size: 0.84rem;
   }
   .sync-result.ok {
-    background: color-mix(in srgb, var(--ok) 10%, transparent);
+    background: var(--ok-subtle);
     color: var(--ok);
+    border: 1px solid color-mix(in srgb, var(--ok) 30%, transparent);
   }
   .sync-result.error {
-    background: color-mix(in srgb, var(--danger) 10%, transparent);
+    background: var(--danger-subtle);
     color: var(--danger);
+    border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
   }
   button.small {
     font-size: 0.75rem;

@@ -263,91 +263,116 @@
   .run-controls {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    padding: 0.8rem 1rem;
+    gap: 0.75rem;
+    padding: 0.95rem 1.15rem;
     background: var(--surface-1);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
   }
   .controls-header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
     flex-wrap: wrap;
+    padding-bottom: 0.45rem;
+    border-bottom: 1px solid var(--border-subtle);
   }
   h3 {
     margin: 0;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-faint);
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    font-weight: 700;
   }
   .run-facts {
     font-size: 0.8rem;
     color: var(--text-dim);
     font-family: var(--mono);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
   }
   .hint {
     margin: 0;
     color: var(--text-faint);
     font-size: 0.85rem;
+    font-style: italic;
   }
   .terminal-note {
     margin: 0;
     font-size: 0.82rem;
-    padding: 0.3rem 0.6rem;
-    border-radius: 6px;
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
   }
   .terminal-note.failed {
-    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    background: var(--danger-subtle);
     color: var(--danger);
+    border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
   }
   .terminal-note.paused {
-    background: color-mix(in srgb, var(--warn) 12%, transparent);
+    background: var(--warn-subtle);
     color: var(--warn);
+    border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent);
   }
   .control-row {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.6rem;
     flex-wrap: wrap;
     align-items: flex-start;
   }
   .control-row textarea {
-    flex: 1 1 16rem;
+    flex: 1 1 18rem;
     resize: vertical;
+    min-height: 2.75rem;
+    font-size: 0.84rem;
+    line-height: 1.45;
   }
   .steer-group,
   .continue-group,
   .reopen-group {
     display: flex;
     gap: 0.5rem;
-    flex: 1 1 14rem;
+    flex: 1 1 15rem;
   }
   .steer-group input,
   .continue-group input,
   .reopen-group input {
     flex: 1;
     min-width: 10rem;
+    height: 2.1rem;
   }
   .advance-toggle {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.45rem;
+    background: var(--surface-2);
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    width: fit-content;
   }
   .toggle-label {
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     color: var(--text-dim);
-    margin-right: 0.15rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
   .segment {
-    font-size: 0.78rem;
-    padding: 0.2rem 0.7rem;
-    border-radius: 999px;
+    font-size: 0.76rem;
+    padding: 0.15rem 0.65rem;
+    border-radius: var(--radius-full);
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-faint);
   }
   .segment.active {
     background: var(--surface-3);
-    border-color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 50%, transparent);
     color: var(--accent);
     font-weight: 600;
   }
@@ -359,11 +384,15 @@
     margin: 0;
     font-size: 0.8rem;
     font-family: var(--mono);
+    padding: 0.35rem 0.65rem;
+    border-radius: var(--radius-xs);
   }
   .outcome.ok {
     color: var(--ok);
+    background: var(--ok-subtle);
   }
   .outcome.error {
     color: var(--danger);
+    background: var(--danger-subtle);
   }
 </style>

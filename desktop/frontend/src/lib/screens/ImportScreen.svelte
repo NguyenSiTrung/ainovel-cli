@@ -223,166 +223,203 @@
   .screen {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.9rem 1rem 1.5rem;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem 2rem;
     flex: 1;
     min-height: 0;
   }
   .screen-header h2 {
     margin: 0;
-    font-size: 1.2rem;
+    font-size: 1.35rem;
+    font-weight: 700;
   }
   .screen-description {
-    margin: 0.1rem 0 0;
-    color: var(--text-faint);
-    font-size: 0.82rem;
+    margin: 0.15rem 0 0;
+    color: var(--text-dim);
+    font-size: 0.84rem;
   }
   .owner {
     font-style: italic;
+    display: none;
   }
   .empty-state {
-    padding: 2.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.85rem;
+    padding: 3.5rem 2rem;
     border: 1px dashed var(--border);
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--surface-1) 80%, transparent);
   }
   .empty-state h3 {
-    margin: 0 0 0.3rem;
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text);
   }
   .empty-state p {
     margin: 0;
     color: var(--text-dim);
+    font-size: 0.88rem;
   }
   .staged-banner {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
     margin: 0;
-    font-size: 0.8rem;
+    padding: 0.5rem 0.85rem;
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
     color: var(--text-dim);
   }
   .staged-badge,
   .durable-badge {
-    font-size: 0.64rem;
+    font-size: 0.65rem;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    border-radius: 999px;
-    padding: 0.05rem 0.45rem;
-    border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
-    color: var(--warn);
+    letter-spacing: 0.08em;
+    border-radius: var(--radius-full);
+    padding: 0.1rem 0.55rem;
+    font-weight: 600;
     white-space: nowrap;
   }
+  .staged-badge {
+    border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
+    background: var(--warn-subtle);
+    color: var(--warn);
+  }
   .durable-badge {
-    border-color: color-mix(in srgb, var(--ok) 55%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ok) 55%, transparent);
+    background: var(--ok-subtle);
     color: var(--ok);
   }
   .import-layout {
     display: grid;
-    grid-template-columns: minmax(16rem, 22rem) minmax(14rem, 1fr) minmax(11rem, 14rem);
-    gap: 0.75rem;
+    grid-template-columns: minmax(18rem, 24rem) minmax(16rem, 1fr) minmax(13rem, 16rem);
+    gap: 0.85rem;
     align-items: start;
   }
   .pane {
     background: var(--surface-1);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.8rem 0.9rem;
+    border-radius: var(--radius-md);
+    padding: 1.1rem 1.25rem;
+    box-shadow: var(--shadow-sm);
   }
   .pane h3 {
-    margin: 0 0 0.6rem;
-    font-size: 0.78rem;
+    margin: 0 0 0.75rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-faint);
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
   }
   .pane .form-gap {
-    margin-top: 0.9rem;
+    margin-top: 1.15rem;
   }
   .status {
-    font-size: 0.68rem;
+    font-size: 0.7rem;
     color: var(--text-dim);
     border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 0 0.45rem;
+    border-radius: var(--radius-full);
+    padding: 0.05rem 0.55rem;
     text-transform: none;
     letter-spacing: 0;
+    font-weight: 500;
   }
   .meta {
-    margin: 0.25rem 0;
+    margin: 0.3rem 0;
     color: var(--text-faint);
-    font-size: 0.78rem;
+    font-size: 0.8rem;
+    line-height: 1.45;
   }
   .meta-inline {
     display: block;
     color: var(--text-faint);
-    font-size: 0.72rem;
+    font-size: 0.74rem;
+    margin-top: 0.15rem;
   }
   .big {
-    padding: 0.5rem 1rem;
+    padding: 0.65rem 1.25rem;
     font-size: 0.9rem;
+    font-weight: 600;
+    width: 100%;
   }
   .option-row {
     display: flex;
     align-items: baseline;
-    gap: 0.5rem;
+    gap: 0.55rem;
     font-size: 0.82rem;
-    margin-bottom: 0.45rem;
+    margin-bottom: 0.55rem;
     color: var(--text-dim);
   }
   .option-row select,
   .option-row input[type='text'] {
     flex: 1;
     min-width: 0;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
   }
   .actions {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
-    margin-top: 0.6rem;
+    margin-top: 0.75rem;
   }
   .fact-list {
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.6rem;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.35rem;
+    padding: 0.65rem 0.8rem;
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
   }
   .fact-list div {
     display: flex;
     justify-content: space-between;
-    gap: 0.6rem;
+    gap: 0.75rem;
     font-size: 0.82rem;
   }
   .fact-list div.detail dd {
     white-space: normal;
   }
   .fact-list dt {
-    color: var(--text-faint);
+    color: var(--text-dim);
     flex: none;
   }
   .fact-list dd {
     margin: 0;
     text-align: right;
     overflow-wrap: anywhere;
+    font-weight: 500;
   }
   .recent {
     list-style: none;
-    margin: 0.4rem 0;
+    margin: 0.5rem 0;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.25rem;
     font-family: var(--mono);
-    font-size: 0.72rem;
-    max-height: 11rem;
+    font-size: 0.74rem;
+    max-height: 12rem;
     overflow-y: auto;
   }
   .recent li {
     display: flex;
     gap: 0.5rem;
     color: var(--text-dim);
+    padding: 0.2rem 0.4rem;
+    border-radius: var(--radius-xs);
+    background: var(--surface-2);
   }
   .recent li.x {
     color: var(--warn);
@@ -393,6 +430,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-weight: 500;
   }
   .recent .detail {
     overflow: hidden;
@@ -403,11 +441,13 @@
     color: var(--ok);
     margin: 0 0 0.4rem;
     font-size: 0.9rem;
+    font-weight: 600;
   }
   .error-box {
     border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent);
-    border-radius: 8px;
-    padding: 0.5rem 0.7rem;
+    background: var(--danger-subtle);
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 0.85rem;
     color: var(--danger);
     font-size: 0.84rem;
   }
@@ -420,7 +460,8 @@
   }
   button.small {
     font-size: 0.75rem;
-    padding: 0.2rem 0.55rem;
-    margin-top: 0.3rem;
+    padding: 0.2rem 0.65rem;
+    margin-top: 0.35rem;
+    border-radius: var(--radius-full);
   }
 </style>

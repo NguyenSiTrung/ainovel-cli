@@ -59,57 +59,88 @@
   .stream-panel {
     display: flex;
     flex-direction: column;
+    flex: 1;
     min-height: 0;
     overflow: hidden;
+    background: var(--surface-1);
   }
   h3 {
     margin: 0 0 0.4rem;
-    font-size: 0.8rem;
+    font-size: 0.76rem;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-faint);
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.45rem;
+    font-weight: 700;
   }
   .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
     font-size: 0.68rem;
     color: var(--ok);
-    border: 1px solid color-mix(in srgb, var(--ok) 50%, transparent);
-    border-radius: 999px;
-    padding: 0 0.4rem;
+    background: color-mix(in srgb, var(--ok) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent);
+    border-radius: var(--radius-full);
+    padding: 0.05rem 0.45rem;
     text-transform: lowercase;
+    font-weight: 600;
+  }
+  .live::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 5px var(--ok);
   }
   .current {
     font-family: var(--mono);
-    font-size: 0.8rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
     white-space: pre-wrap;
     word-break: break-word;
-    max-height: 8rem;
+    flex: 1;
+    min-height: 5rem;
+    max-height: 14rem;
     overflow-y: auto;
     background: var(--surface-2);
-    border-radius: 6px;
-    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 0.55rem 0.65rem;
+    color: var(--text);
   }
   .empty {
     color: var(--text-faint);
+    font-style: italic;
+    font-size: 0.78rem;
   }
   .history {
     font-family: var(--mono);
-    font-size: 0.72rem;
+    font-size: 0.74rem;
+    line-height: 1.4;
     color: var(--text-dim);
-    max-height: 6rem;
+    max-height: 8rem;
     overflow-y: auto;
     margin-top: 0.4rem;
     white-space: pre-wrap;
     word-break: break-word;
+    background: var(--surface-0);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xs);
+    padding: 0.4rem 0.5rem;
   }
   .clear-marker {
     color: var(--warn);
-    margin: 0.2rem 0;
+    margin: 0.25rem 0;
     user-select: none;
+    font-size: 0.7rem;
+    opacity: 0.9;
   }
   .channel-tag {
-    color: var(--text-faint);
+    color: var(--accent);
+    font-weight: 500;
   }
 </style>
