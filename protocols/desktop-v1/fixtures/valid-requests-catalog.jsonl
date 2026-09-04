@@ -47,3 +47,7 @@
 {"protocol":"desktop-v1","kind":"request","id":"cat-047","method":"runtime.queue","payload":{}}
 {"protocol":"desktop-v1","kind":"request","id":"cat-048","method":"artifacts.read","payload":{"kind":"facts"}}
 {"protocol":"desktop-v1","kind":"request","id":"cat-049","method":"project.reopen","payload":{"direction":"续写后续冒险"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-050","method":"config.save_provider","payload":{"provider":"custom-proxy","type":"openai","base_url":"https://api.example.com/v1","models":[{"name":"gpt-4o"}]}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-051","method":"config.test_provider","payload":{"provider":"custom-proxy","type":"openai","base_url":"https://api.example.com/v1","models":[{"name":"gpt-4o"}],"test_model":"gpt-4o"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-052","method":"config.delete_provider","payload":{"provider":"custom-proxy"}}
+{"protocol":"desktop-v1","kind":"request","id":"cat-053","method":"config.fetch_provider_models","payload":{"type":"openai","base_url":"https://api.example.com/v1"}}

@@ -98,8 +98,10 @@ const (
 // New 创建 Host。
 func New(cfg bootstrap.Config, bundle assets.Bundle, options ...NewOption) (*Host, error) {
 	cfg.FillDefaults()
-	if err := cfg.ValidateBase(); err != nil {
-		return nil, err
+	if cfg.Provider != "" {
+		if err := cfg.ValidateBase(); err != nil {
+			return nil, err
+		}
 	}
 	var opts newOptions
 	for _, option := range options {
@@ -370,6 +372,9 @@ func (h *Host) StartPrepared(rawRequirement string) error {
 		return fmt.Errorf("阶段共创进行中，请先结束共创")
 	}
 	h.mu.Unlock()
+	if h.cfg.Provider == "" {
+		return fmt.Errorf("no LLM provider configured; please configure a provider in Settings before starting a run")
+	}
 
 	rawRequirement = strings.TrimSpace(rawRequirement)
 	if rawRequirement == "" {
@@ -464,6 +469,13 @@ func (h *Host) refuseNewBookOverExisting() error {
 // runEnded 会把 lifecycle 落到终态;若顺序颠倒,runEnded 先跑、这里再写 running,
 // UI 将永远显示"运行中"而引擎实际已停。
 func (h *Host) startEngine(initial *flow.Instruction) bool {
+	if h.cfg.Provider == "" {
+		h.emitEvent(Event{
+			Time: time.Now(), Category: "ERROR", Level: "error",
+			Summary: "未配置 LLM Provider，无法启动创作引擎；请在 Settings 中添加 Provider",
+		})
+		return false
+	}
 	// 跨重启门禁：存在未完成导入工作区时，禁止普通 Engine 消费半发布状态（RFC §12.5）。
 	active, done, importErr := imp.ResumeStatus(h.store)
 	if importErr != nil {

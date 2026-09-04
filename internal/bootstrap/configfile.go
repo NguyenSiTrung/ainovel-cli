@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -265,6 +266,26 @@ func SaveProviderConfig(path string, provider string, pc ProviderConfig) error {
 		target.Providers = make(map[string]ProviderConfig)
 	}
 	target.Providers[provider] = pc
+	return SaveConfig(path, target)
+}
+
+// DeleteProviderConfig 从目标配置文件中删除指定 provider。
+func DeleteProviderConfig(path string, provider string) error {
+	provider = strings.TrimSpace(provider)
+	if provider == "" {
+		return fmt.Errorf("provider name cannot be empty")
+	}
+	target, found, err := loadOptionalJSON(path)
+	if err != nil {
+		return err
+	}
+	if !found || target.Providers == nil {
+		return nil
+	}
+	if _, exists := target.Providers[provider]; !exists {
+		return nil
+	}
+	delete(target.Providers, provider)
 	return SaveConfig(path, target)
 }
 

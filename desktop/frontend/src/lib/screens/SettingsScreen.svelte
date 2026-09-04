@@ -13,9 +13,11 @@
    */
   import { onMount } from 'svelte';
 
-  import { getPaths } from '$lib/api/desktop';
+  import { getPaths, type ProviderSummary } from '$lib/api/desktop';
+  import ProviderEditorModal from '$lib/components/ProviderEditorModal.svelte';
   import { currentLanguage, t } from '$lib/locale';
   import {
+    deleteProviderFromUi,
     dismissSettingsMessage,
     LANGUAGE_CHOICES,
     loadModelOptions,
@@ -49,6 +51,8 @@
   let selectedLanguage = $state('');
   let selectedStoryLanguage = $state('');
   let projectsDir = $state<string | null>(null);
+  let showProviderModal = $state(false);
+  let editingProvider = $state<ProviderSummary | null>(null);
 
   const LANGUAGE_LABELS: Record<string, string> = {
     en: 'English (en)',
@@ -149,6 +153,26 @@
   function money(value: number | undefined): string {
     return typeof value === 'number' && Number.isFinite(value) ? `$${value.toFixed(2)}` : '—';
   }
+
+  function openAddProvider(): void {
+    editingProvider = null;
+    showProviderModal = true;
+  }
+
+  function openEditProvider(): void {
+    editingProvider = activeProviderSummary ?? null;
+    showProviderModal = true;
+  }
+
+  async function handleDeleteProvider(): Promise<void> {
+    if (!selectedProvider || selectedProvider === view?.provider) return;
+    const toDelete = selectedProvider;
+    const ok = await deleteProviderFromUi(toDelete);
+    if (ok) {
+      selectedProvider = view?.provider ?? '';
+      if (selectedProvider !== '') void loadModelOptions(selectedProvider);
+    }
+  }
 </script>
 
 <section class="settings-screen screen" data-testid="settings-screen">
@@ -186,16 +210,53 @@
       <article class="card" data-testid="settings-model">
         <h3>Provider &amp; model</h3>
         <p class="meta">
-          Active: <span class="mono">{view?.provider ?? '—'} / {view?.model ?? '—'}</span>
+          Active: <span class="mono">{view?.provider || '—'} / {view?.model || '—'}</span>
         </p>
+        {#if providerNames.length === 0}
+          <div class="empty-provider-notice" data-testid="settings-no-providers">
+            No providers configured yet. Click "+ Add provider" below to get started.
+          </div>
+        {/if}
         <label>
           provider
           <select value={selectedProvider} onchange={changeProvider} data-testid="settings-provider-select">
+            {#if providerNames.length === 0}
+              <option value="" disabled selected>No providers configured</option>
+            {/if}
             {#each providerNames as name (name)}
               <option value={name}>{name}</option>
             {/each}
           </select>
         </label>
+        <div class="provider-actions">
+          <button
+            type="button"
+            class="small"
+            onclick={openAddProvider}
+            data-testid="settings-provider-add"
+          >
+            + Add provider
+          </button>
+          <button
+            type="button"
+            class="small"
+            disabled={!selectedProvider}
+            onclick={openEditProvider}
+            data-testid="settings-provider-edit"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            class="small danger"
+            disabled={!selectedProvider || selectedProvider === view?.provider || settings.mutations.provider !== 'idle'}
+            title={selectedProvider === view?.provider ? 'Active default provider cannot be deleted' : undefined}
+            onclick={handleDeleteProvider}
+            data-testid="settings-provider-delete"
+          >
+            Delete
+          </button>
+        </div>
         <label>
           model
           <select value={selectedModel} onchange={changeModel} data-testid="settings-model-select">
@@ -360,6 +421,16 @@
       </article>
     </div>
   {/if}
+  <ProviderEditorModal
+    open={showProviderModal}
+    provider={editingProvider}
+    onclose={() => { showProviderModal = false; }}
+    onsaved={(newProviderName) => {
+      selectedProvider = newProviderName;
+      showProviderModal = false;
+      void loadModelOptions(newProviderName);
+    }}
+  />
 </section>
 
 <style>
@@ -439,6 +510,15 @@
     flex-direction: column;
     gap: 0.65rem;
     box-shadow: var(--shadow-sm);
+  }
+  .empty-provider-notice {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    background: var(--surface-2);
+    border: 1px dashed var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.65rem;
+    line-height: 1.4;
   }
   .card h3 {
     margin: 0;
@@ -527,5 +607,19 @@
     font-size: 0.75rem;
     padding: 0.2rem 0.65rem;
     border-radius: var(--radius-full);
+  }
+  .provider-actions {
+    display: flex;
+    gap: 0.45rem;
+    align-items: center;
+    margin-top: 0.15rem;
+  }
+  button.danger {
+    background: var(--danger-subtle);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+  }
+  button.danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--danger) 25%, transparent);
   }
 </style>

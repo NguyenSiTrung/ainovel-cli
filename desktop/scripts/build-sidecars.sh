@@ -30,6 +30,14 @@ root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 out_dir="$root/desktop/src-tauri/binaries"
 main_pkg="./cmd/ainovel-cli"
 
+GO_BIN="${GO_BIN:-go}"
+if ! command -v "$GO_BIN" >/dev/null 2>&1; then
+    if [ -x "$HOME/.local/go/bin/go" ]; then
+        GO_BIN="$HOME/.local/go/bin/go"
+    elif [ -x "/usr/local/go/bin/go" ]; then
+        GO_BIN="/usr/local/go/bin/go"
+    fi
+fi
 # ── version metadata defaults ────────────────────────────────────────────────
 if [ -z "${DESKTOP_VERSION:-}" ]; then
     DESKTOP_VERSION=$(git -C "$root" describe --tags --always 2>/dev/null || echo dev)
@@ -69,7 +77,7 @@ for triple in $targets; do
 
     echo "==> building $name (GOOS=$goos GOARCH=$goarch, version=$DESKTOP_VERSION commit=$DESKTOP_COMMIT date=$DESKTOP_DATE)"
     (cd "$root" &&
-        GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 go build \
+        GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 "$GO_BIN" build \
             -trimpath \
             -ldflags "-s -w -X main.version=$DESKTOP_VERSION -X main.commit=$DESKTOP_COMMIT -X main.date=$DESKTOP_DATE" \
             -o "$out_dir/$name" "$main_pkg")

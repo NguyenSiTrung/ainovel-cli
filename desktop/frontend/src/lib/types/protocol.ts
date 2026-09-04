@@ -85,6 +85,10 @@ export type MethodName =
   | 'config.set_thinking'
   | 'config.set_language'
   | 'config.set_story_language'
+  | 'config.save_provider'
+  | 'config.test_provider'
+  | 'config.delete_provider'
+  | 'config.fetch_provider_models'
   // diagnostics / usage / logs / runtime
   | 'diagnostics.snapshot'
   | 'diagnostics.export'

@@ -23,16 +23,20 @@ vi.mock('@tauri-apps/api/event', async () => {
 import { get } from 'svelte/store';
 
 import {
+  deleteProviderFromUi,
   dismissSettingsMessage,
+  fetchProviderModelsFromUi,
   loadModelOptions,
   refreshConfig,
   refreshThinkingLevels,
   resetSettingsState,
+  saveProviderFromUi,
   setLanguageFromUi,
   setStoryLanguageFromUi,
   setThinkingFromUi,
   settingsState,
   switchModelFromUi,
+  testProviderFromUi,
 } from '$lib/settings';
 import { connectionState, disposeDesktop, projectSnapshot } from '$lib/stores/desktop';
 import { installBridgeMarker, tauri } from '$tests/tauri-mock';
@@ -289,5 +293,72 @@ describe('explicit mutations (one protocol request each)', () => {
     expect(get(settingsState).message).not.toBeNull();
     dismissSettingsMessage();
     expect(get(settingsState).message).toBeNull();
+  });
+
+  it('saveProviderFromUi calls config.save_provider and refreshes config', async () => {
+    scriptEngine({
+      'config.save_provider': () => ({
+        saved: true,
+        provider: { name: 'new-proxy', type: 'openai', models: ['model-1'] },
+      }),
+    });
+    const ok = await saveProviderFromUi({
+      provider: 'new-proxy',
+      type: 'openai',
+      models: [{ name: 'model-1' }],
+    });
+    expect(ok).toBe(true);
+    expect(callsOfMethod('config.save_provider')).toBe(1);
+    expect(get(settingsState).message).toContain('provider new-proxy saved');
+  });
+
+  it('testProviderFromUi returns latency on success and error on failure', async () => {
+    scriptEngine({
+      'config.test_provider': () => ({
+        success: true,
+        latency_ms: 150,
+      }),
+    });
+    const res = await testProviderFromUi({
+      provider: 'new-proxy',
+      type: 'openai',
+      models: [{ name: 'model-1' }],
+      test_model: 'model-1',
+    });
+    expect(res.ok).toBe(true);
+    expect(res.latencyMs).toBe(150);
+  });
+
+  it('deleteProviderFromUi calls config.delete_provider and notes applied', async () => {
+    scriptEngine({
+      'config.delete_provider': () => ({
+        deleted: true,
+        provider: 'old-proxy',
+      }),
+    });
+    const ok = await deleteProviderFromUi('old-proxy');
+    expect(ok).toBe(true);
+    expect(callsOfMethod('config.delete_provider')).toBe(1);
+    expect(get(settingsState).message).toContain('provider old-proxy deleted');
+  });
+
+  it('deleteProviderFromUi with empty provider sends nothing', async () => {
+    scriptEngine();
+    expect(await deleteProviderFromUi('')).toBe(false);
+    expect(callsOfMethod('config.delete_provider')).toBe(0);
+  });
+
+  it('fetchProviderModelsFromUi calls config.fetch_provider_models and returns models', async () => {
+    scriptEngine({
+      'config.fetch_provider_models': () => ({
+        models: ['gpt-4o', 'gpt-4o-mini', 'o3-mini'],
+      }),
+    });
+    const models = await fetchProviderModelsFromUi({
+      type: 'openai',
+      base_url: 'https://api.example.com/v1',
+    });
+    expect(models).toEqual(['gpt-4o', 'gpt-4o-mini', 'o3-mini']);
+    expect(callsOfMethod('config.fetch_provider_models')).toBe(1);
   });
 });

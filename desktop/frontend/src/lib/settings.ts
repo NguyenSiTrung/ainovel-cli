@@ -23,15 +23,23 @@
 import { get, writable, type Writable } from 'svelte/store';
 
 import {
+  configDeleteProvider,
+  configFetchProviderModels,
   configGet,
   configModels,
+  configSaveProvider,
   configSetLanguage,
   configSetStoryLanguage,
   configSetThinking,
   configSwitchModel,
+  configTestProvider,
   configThinkingLevels,
+  toStructuredError,
   type ConfigGetResult,
   type ModelOption,
+  type FetchProviderModelsPayload,
+  type SaveProviderPayload,
+  type TestProviderPayload,
   type ThinkingLevelsResult,
 } from '$lib/api/desktop';
 import { setLocale } from '$lib/locale';
@@ -45,6 +53,143 @@ import type { StructuredError } from '$lib/types/protocol';
 
 /** Engine-supported UI/story language codes (internal/i18n catalog: vi/en/zh). */
 export const LANGUAGE_CHOICES = ['en', 'vi', 'zh'] as const;
+
+export interface ProviderPreset {
+  id: string;
+  name: string;
+  label: string;
+  type: string;
+  api?: string;
+  baseUrl?: string;
+  apiKeyOptional?: boolean;
+  defaultModels: Array<{ name: string; context_window?: number }>;
+}
+
+export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
+  {
+    id: 'custom',
+    name: '',
+    label: 'Custom Provider',
+    type: 'openai',
+    api: 'chat',
+    defaultModels: [{ name: '', context_window: 128000 }],
+  },
+  {
+    id: 'openrouter',
+    name: 'openrouter',
+    label: 'OpenRouter',
+    type: 'openai',
+    api: 'chat',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    defaultModels: [
+      { name: 'anthropic/claude-3.5-sonnet', context_window: 200000 },
+      { name: 'google/gemini-2.5-flash', context_window: 1000000 },
+    ],
+  },
+  {
+    id: 'anthropic',
+    name: 'anthropic',
+    label: 'Anthropic',
+    type: 'anthropic',
+    defaultModels: [
+      { name: 'claude-sonnet-4', context_window: 1000000 },
+      { name: 'claude-3-5-haiku', context_window: 200000 },
+    ],
+  },
+  {
+    id: 'gemini',
+    name: 'gemini',
+    label: 'Google Gemini',
+    type: 'gemini',
+    defaultModels: [
+      { name: 'gemini-2.5-flash', context_window: 1000000 },
+      { name: 'gemini-2.5-pro', context_window: 1000000 },
+    ],
+  },
+  {
+    id: 'openai',
+    name: 'openai',
+    label: 'OpenAI',
+    type: 'openai',
+    api: 'chat',
+    defaultModels: [
+      { name: 'gpt-4o', context_window: 128000 },
+      { name: 'gpt-4o-mini', context_window: 128000 },
+      { name: 'o3-mini', context_window: 200000 },
+    ],
+  },
+  {
+    id: 'deepseek',
+    name: 'deepseek',
+    label: 'DeepSeek',
+    type: 'openai',
+    api: 'chat',
+    baseUrl: 'https://api.deepseek.com/v1',
+    defaultModels: [
+      { name: 'deepseek-chat', context_window: 128000 },
+      { name: 'deepseek-reasoner', context_window: 128000 },
+    ],
+  },
+  {
+    id: 'qwen',
+    name: 'qwen',
+    label: 'Qwen (DashScope)',
+    type: 'openai',
+    api: 'chat',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    defaultModels: [
+      { name: 'qwen-max', context_window: 32000 },
+      { name: 'qwen-plus', context_window: 128000 },
+    ],
+  },
+  {
+    id: 'glm',
+    name: 'glm',
+    label: 'GLM (Zhipu)',
+    type: 'openai',
+    api: 'chat',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    defaultModels: [
+      { name: 'glm-4-plus', context_window: 128000 },
+      { name: 'glm-4-flash', context_window: 128000 },
+    ],
+  },
+  {
+    id: 'grok',
+    name: 'grok',
+    label: 'Grok (xAI)',
+    type: 'openai',
+    api: 'chat',
+    baseUrl: 'https://api.x.ai/v1',
+    defaultModels: [
+      { name: 'grok-2', context_window: 128000 },
+      { name: 'grok-beta', context_window: 128000 },
+    ],
+  },
+  {
+    id: 'ollama',
+    name: 'ollama',
+    label: 'Ollama',
+    type: 'openai',
+    api: 'chat',
+    baseUrl: 'http://localhost:11434/v1',
+    apiKeyOptional: true,
+    defaultModels: [
+      { name: 'llama3.1', context_window: 128000 },
+      { name: 'qwen2.5', context_window: 128000 },
+    ],
+  },
+  {
+    id: 'bedrock',
+    name: 'bedrock',
+    label: 'AWS Bedrock',
+    type: 'bedrock',
+    apiKeyOptional: true,
+    defaultModels: [
+      { name: 'anthropic.claude-3-5-sonnet-20241022-v2:0', context_window: 200000 },
+    ],
+  },
+];
 
 /**
  * Adopt the engine-reported UI language as the chrome locale. The engine is
@@ -85,6 +230,7 @@ export interface SettingsState {
     thinking: MutationStatus;
     language: MutationStatus;
     storyLanguage: MutationStatus;
+    provider: MutationStatus;
   };
   /** Last applied-change confirmation (engine-echoed values). */
   message: string | null;
@@ -98,7 +244,7 @@ function initialSettingsState(): SettingsState {
     fetchedAt: null,
     thinking: { status: 'idle', levels: [], provider: undefined, model: undefined, error: null },
     modelOptions: { status: 'idle', provider: undefined, options: [], error: null },
-    mutations: { model: 'idle', thinking: 'idle', language: 'idle', storyLanguage: 'idle' },
+    mutations: { model: 'idle', thinking: 'idle', language: 'idle', storyLanguage: 'idle', provider: 'idle' },
     message: null,
   };
 }
@@ -292,6 +438,73 @@ export async function setStoryLanguageFromUi(language: string): Promise<boolean>
     return false;
   } finally {
     settingsState.update((s) => ({ ...s, mutations: { ...s.mutations, storyLanguage: 'idle' } }));
+  }
+}
+
+/** Save or update a provider configuration — explicit protocol request. */
+export async function saveProviderFromUi(payload: SaveProviderPayload): Promise<boolean> {
+  if (get(settingsState).mutations.provider !== 'idle' || payload.provider.trim() === '') return false;
+  settingsState.update((s) => ({
+    ...s,
+    mutations: { ...s.mutations, provider: 'applying' },
+    message: null,
+  }));
+  try {
+    const result = await configSaveProvider(payload);
+    noteApplied(`provider ${result.provider?.name ?? payload.provider} saved`);
+    await refreshConfig();
+    return true;
+  } catch (raw) {
+    reportError(raw, 'config.save_provider');
+    return false;
+  } finally {
+    settingsState.update((s) => ({ ...s, mutations: { ...s.mutations, provider: 'idle' } }));
+  }
+}
+
+/** Test a draft provider connection without saving. */
+export async function testProviderFromUi(
+  payload: TestProviderPayload,
+): Promise<{ ok: boolean; latencyMs?: number; error?: string }> {
+  try {
+    const result = await configTestProvider(payload);
+    return { ok: true, latencyMs: result.latency_ms };
+  } catch (raw) {
+    const structured = toStructuredError(raw);
+    return { ok: false, error: structured.message };
+  }
+}
+
+/** Delete a provider configuration — explicit protocol request. */
+export async function deleteProviderFromUi(provider: string): Promise<boolean> {
+  const name = provider.trim();
+  if (get(settingsState).mutations.provider !== 'idle' || name === '') return false;
+  settingsState.update((s) => ({
+    ...s,
+    mutations: { ...s.mutations, provider: 'applying' },
+    message: null,
+  }));
+  try {
+    const result = await configDeleteProvider({ provider: name });
+    noteApplied(`provider ${result.provider ?? name} deleted`);
+    await refreshConfig();
+    return true;
+  } catch (raw) {
+    reportError(raw, 'config.delete_provider');
+    return false;
+  } finally {
+    settingsState.update((s) => ({ ...s, mutations: { ...s.mutations, provider: 'idle' } }));
+  }
+}
+
+/** Fetch available models from a remote endpoint. Returns model ID list or throws on failure. */
+export async function fetchProviderModelsFromUi(payload: FetchProviderModelsPayload): Promise<string[]> {
+  try {
+    const result = await configFetchProviderModels(payload);
+    return result.models ?? [];
+  } catch (raw) {
+    reportError(raw, 'config.fetch_provider_models');
+    throw raw;
   }
 }
 

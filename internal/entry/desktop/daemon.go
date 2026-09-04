@@ -77,6 +77,10 @@ type HostAPI interface {
 	AvailableThinking(role string) []agentcore.ThinkingLevel
 	SetRoleThinking(role, level string) error
 	ConfigureLanguage(uiLang, storyLang string) error
+	ConfigureModels(draft host.ModelConfigurationDraft) error
+	TestModelConnection(ctx context.Context, draft host.ModelConfigurationDraft, modelName string) error
+	DeleteProvider(provider string) error
+	FetchRemoteModels(ctx context.Context, draft host.FetchRemoteModelsDraft) ([]string, error)
 }
 
 var _ HostAPI = (*host.Host)(nil) // 编译期断言：生产 Host 满足接口

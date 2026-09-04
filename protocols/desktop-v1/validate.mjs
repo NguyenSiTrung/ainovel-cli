@@ -51,7 +51,7 @@ const EXPECTED_FIXTURES = [
   "valid-response-success.jsonl",
 ];
 
-const METHOD_COUNT = 49;
+const METHOD_COUNT = 53;
 const EVENT_COUNT = 26;
 const ERROR_CODE_COUNT = 9;
 

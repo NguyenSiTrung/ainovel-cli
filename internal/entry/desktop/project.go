@@ -13,7 +13,10 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
+
+	"github.com/voocel/ainovel-cli/internal/bootstrap"
 
 	"github.com/voocel/ainovel-cli/internal/diag"
 	"github.com/voocel/ainovel-cli/internal/domain"
@@ -773,6 +776,221 @@ func (d *Daemon) setLanguage(req *Request, ui bool) *Response {
 	}
 	d.stateMu.Unlock()
 	return successResponse(req.ID, d.session, map[string]any{"story_language": lang})
+}
+
+func parseModelConfigurationDraft(payload map[string]any) (host.ModelConfigurationDraft, error) {
+	provider := strings.TrimSpace(payloadString(payload, "provider"))
+	if provider == "" {
+		return host.ModelConfigurationDraft{}, fmt.Errorf("provider is required")
+	}
+	typ := strings.ToLower(strings.TrimSpace(payloadString(payload, "type")))
+	if typ == "" {
+		return host.ModelConfigurationDraft{}, fmt.Errorf("type is required")
+	}
+	api := strings.ToLower(strings.TrimSpace(payloadString(payload, "api")))
+	baseURL := strings.TrimSpace(payloadString(payload, "base_url"))
+	apiKey := strings.TrimSpace(payloadString(payload, "api_key"))
+	keyActionStr := strings.ToLower(strings.TrimSpace(payloadString(payload, "api_key_action")))
+
+	var keyAction host.APIKeyAction
+	switch keyActionStr {
+	case string(host.APIKeyReplace):
+		keyAction = host.APIKeyReplace
+	case string(host.APIKeyClear):
+		keyAction = host.APIKeyClear
+	case string(host.APIKeyKeep):
+		keyAction = host.APIKeyKeep
+	case "":
+		if apiKey != "" {
+			keyAction = host.APIKeyReplace
+		} else {
+			keyAction = host.APIKeyKeep
+		}
+	default:
+		return host.ModelConfigurationDraft{}, fmt.Errorf("unknown api_key_action %q", keyActionStr)
+	}
+
+	rawModels, ok := payload["models"].([]any)
+	if !ok || len(rawModels) == 0 {
+		return host.ModelConfigurationDraft{}, fmt.Errorf("at least one model is required")
+	}
+	models := make([]bootstrap.ModelConfig, 0, len(rawModels))
+	for _, item := range rawModels {
+		switch m := item.(type) {
+		case string:
+			name := strings.TrimSpace(m)
+			if name == "" {
+				return host.ModelConfigurationDraft{}, fmt.Errorf("model name cannot be empty")
+			}
+			models = append(models, bootstrap.ModelConfig{Name: name})
+		case map[string]any:
+			name := strings.TrimSpace(payloadString(m, "name"))
+			if name == "" {
+				return host.ModelConfigurationDraft{}, fmt.Errorf("model name cannot be empty")
+			}
+			window, _ := payloadInt(m, "context_window")
+			models = append(models, bootstrap.ModelConfig{Name: name, ContextWindow: window})
+		default:
+			return host.ModelConfigurationDraft{}, fmt.Errorf("invalid model entry: %v", item)
+		}
+	}
+
+	var renames []host.ModelRename
+	if rawRenames, ok := payload["renames"].([]any); ok {
+		for _, r := range rawRenames {
+			if rm, ok := r.(map[string]any); ok {
+				from := strings.TrimSpace(payloadString(rm, "from"))
+				to := strings.TrimSpace(payloadString(rm, "to"))
+				if from != "" && to != "" {
+					renames = append(renames, host.ModelRename{From: from, To: to})
+				}
+			}
+		}
+	}
+
+	return host.ModelConfigurationDraft{
+		Provider:     provider,
+		Type:         typ,
+		API:          api,
+		BaseURL:      baseURL,
+		Models:       models,
+		Renames:      renames,
+		APIKeyAction: keyAction,
+		APIKey:       apiKey,
+	}, nil
+}
+
+func (d *Daemon) handleConfigSaveProvider(req *Request) *Response {
+	p, errResp := d.requireProject(req)
+	if errResp != nil {
+		return errResp
+	}
+	draft, err := parseModelConfigurationDraft(req.Payload)
+	if err != nil {
+		return errorResponse(req.ID, d.session, CodeInvalidPayload, err.Error(), nil)
+	}
+	if err := p.host.ConfigureModels(draft); err != nil {
+		d.log("warn", "config", "save provider failed", "provider", draft.Provider, "err", err.Error())
+		return errorResponse(req.ID, d.session, classifyCode(err), err.Error(), nil)
+	}
+	mcfg := p.host.ModelConfiguration()
+	var summary map[string]any
+	for _, s := range providerSummaries(mcfg) {
+		if s["name"] == draft.Provider {
+			summary = s
+			break
+		}
+	}
+	d.emitEvent(p.id, "notification.info", map[string]any{
+		"message": fmt.Sprintf("provider %q configuration saved", draft.Provider),
+	})
+	return successResponse(req.ID, d.session, map[string]any{"saved": true, "provider": summary})
+}
+
+func (d *Daemon) handleConfigTestProvider(req *Request) *Response {
+	p, errResp := d.requireProject(req)
+	if errResp != nil {
+		return errResp
+	}
+	draft, err := parseModelConfigurationDraft(req.Payload)
+	if err != nil {
+		return errorResponse(req.ID, d.session, CodeInvalidPayload, err.Error(), nil)
+	}
+	testModel := strings.TrimSpace(payloadString(req.Payload, "test_model"))
+	if testModel == "" {
+		if len(draft.Models) > 0 {
+			testModel = draft.Models[0].Name
+		} else {
+			return errorResponse(req.ID, d.session, CodeInvalidPayload, "test_model is required", nil)
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	start := time.Now()
+	if err := p.host.TestModelConnection(ctx, draft, testModel); err != nil {
+		d.log("warn", "config", "test provider connection failed", "provider", draft.Provider, "model", testModel, "err", err.Error())
+		return errorResponse(req.ID, d.session, CodeOperationFailed, redactString(err.Error()), nil)
+	}
+	latency := time.Since(start).Milliseconds()
+	return successResponse(req.ID, d.session, map[string]any{
+		"success": true, "latency_ms": latency,
+	})
+}
+
+func (d *Daemon) handleConfigDeleteProvider(req *Request) *Response {
+	p, errResp := d.requireProject(req)
+	if errResp != nil {
+		return errResp
+	}
+	provider := strings.TrimSpace(payloadString(req.Payload, "provider"))
+	if provider == "" {
+		return errorResponse(req.ID, d.session, CodeInvalidPayload, "provider is required", nil)
+	}
+	if err := p.host.DeleteProvider(provider); err != nil {
+		d.log("warn", "config", "delete provider failed", "provider", provider, "err", err.Error())
+		return errorResponse(req.ID, d.session, classifyCode(err), err.Error(), nil)
+	}
+	d.emitEvent(p.id, "notification.info", map[string]any{
+		"message": fmt.Sprintf("provider %q deleted", provider),
+	})
+	return successResponse(req.ID, d.session, map[string]any{"deleted": true, "provider": provider})
+}
+
+func (d *Daemon) handleConfigFetchProviderModels(req *Request) *Response {
+	p, errResp := d.requireProject(req)
+	if errResp != nil {
+		return errResp
+	}
+	baseURL := strings.TrimSpace(payloadString(req.Payload, "base_url"))
+	if baseURL == "" {
+		return errorResponse(req.ID, d.session, CodeInvalidPayload, "base_url is required", nil)
+	}
+	typ := strings.TrimSpace(payloadString(req.Payload, "type"))
+	if typ == "" {
+		typ = "openai"
+	}
+	provider := strings.TrimSpace(payloadString(req.Payload, "provider"))
+	api := strings.TrimSpace(payloadString(req.Payload, "api"))
+	apiKey := strings.TrimSpace(payloadString(req.Payload, "api_key"))
+	keyActionStr := strings.TrimSpace(payloadString(req.Payload, "api_key_action"))
+	var keyAction host.APIKeyAction
+	switch keyActionStr {
+	case string(host.APIKeyReplace):
+		keyAction = host.APIKeyReplace
+	case string(host.APIKeyClear):
+		keyAction = host.APIKeyClear
+	case string(host.APIKeyKeep):
+		keyAction = host.APIKeyKeep
+	case "":
+		if apiKey != "" {
+			keyAction = host.APIKeyReplace
+		} else {
+			keyAction = host.APIKeyKeep
+		}
+	default:
+		return errorResponse(req.ID, d.session, CodeInvalidPayload, fmt.Sprintf("unknown api_key_action %q", keyActionStr), nil)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	models, err := p.host.FetchRemoteModels(ctx, host.FetchRemoteModelsDraft{
+		Provider:     provider,
+		Type:         typ,
+		API:          api,
+		BaseURL:      baseURL,
+		APIKeyAction: keyAction,
+		APIKey:       apiKey,
+	})
+	if err != nil {
+		d.log("warn", "config", "fetch provider models failed", "base_url", baseURL, "err", err.Error())
+		return errorResponse(req.ID, d.session, CodeOperationFailed, redactString(err.Error()), nil)
+	}
+
+	return successResponse(req.ID, d.session, map[string]any{
+		"models": models,
+	})
 }
 
 // ── 诊断（复用 TUI 的 store.NewStore + diag.Diagnose 路径）──

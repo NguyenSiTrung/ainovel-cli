@@ -129,10 +129,10 @@ func TestPayloadHelpers(t *testing.T) {
 }
 
 func TestKnownMethodsCatalog(t *testing.T) {
-	if len(knownMethods) != 49 {
-		t.Fatalf("method catalog must have 49 entries, got %d", len(knownMethods))
+	if len(knownMethods) != 53 {
+		t.Fatalf("method catalog must have 53 entries, got %d", len(knownMethods))
 	}
-	for _, m := range []string{"engine.ping", "engine.shutdown", "project.replay_events", "config.set_story_language", "runtime.queue", "simulation.profile_import"} {
+	for _, m := range []string{"engine.ping", "engine.shutdown", "project.replay_events", "config.set_story_language", "config.save_provider", "config.test_provider", "config.delete_provider", "config.fetch_provider_models", "runtime.queue", "simulation.profile_import"} {
 		if !knownMethod(m) {
 			t.Fatalf("method %q missing from catalog", m)
 		}

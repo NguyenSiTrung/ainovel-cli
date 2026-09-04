@@ -20,8 +20,14 @@ if [ -z "${AINOVEL_SIDECAR:-}" ]; then
     if [ -f "$AINOVEL_SIDECAR" ] && grep -q "placeholder sidecar" "$AINOVEL_SIDECAR" 2>/dev/null; then
         is_placeholder=1
     fi
+    needs_build=0
     if [ ! -x "$AINOVEL_SIDECAR" ] || [ "$is_placeholder" -eq 1 ]; then
-        echo "dev: sidecar missing or placeholder, building $triple..." >&2
+        needs_build=1
+    elif [ -n "$(find "$root/cmd" "$root/internal" -name '*.go' -newer "$AINOVEL_SIDECAR" 2>/dev/null | head -n 1)" ]; then
+        needs_build=1
+    fi
+    if [ "$needs_build" -eq 1 ]; then
+        echo "dev: sidecar missing or outdated, building $triple..." >&2
         sh "$desk/scripts/build-sidecars.sh" "$triple"
     fi
 fi

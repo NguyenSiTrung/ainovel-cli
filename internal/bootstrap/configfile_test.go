@@ -329,6 +329,33 @@ func TestWriteStartupError(t *testing.T) {
 	}
 }
 
+func TestDeleteProviderConfig(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".ainovel", "config.json")
+	original := Config{
+		Provider: "kept", ModelName: "kept-model",
+		Providers: map[string]ProviderConfig{
+			"kept":    {Type: "openai", Models: []ModelConfig{{Name: "kept-model"}}},
+			"deleted": {Type: "openai", Models: []ModelConfig{{Name: "del-model"}}},
+		},
+	}
+	if err := SaveConfig(path, original); err != nil {
+		t.Fatal(err)
+	}
+	if err := DeleteProviderConfig(path, "deleted"); err != nil {
+		t.Fatal(err)
+	}
+	updated, err := LoadConfigFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := updated.Providers["deleted"]; exists {
+		t.Fatalf("provider 'deleted' should have been removed")
+	}
+	if _, exists := updated.Providers["kept"]; !exists {
+		t.Fatalf("provider 'kept' should still exist")
+	}
+}
+
 func contains(s, sub string) bool {
 	for i := 0; i+len(sub) <= len(s); i++ {
 		if s[i:i+len(sub)] == sub {

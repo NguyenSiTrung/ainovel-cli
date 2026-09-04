@@ -2,7 +2,10 @@ package host
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -253,6 +256,12 @@ func (h *Host) ConfigureModels(draft ModelConfigurationDraft) error {
 		}
 	}
 
+	// 若原先处于未配置 Provider 状态，将首个保存的 Provider/Model 自动提升为默认。
+	if candidate.Provider == "" && len(pc.Models) > 0 {
+		candidate.Provider = draft.Provider
+		candidate.ModelName = pc.Models[0].Name
+	}
+
 	// 普通编辑不改变“当前用哪个”；显式重命名只迁移同一模型的引用身份。
 	if err := candidate.ValidateBase(); err != nil {
 		return err
@@ -357,7 +366,7 @@ func renameModelReferences(cfg *bootstrap.Config, provider string, renames map[s
 }
 
 func (h *Host) saveModelConfigurationLocked(candidate bootstrap.Config, provider string, pc bootstrap.ProviderConfig, renamed bool) error {
-	if renamed {
+	if renamed || (h.cfg.Provider == "" && candidate.Provider != "") {
 		// 引用与 provider 定义必须在同一次文件替换中落盘，否则进程重启可能只看到一半。
 		// /model 也使用 SaveConfig 写回有效配置；重命名沿用同一语义。
 		return bootstrap.SaveConfig(h.configPath, candidate)
@@ -423,6 +432,36 @@ func (h *Host) modelReferencesLocked(provider, model string) []string {
 	return refs
 }
 
+// DeleteProvider 校验未被引用后，从配置中删除指定 provider 并热应用。
+func (h *Host) DeleteProvider(provider string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	provider = strings.TrimSpace(provider)
+	if provider == "" {
+		return fmt.Errorf("provider 不能为空")
+	}
+	if _, ok := h.cfg.Providers[provider]; !ok {
+		return fmt.Errorf("provider %q 不存在", provider)
+	}
+	if h.cfg.Provider == provider {
+		return fmt.Errorf("provider %q 仍被默认模型引用，请先切换默认模型后再删除", provider)
+	}
+	for role, rc := range h.cfg.Roles {
+		if rc.Provider == provider {
+			return fmt.Errorf("provider %q 仍被角色 %s 引用，请先修改角色配置后再删除", provider, role)
+		}
+		for _, fallback := range rc.Fallbacks {
+			if fallback.Provider == provider {
+				return fmt.Errorf("provider %q 仍被角色 %s 的 fallback 引用，请先修改角色配置后再删除", provider, role)
+			}
+		}
+	}
+
+	delete(h.cfg.Providers, provider)
+	return bootstrap.DeleteProviderConfig(h.configPath, provider)
+}
+
 // ConfigureLanguage updates UI language and story language in Host config and saves to config file.
 // Both codes funnel through i18n.NormalizeLanguage so raw locales ("EN_us",
 // "vi-VN.UTF-8") and unknown codes (fallback zh) never persist unnormalized.
@@ -445,4 +484,176 @@ func (h *Host) ConfigureLanguage(uiLang, storyLang string) error {
 		return nil
 	}
 	return bootstrap.SaveConfig(h.configPath, h.cfg)
+}
+
+// FetchRemoteModelsDraft contains connection info to query a remote provider's /models endpoint.
+type FetchRemoteModelsDraft struct {
+	Provider     string
+	Type         string
+	API          string
+	BaseURL      string
+	APIKeyAction APIKeyAction
+	APIKey       string
+}
+
+// FetchRemoteModels queries the provider's /models endpoint directly and returns a sorted list of model IDs.
+func (h *Host) FetchRemoteModels(ctx context.Context, draft FetchRemoteModelsDraft) ([]string, error) {
+	h.mu.Lock()
+	baseURL := strings.TrimSpace(draft.BaseURL)
+	if baseURL == "" && draft.Provider != "" {
+		if existing, ok := h.cfg.Providers[draft.Provider]; ok {
+			baseURL = strings.TrimSpace(existing.BaseURL)
+		}
+	}
+	apiKey := strings.TrimSpace(draft.APIKey)
+	switch draft.APIKeyAction {
+	case "", APIKeyKeep:
+		if draft.Provider != "" {
+			if existing, ok := h.cfg.Providers[draft.Provider]; ok {
+				apiKey = strings.TrimSpace(existing.APIKey)
+			}
+		}
+	case APIKeyReplace:
+		apiKey = strings.TrimSpace(draft.APIKey)
+	case APIKeyClear:
+		apiKey = ""
+	}
+	pType := strings.ToLower(strings.TrimSpace(draft.Type))
+	h.mu.Unlock()
+
+	if baseURL == "" {
+		return nil, fmt.Errorf("Base URL 不能为空")
+	}
+
+	cleanBase := strings.TrimRight(baseURL, "/")
+	endpoints := []string{cleanBase + "/models"}
+	if !strings.HasSuffix(cleanBase, "/v1") && !strings.Contains(cleanBase, "/v1/") {
+		endpoints = append(endpoints, cleanBase+"/v1/models")
+	}
+
+	var lastErr error
+	for _, endpoint := range endpoints {
+		models, err := fetchModelsFromEndpoint(ctx, endpoint, apiKey, pType)
+		if err == nil {
+			return models, nil
+		}
+		lastErr = err
+	}
+	return nil, lastErr
+}
+
+func fetchModelsFromEndpoint(ctx context.Context, endpoint, apiKey, pType string) ([]string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("创建请求失败: %w", err)
+	}
+
+	if apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+		if pType == "anthropic" {
+			req.Header.Set("x-api-key", apiKey)
+			req.Header.Set("anthropic-version", "2023-06-01")
+		}
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "ainovel-cli/desktop")
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("请求 %s 失败: %w", endpoint, err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, 2*1024*1024))
+	if err != nil {
+		return nil, fmt.Errorf("读取响应失败: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		msg := strings.TrimSpace(string(bodyBytes))
+		if len(msg) > 200 {
+			msg = msg[:200] + "..."
+		}
+		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, msg)
+	}
+
+	return parseModelsResponse(bodyBytes)
+}
+
+func parseModelsResponse(body []byte) ([]string, error) {
+	type rawItem struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	var obj struct {
+		Data   []rawItem `json:"data"`
+		Models []rawItem `json:"models"`
+	}
+	if err := json.Unmarshal(body, &obj); err == nil && (len(obj.Data) > 0 || len(obj.Models) > 0) {
+		set := make(map[string]bool)
+		for _, item := range obj.Data {
+			name := strings.TrimSpace(item.ID)
+			if name == "" {
+				name = strings.TrimSpace(item.Name)
+			}
+			if name != "" {
+				set[name] = true
+			}
+		}
+		for _, item := range obj.Models {
+			name := strings.TrimSpace(item.Name)
+			if name == "" {
+				name = strings.TrimSpace(item.ID)
+			}
+			if name != "" {
+				set[name] = true
+			}
+		}
+		res := make([]string, 0, len(set))
+		for m := range set {
+			res = append(res, m)
+		}
+		sort.Strings(res)
+		return res, nil
+	}
+
+	var arr []rawItem
+	if err := json.Unmarshal(body, &arr); err == nil && len(arr) > 0 {
+		set := make(map[string]bool)
+		for _, item := range arr {
+			name := strings.TrimSpace(item.ID)
+			if name == "" {
+				name = strings.TrimSpace(item.Name)
+			}
+			if name != "" {
+				set[name] = true
+			}
+		}
+		res := make([]string, 0, len(set))
+		for m := range set {
+			res = append(res, m)
+		}
+		sort.Strings(res)
+		return res, nil
+	}
+
+	var strArr []string
+	if err := json.Unmarshal(body, &strArr); err == nil && len(strArr) > 0 {
+		set := make(map[string]bool)
+		for _, s := range strArr {
+			s = strings.TrimSpace(s)
+			if s != "" {
+				set[s] = true
+			}
+		}
+		res := make([]string, 0, len(set))
+		for m := range set {
+			res = append(res, m)
+		}
+		sort.Strings(res)
+		return res, nil
+	}
+
+	return nil, fmt.Errorf("未能在响应中解析出模型列表")
 }

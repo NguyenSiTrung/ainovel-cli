@@ -74,7 +74,7 @@ fn valid_fixtures_parse_in_both_modes() {
             total += 1;
         }
     }
-    // 48 request catalog lines + 26 event catalog lines + the rest.
+    // 53 request catalog lines + 26 event catalog lines + the rest.
     assert!(
         total >= 80,
         "expected the full shared fixture set, got {total}"
@@ -84,7 +84,7 @@ fn valid_fixtures_parse_in_both_modes() {
 #[test]
 fn request_catalog_fixture_covers_every_binding_method() {
     let lines = fixture("valid-requests-catalog.jsonl");
-    assert_eq!(lines.len(), 49, "one valid request per method");
+    assert_eq!(lines.len(), 53, "one valid request per method");
     let mut methods: Vec<String> = lines
         .iter()
         .map(

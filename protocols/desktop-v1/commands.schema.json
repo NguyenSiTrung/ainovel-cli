@@ -70,6 +70,10 @@
         "config.set_thinking",
         "config.set_language",
         "config.set_story_language",
+        "config.save_provider",
+        "config.test_provider",
+        "config.delete_provider",
+        "config.fetch_provider_models",
         "diagnostics.snapshot",
         "diagnostics.export",
         "usage.snapshot",
@@ -976,6 +980,94 @@
       "if": {
         "properties": {
           "method": {
+            "const": "config.save_provider"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/config_save_provider_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "config.test_provider"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/config_test_provider_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "config.delete_provider"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/config_delete_provider_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
+            "const": "config.fetch_provider_models"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/config_fetch_provider_models_request"
+          }
+        },
+        "required": [
+          "payload"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "method": {
             "const": "diagnostics.snapshot"
           }
         },
@@ -1662,6 +1754,194 @@
       },
       "required": [
         "language"
+      ]
+    },
+    "config_save_provider_request": {
+      "title": "config.save_provider request payload",
+      "description": "Save or update a provider configuration. Write-only credentials.",
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "Provider name or identifier."
+        },
+        "type": {
+          "type": "string",
+          "description": "API protocol type (openai, anthropic, gemini)."
+        },
+        "api": {
+          "type": "string",
+          "description": "Optional OpenAI endpoint style (chat or responses)."
+        },
+        "base_url": {
+          "type": "string",
+          "description": "Optional provider API Base URL."
+        },
+        "api_key_action": {
+          "type": "string",
+          "enum": ["keep", "replace", "clear"],
+          "description": "Optional API key mutation action (keep, replace, clear)."
+        },
+        "api_key": {
+          "type": "string",
+          "description": "Optional write-only API key string."
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Model identifier."
+              },
+              "context_window": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Optional model context window size in tokens."
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "minItems": 1,
+          "description": "Configured models for this provider (at least one required)."
+        },
+        "renames": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "from",
+              "to"
+            ]
+          },
+          "description": "Optional model rename tracking."
+        }
+      },
+      "required": [
+        "provider",
+        "type",
+        "models"
+      ]
+    },
+    "config_test_provider_request": {
+      "title": "config.test_provider request payload",
+      "description": "Test a draft provider connection with a minimal probe call without saving.",
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "Provider name or identifier."
+        },
+        "type": {
+          "type": "string",
+          "description": "API protocol type (openai, anthropic, gemini)."
+        },
+        "api": {
+          "type": "string",
+          "description": "Optional OpenAI endpoint style (chat or responses)."
+        },
+        "base_url": {
+          "type": "string",
+          "description": "Optional provider API Base URL."
+        },
+        "api_key_action": {
+          "type": "string",
+          "enum": ["keep", "replace", "clear"],
+          "description": "Optional API key mutation action."
+        },
+        "api_key": {
+          "type": "string",
+          "description": "Optional write-only API key string."
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "context_window": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "description": "Configured models for this provider."
+        },
+        "test_model": {
+          "type": "string",
+          "description": "Model to probe."
+        }
+      },
+      "required": [
+        "provider",
+        "type",
+        "test_model"
+      ]
+    },
+    "config_delete_provider_request": {
+      "title": "config.delete_provider request payload",
+      "description": "Delete a provider configuration.",
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "Provider name to delete."
+        }
+      },
+      "required": [
+        "provider"
+      ]
+    },
+    "config_fetch_provider_models_request": {
+      "title": "config.fetch_provider_models request payload",
+      "description": "Fetch available models directly from a remote provider endpoint (e.g. OpenAI /v1/models).",
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "Optional provider name or identifier."
+        },
+        "type": {
+          "type": "string",
+          "description": "API protocol type (openai, anthropic, gemini)."
+        },
+        "api": {
+          "type": "string",
+          "description": "Optional OpenAI endpoint style (chat or responses)."
+        },
+        "base_url": {
+          "type": "string",
+          "description": "Provider API Base URL."
+        },
+        "api_key_action": {
+          "type": "string",
+          "enum": ["keep", "replace", "clear"],
+          "description": "Optional API key mutation action."
+        },
+        "api_key": {
+          "type": "string",
+          "description": "Optional write-only API key string."
+        }
+      },
+      "required": [
+        "type",
+        "base_url"
       ]
     },
     "diagnostics_snapshot_request": {

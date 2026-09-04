@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1106,6 +1107,84 @@ func TestConfigHandlers(t *testing.T) {
 	if resp["ok"] != true {
 		t.Fatalf("set_story_language: %v", resp)
 	}
+}
+
+func TestConfigProviderManagement(t *testing.T) {
+	h := newFakeHost(t)
+	d, _ := newTestDaemon(t, h)
+	openFakeProject(d, h)
+
+	// 1. 无效 save: 空 models
+	resp := doRequest(t, d, requestLine("sp1", "config.save_provider", `{"provider":"test-p","type":"openai","models":[]}`))
+	if resp["ok"] == true {
+		t.Fatalf("expected failure for empty models: %v", resp)
+	}
+
+	// 2. 有效 save
+	var savedDraft host.ModelConfigurationDraft
+	h.configureModelsFn = func(draft host.ModelConfigurationDraft) error {
+		savedDraft = draft
+		return nil
+	}
+	resp = doRequest(t, d, requestLine("sp2", "config.save_provider", `{"provider":"custom-proxy","type":"openai","base_url":"https://api.example/v1","models":[{"name":"custom-model","context_window":128000}]}`))
+	if resp["ok"] != true {
+		t.Fatalf("save provider failed: %v", resp)
+	}
+	if savedDraft.Provider != "custom-proxy" || len(savedDraft.Models) != 1 || savedDraft.Models[0].Name != "custom-model" {
+		t.Fatalf("savedDraft mismatch: %+v", savedDraft)
+	}
+	awaitEvent(t, d, "notification.info")
+
+	// 3. test connection
+	var testCalled bool
+	h.testModelConnectionFn = func(ctx context.Context, draft host.ModelConfigurationDraft, model string) error {
+		testCalled = true
+		if model != "custom-model" {
+			return fmt.Errorf("unexpected model %q", model)
+		}
+		return nil
+	}
+	resp = doRequest(t, d, requestLine("tp1", "config.test_provider", `{"provider":"custom-proxy","type":"openai","base_url":"https://api.example/v1","models":[{"name":"custom-model"}],"test_model":"custom-model"}`))
+	if resp["ok"] != true || !testCalled {
+		t.Fatalf("test provider failed: %v, called=%v", resp, testCalled)
+	}
+
+	// 4. delete provider
+	var deletedProvider string
+	h.deleteProviderFn = func(provider string) error {
+		deletedProvider = provider
+		return nil
+	}
+	resp = doRequest(t, d, requestLine("dp1", "config.delete_provider", `{"provider":"custom-proxy"}`))
+	if resp["ok"] != true || deletedProvider != "custom-proxy" {
+		t.Fatalf("delete provider failed: %v, deleted=%q", resp, deletedProvider)
+	}
+
+	// 5. fetch provider models
+	// 5a. missing base_url fails
+	resp = doRequest(t, d, requestLine("fpm1", "config.fetch_provider_models", `{"type":"openai"}`))
+	if resp["ok"] == true {
+		t.Fatalf("expected error for missing base_url: %v", resp)
+	}
+	// 5b. successful fetch
+	var fetchCalled bool
+	h.fetchRemoteModelsFn = func(ctx context.Context, draft host.FetchRemoteModelsDraft) ([]string, error) {
+		fetchCalled = true
+		if draft.BaseURL != "https://api.example/v1" {
+			return nil, fmt.Errorf("unexpected base_url %q", draft.BaseURL)
+		}
+		return []string{"remote-model-1", "remote-model-2"}, nil
+	}
+	resp = doRequest(t, d, requestLine("fpm2", "config.fetch_provider_models", `{"type":"openai","base_url":"https://api.example/v1"}`))
+	if resp["ok"] != true || !fetchCalled {
+		t.Fatalf("fetch provider models failed: %v, called=%v", resp, fetchCalled)
+	}
+	payload, _ := resp["payload"].(map[string]any)
+	models, _ := payload["models"].([]any)
+	if len(models) != 2 || models[0] != "remote-model-1" || models[1] != "remote-model-2" {
+		t.Fatalf("unexpected fetched models payload: %v", payload)
+	}
+	awaitEvent(t, d, "notification.info")
 }
 
 // ── 诊断 / 用量 / 日志 / 队列 ──

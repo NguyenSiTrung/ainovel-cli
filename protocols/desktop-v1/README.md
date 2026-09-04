@@ -79,7 +79,7 @@ Required: `protocol`, `kind`, `event`, `sequence`. Optional: `project_id`,
 | `protocol` | required | required | required | const `"desktop-v1"` |
 | `kind` | required | required | required | `"request"` / `"response"` / `"event"` |
 | `id` | required | required | — | non-empty string; response echoes its request |
-| `method` | required | — | — | one of the 49 method names (section 6) |
+| `method` | required | — | — | one of the 53 method names (section 6) |
 | `ok` | — | required | — | boolean |
 | `error` | — | required iff `ok:false` | — | `{code, message, details?}` |
 | `payload` | optional | success only | optional | object; open (unknown fields allowed) |
@@ -192,7 +192,7 @@ Codes are stable snake_case strings and are binding for all implementations.
   not as responses; the triggering request, if any, already received its
   acceptance response.
 
-## 6. Method catalog (49 methods, binding)
+## 6. Method catalog (53 methods, binding)
 
 Payload schemas are named `<method>_request` in `commands.schema.json`. "req"
 fields must be present inside `payload`; "opt" fields are documented optional
@@ -287,6 +287,10 @@ enumerated.
 | `config.set_thinking` | `level` | — | Level name from `config.thinking_levels`. |
 | `config.set_language` | `language` | — | UI language code. |
 | `config.set_story_language` | `language` | — | Story output language code. |
+| `config.save_provider` | `provider`, `type`, `models` | `api`, `base_url`, `api_key_action`, `api_key`, `renames` | Write-only credentials. Hot-applies. |
+| `config.test_provider` | `provider`, `type`, `models`, `test_model` | `api`, `base_url`, `api_key_action`, `api_key` | Non-mutating probe. |
+| `config.delete_provider` | `provider` | — | Rejects if referenced. |
+| `config.fetch_provider_models` | `type`, `base_url` | `provider`, `api`, `api_key_action`, `api_key` | Discovers available models from remote endpoint (GET /models). |
 
 ### diagnostics / usage / logs / runtime
 
@@ -415,8 +419,7 @@ must validate line-by-line.
 | `valid-events-stream-lifecycle.jsonl` | `run.started`, `stream.delta` x2, `stream.clear`, `run.completed` (completion). | accept |
 | `valid-events-duplicate-sequence-replay.jsonl` | Same-session duplicate sequence 471 re-delivered, then 472. | accept |
 | `valid-events-sidecar-recovery.jsonl` | Old session events, exit/restart, `engine.ready` with new session id and reset sequence. | accept |
-| `valid-requests-catalog.jsonl` | One valid request per method (49 lines). | accept |
-| `valid-events-catalog.jsonl` | One valid event per event name (26 lines). | accept |
+| `valid-requests-catalog.jsonl` | One valid request per method (53 lines). | accept |
 | `invalid-malformed-line.jsonl` | Truncated JSON and garbage lines. | reject |
 | `invalid-schema-violations.jsonl` | Wrong protocol, missing required fields, unknown method/event, bad error shapes, non-object line. | reject |
 

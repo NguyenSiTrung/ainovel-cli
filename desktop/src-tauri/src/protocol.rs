@@ -77,6 +77,10 @@ pub const METHODS: &[&str] = &[
     "config.set_thinking",
     "config.set_language",
     "config.set_story_language",
+    "config.save_provider",
+    "config.test_provider",
+    "config.delete_provider",
+    "config.fetch_provider_models",
     "diagnostics.snapshot",
     "diagnostics.export",
     "usage.snapshot",
@@ -499,7 +503,7 @@ mod tests {
 
     #[test]
     fn catalog_sizes_match_protocol_readme() {
-        assert_eq!(METHODS.len(), 49, "49 binding methods");
+        assert_eq!(METHODS.len(), 53, "53 binding methods");
         assert_eq!(EVENTS.len(), 26, "26 binding events");
         assert_eq!(ERROR_CODES.len(), 9, "9 binding error codes");
     }

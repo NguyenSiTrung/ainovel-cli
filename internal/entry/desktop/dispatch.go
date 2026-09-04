@@ -84,6 +84,10 @@ func (d *Daemon) registerDispatch() {
 		"config.set_thinking":       d.handleConfigSetThinking,
 		"config.set_language":       d.handleConfigSetLanguage,
 		"config.set_story_language": d.handleConfigSetStoryLanguage,
+		"config.save_provider":      d.handleConfigSaveProvider,
+		"config.test_provider":      d.handleConfigTestProvider,
+		"config.delete_provider":    d.handleConfigDeleteProvider,
+		"config.fetch_provider_models": d.handleConfigFetchProviderModels,
 
 		// 诊断 / 用量 / 日志 / 队列
 		"diagnostics.snapshot": d.handleDiagnosticsSnapshot,

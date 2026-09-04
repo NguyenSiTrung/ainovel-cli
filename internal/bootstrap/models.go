@@ -298,11 +298,41 @@ func ModelProvider(m agentcore.ChatModel) string {
 	return ""
 }
 
+type unconfiguredModel struct{}
+
+func (m *unconfiguredModel) Generate(ctx context.Context, messages []agentcore.Message, tools []agentcore.ToolSpec, opts ...agentcore.CallOption) (*agentcore.LLMResponse, error) {
+	return nil, errors.New("no LLM provider configured; please configure a provider in Settings before starting a run")
+}
+
+func (m *unconfiguredModel) GenerateStream(ctx context.Context, messages []agentcore.Message, tools []agentcore.ToolSpec, opts ...agentcore.CallOption) (<-chan agentcore.StreamEvent, error) {
+	out := make(chan agentcore.StreamEvent, 1)
+	out <- agentcore.StreamEvent{
+		Type: agentcore.StreamEventError,
+		Err:  errors.New("no LLM provider configured; please configure a provider in Settings before starting a run"),
+	}
+	close(out)
+	return out, nil
+}
+func (m *unconfiguredModel) SupportsTools() bool {
+	return false
+}
+
+
 // NewModelSet 根据配置创建多模型集合。
 // 相同 provider+model 组合复用同一个实例。
 func NewModelSet(cfg Config) (*ModelSet, error) {
-	cache := make(map[string]agentcore.ChatModel)
+	if cfg.Provider == "" {
+		dummy := &unconfiguredModel{}
+		ms := &ModelSet{
+			Default:   NewSwappableModel("", "", dummy, nil),
+			models:    make(map[string]*SwappableModel),
+			fallbacks: make(map[string][]modelTarget),
+			config:    CloneConfig(cfg),
+		}
+		return ms, nil
+	}
 
+	cache := make(map[string]agentcore.ChatModel)
 	// 创建默认模型
 	defaultPC := cfg.DefaultProviderConfig()
 	defaultModel, err := createModelFromConfig(cfg.Provider, cfg.ModelName, defaultPC, cache)

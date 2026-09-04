@@ -61,7 +61,11 @@ type fakeHost struct {
 
 	switchModelFn     func(role, provider, model string) error
 	setRoleThinkingFn func(role, level string) error
-	configureLangFn   func(ui, story string) error
+	configureLangFn       func(ui, story string) error
+	configureModelsFn     func(draft host.ModelConfigurationDraft) error
+	testModelConnectionFn func(ctx context.Context, draft host.ModelConfigurationDraft, model string) error
+	deleteProviderFn      func(provider string) error
+	fetchRemoteModelsFn   func(ctx context.Context, draft host.FetchRemoteModelsDraft) ([]string, error)
 }
 
 func newFakeHost(t *testing.T) *fakeHost {
@@ -317,6 +321,34 @@ func (f *fakeHost) ConfigureLanguage(ui, story string) error {
 		return f.configureLangFn(ui, story)
 	}
 	return nil
+}
+
+func (f *fakeHost) ConfigureModels(draft host.ModelConfigurationDraft) error {
+	if f.configureModelsFn != nil {
+		return f.configureModelsFn(draft)
+	}
+	return nil
+}
+
+func (f *fakeHost) TestModelConnection(ctx context.Context, draft host.ModelConfigurationDraft, model string) error {
+	if f.testModelConnectionFn != nil {
+		return f.testModelConnectionFn(ctx, draft, model)
+	}
+	return nil
+}
+
+func (f *fakeHost) DeleteProvider(provider string) error {
+	if f.deleteProviderFn != nil {
+		return f.deleteProviderFn(provider)
+	}
+	return nil
+}
+
+func (f *fakeHost) FetchRemoteModels(ctx context.Context, draft host.FetchRemoteModelsDraft) ([]string, error) {
+	if f.fetchRemoteModelsFn != nil {
+		return f.fetchRemoteModelsFn(ctx, draft)
+	}
+	return []string{"gpt-4o", "gpt-4o-mini"}, nil
 }
 
 // ── 测试工具 ──

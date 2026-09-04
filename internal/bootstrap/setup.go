@@ -198,9 +198,9 @@ func saveExampleConfig() {
 	_ = os.WriteFile(filepath.Join(dir, "config.example.jsonc"), []byte(exampleConfig), 0o644)
 }
 
-// SeedDefaultConfig 在桌面端无交互模式首次启动且配置缺失时，自动落盘默认
-// 配置模板 (~/.ainovel/config.json) 与注释模板 (~/.ainovel/config.example.jsonc)，
-// 让桌面端直接进入可用状态，而无需先在终端运行交互式 TUI。
+// SeedDefaultConfig 在桌面端无交互模式首次启动且配置缺失时，自动落盘干净的默认
+// 配置 (~/.ainovel/config.json) 与注释模板 (~/.ainovel/config.example.jsonc)。
+// 首次启动不预填示例 Provider，保持干净的未配置状态供用户自主添加。
 func SeedDefaultConfig() error {
 	path := DefaultConfigPath()
 	if path == "" {
@@ -211,7 +211,14 @@ func SeedDefaultConfig() error {
 	}
 	saveExampleConfig()
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.WriteFile(path, []byte(exampleConfig), 0o644); err != nil {
+		initial := Config{
+			Language:      i18n.DetectSystemLanguage(),
+			StoryLanguage: i18n.DetectSystemLanguage(),
+			Style:         "default",
+			Providers:     map[string]ProviderConfig{},
+			Roles:         map[string]RoleConfig{},
+		}
+		if err := SaveConfig(path, initial); err != nil {
 			return err
 		}
 	}

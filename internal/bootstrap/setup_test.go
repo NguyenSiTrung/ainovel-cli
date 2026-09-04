@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -75,8 +76,14 @@ func TestSeedDefaultConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadConfig failed: %v", err)
 	}
-	cfg.FillDefaults()
-	if err := cfg.ValidateBase(); err != nil {
-		t.Fatalf("ValidateBase failed on seeded config: %v", err)
+	if len(cfg.Providers) != 0 {
+		t.Fatalf("seeded config should have empty providers (no pre-example like openrouter/claude-code-proxy), got: %v", cfg.Providers)
+	}
+	if cfg.Provider != "" {
+		t.Fatalf("seeded config should have empty default provider, got: %q", cfg.Provider)
+	}
+	examplePath := filepath.Join(home, ".ainovel", "config.example.jsonc")
+	if _, err := os.Stat(examplePath); err != nil {
+		t.Fatalf("expected config.example.jsonc to be saved for reference: %v", err)
 	}
 }

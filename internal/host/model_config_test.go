@@ -293,3 +293,156 @@ func TestConfigureModelsSuggestsSwitchForNewProvider(t *testing.T) {
 		t.Fatalf("新增非当前 Provider 后应提示切换，event=%q", event.Summary)
 	}
 }
+
+func TestDeleteProviderRejectsInUseAndDeletesUnused(t *testing.T) {
+	h, _ := newModelConfigTestHost(t)
+	// proxy is active default provider -> delete must be rejected
+	err := h.DeleteProvider("proxy")
+	if err == nil {
+		t.Fatalf("expected error deleting active default provider")
+	}
+	// Add unused provider
+	err = h.ConfigureModels(ModelConfigurationDraft{
+		Provider: "unused", Type: "openai", BaseURL: "https://unused.example/v1",
+		Models: []bootstrap.ModelConfig{{Name: "m1"}}, APIKeyAction: APIKeyKeep,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Deleting unused should succeed
+	if err := h.DeleteProvider("unused"); err != nil {
+		t.Fatalf("delete unused provider failed: %v", err)
+	}
+	if _, exists := h.cfg.Providers["unused"]; exists {
+		t.Fatalf("provider 'unused' should not exist in host config")
+	}
+}
+
+func TestFetchRemoteModelsOpenAIAndOllamaFormats(t *testing.T) {
+	h, _ := newModelConfigTestHost(t)
+
+	// 1. OpenAI format
+	srvOpenAI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer test-key" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"data":[{"id":"gpt-4o"},{"id":"gpt-4o-mini"},{"id":"text-embedding-3"}]}`))
+	}))
+	defer srvOpenAI.Close()
+
+	models, err := h.FetchRemoteModels(context.Background(), FetchRemoteModelsDraft{
+		Type: "openai", BaseURL: srvOpenAI.URL, APIKey: "test-key", APIKeyAction: APIKeyReplace,
+	})
+	if err != nil {
+		t.Fatalf("fetch openai models: %v", err)
+	}
+	if len(models) != 3 || models[0] != "gpt-4o" || models[1] != "gpt-4o-mini" || models[2] != "text-embedding-3" {
+		t.Fatalf("unexpected models list: %v", models)
+	}
+
+	// 2. Ollama format
+	srvOllama := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"models":[{"name":"llama3:latest"},{"name":"qwen2.5:7b"}]}`))
+	}))
+	defer srvOllama.Close()
+
+	models, err = h.FetchRemoteModels(context.Background(), FetchRemoteModelsDraft{
+		Type: "openai", BaseURL: srvOllama.URL,
+	})
+	if err != nil {
+		t.Fatalf("fetch ollama models: %v", err)
+	}
+	if len(models) != 2 || models[0] != "llama3:latest" || models[1] != "qwen2.5:7b" {
+		t.Fatalf("unexpected ollama models: %v", models)
+	}
+
+	// 3. Fallback from /models to /v1/models on 404
+	srvFallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/models" {
+			http.NotFound(w, r)
+			return
+		}
+		if r.URL.Path == "/v1/models" {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"data":[{"id":"fallback-model"}]}`))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srvFallback.Close()
+
+	models, err = h.FetchRemoteModels(context.Background(), FetchRemoteModelsDraft{
+		Type: "openai", BaseURL: srvFallback.URL,
+	})
+	if err != nil {
+		t.Fatalf("fetch fallback models: %v", err)
+	}
+	if len(models) != 1 || models[0] != "fallback-model" {
+		t.Fatalf("unexpected fallback models: %v", models)
+	}
+
+	// 4. Retain existing API key with APIKeyKeep
+	srvAuth := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer old-secret" {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"data":[{"id":"secret-model"}]}`))
+	}))
+	defer srvAuth.Close()
+
+	models, err = h.FetchRemoteModels(context.Background(), FetchRemoteModelsDraft{
+		Provider: "proxy", Type: "openai", BaseURL: srvAuth.URL, APIKeyAction: APIKeyKeep,
+	})
+	if err != nil {
+		t.Fatalf("fetch with existing key: %v", err)
+	}
+	if len(models) != 1 || models[0] != "secret-model" {
+		t.Fatalf("unexpected secret models: %v", models)
+	}
+}
+func TestHost_UnconfiguredProvider_AllowsInitAndSavesFirstProvider(t *testing.T) {
+	cfg := bootstrap.Config{
+		Providers: map[string]bootstrap.ProviderConfig{},
+	}
+	models, err := bootstrap.NewModelSet(cfg)
+	if err != nil {
+		t.Fatalf("expected NewModelSet with empty provider to succeed, got: %v", err)
+	}
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := bootstrap.SaveConfig(path, cfg); err != nil {
+		t.Fatalf("save empty config: %v", err)
+	}
+	h := &Host{
+		cfg: cfg, models: models, events: make(chan Event, 4),
+		configPath: path,
+	}
+	snap := h.ModelConfiguration()
+	if snap.DefaultProvider != "" || len(snap.Providers) != 0 {
+		t.Fatalf("expected unconfigured snapshot, got default=%q, providers=%d", snap.DefaultProvider, len(snap.Providers))
+	}
+
+	draft := ModelConfigurationDraft{
+		Provider: "deepseek",
+		Type:     "openai",
+		BaseURL:  "https://api.deepseek.com/v1",
+		Models: []bootstrap.ModelConfig{
+			{Name: "deepseek-chat", ContextWindow: 128000},
+		},
+	}
+	if err := h.ConfigureModels(draft); err != nil {
+		t.Fatalf("ConfigureModels failed on first provider: %v", err)
+	}
+
+	after := h.ModelConfiguration()
+	if after.DefaultProvider != "deepseek" {
+		t.Fatalf("expected default provider to become deepseek, got: %q", after.DefaultProvider)
+	}
+	if after.DefaultModel != "deepseek-chat" {
+		t.Fatalf("expected default model to become deepseek-chat, got: %q", after.DefaultModel)
+	}
+}

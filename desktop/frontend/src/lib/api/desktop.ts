@@ -933,6 +933,90 @@ export function configSetStoryLanguage(language: string): Promise<AppliedLanguag
   );
 }
 
+export interface ProviderModelDraft {
+  name: string;
+  context_window?: number;
+  [key: string]: unknown;
+}
+
+export interface SaveProviderPayload {
+  provider: string;
+  type: string;
+  api?: string;
+  base_url?: string;
+  api_key_action?: 'keep' | 'replace' | 'clear';
+  api_key?: string;
+  models: ProviderModelDraft[];
+  renames?: Array<{ from: string; to: string }>;
+  [key: string]: unknown;
+}
+
+export interface SaveProviderResult {
+  saved: boolean;
+  provider: ProviderSummary;
+  [key: string]: unknown;
+}
+
+export interface TestProviderPayload extends SaveProviderPayload {
+  test_model: string;
+}
+
+export interface TestProviderResult {
+  success: boolean;
+  latency_ms?: number;
+  [key: string]: unknown;
+}
+
+export interface DeleteProviderPayload {
+  provider: string;
+  [key: string]: unknown;
+}
+
+export interface DeleteProviderResult {
+  deleted: boolean;
+  provider: string;
+  [key: string]: unknown;
+}
+
+export function configSaveProvider(payload: SaveProviderPayload): Promise<SaveProviderResult> {
+  return request<JsonObject & SaveProviderResult>('config.save_provider', payload as unknown as JsonObject).then(
+    (r) => r as SaveProviderResult,
+  );
+}
+
+export function configTestProvider(payload: TestProviderPayload): Promise<TestProviderResult> {
+  return request<JsonObject & TestProviderResult>('config.test_provider', payload as unknown as JsonObject).then(
+    (r) => r as TestProviderResult,
+  );
+}
+
+export function configDeleteProvider(payload: DeleteProviderPayload): Promise<DeleteProviderResult> {
+  return request<JsonObject & DeleteProviderResult>('config.delete_provider', payload as unknown as JsonObject).then(
+    (r) => r as DeleteProviderResult,
+  );
+}
+
+export interface FetchProviderModelsPayload {
+  provider?: string;
+  type: string;
+  api?: string;
+  base_url: string;
+  api_key_action?: 'keep' | 'replace' | 'clear';
+  api_key?: string;
+  [key: string]: unknown;
+}
+
+export interface FetchProviderModelsResult {
+  models: string[];
+  [key: string]: unknown;
+}
+
+export function configFetchProviderModels(payload: FetchProviderModelsPayload): Promise<FetchProviderModelsResult> {
+  return request<JsonObject & FetchProviderModelsResult>('config.fetch_provider_models', payload as unknown as JsonObject).then(
+    (r) => r as FetchProviderModelsResult,
+  );
+}
+
 /** One buffered structured log record (already redacted engine-side). */
 export interface LogRecord {
   sequence?: number;

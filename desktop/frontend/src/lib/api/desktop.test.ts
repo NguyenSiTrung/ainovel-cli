@@ -19,6 +19,10 @@ vi.mock('@tauri-apps/api/event', async () => {
 });
 
 import {
+  configDeleteProvider,
+  configFetchProviderModels,
+  configSaveProvider,
+  configTestProvider,
   DesktopApiError,
   EventDeduper,
   enginePing,
@@ -338,5 +342,78 @@ describe('artifacts read wrappers', () => {
       { method: 'artifacts.read', payload: { kind: 'world' } },
       { method: 'artifacts.read', payload: { kind: 'summary' } },
     ]);
+  });
+});
+
+describe('provider configuration management wrappers', () => {
+  beforeEach(() => {
+    tauri.reset();
+  });
+
+  it('configSaveProvider invokes config.save_provider with payload', async () => {
+    tauri.reply('desktop_request', { saved: true, provider: { name: 'custom-proxy' } });
+    const res = await configSaveProvider({
+      provider: 'custom-proxy',
+      type: 'openai',
+      base_url: 'https://api.example.com/v1',
+      models: [{ name: 'gpt-4o', context_window: 128000 }],
+    });
+    expect(res.saved).toBe(true);
+    expect(tauri.callsOf('desktop_request')[0]?.args).toEqual({
+      method: 'config.save_provider',
+      payload: {
+        provider: 'custom-proxy',
+        type: 'openai',
+        base_url: 'https://api.example.com/v1',
+        models: [{ name: 'gpt-4o', context_window: 128000 }],
+      },
+    });
+  });
+
+  it('configTestProvider invokes config.test_provider with payload', async () => {
+    tauri.reply('desktop_request', { success: true, latency_ms: 120 });
+    const res = await configTestProvider({
+      provider: 'custom-proxy',
+      type: 'openai',
+      models: [{ name: 'gpt-4o' }],
+      test_model: 'gpt-4o',
+    });
+    expect(res.success).toBe(true);
+    expect(res.latency_ms).toBe(120);
+    expect(tauri.callsOf('desktop_request')[0]?.args).toEqual({
+      method: 'config.test_provider',
+      payload: {
+        provider: 'custom-proxy',
+        type: 'openai',
+        models: [{ name: 'gpt-4o' }],
+        test_model: 'gpt-4o',
+      },
+    });
+  });
+
+  it('configDeleteProvider invokes config.delete_provider with payload', async () => {
+    tauri.reply('desktop_request', { deleted: true, provider: 'custom-proxy' });
+    const res = await configDeleteProvider({ provider: 'custom-proxy' });
+    expect(res.deleted).toBe(true);
+    expect(tauri.callsOf('desktop_request')[0]?.args).toEqual({
+      method: 'config.delete_provider',
+      payload: { provider: 'custom-proxy' },
+    });
+  });
+
+  it('configFetchProviderModels invokes config.fetch_provider_models with payload', async () => {
+    tauri.reply('desktop_request', { models: ['model-a', 'model-b'] });
+    const res = await configFetchProviderModels({
+      type: 'openai',
+      base_url: 'https://api.example/v1',
+    });
+    expect(res.models).toEqual(['model-a', 'model-b']);
+    expect(tauri.callsOf('desktop_request')[0]?.args).toEqual({
+      method: 'config.fetch_provider_models',
+      payload: {
+        type: 'openai',
+        base_url: 'https://api.example/v1',
+      },
+    });
   });
 });

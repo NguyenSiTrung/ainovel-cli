@@ -224,6 +224,7 @@ func init() {
 		"config.get", "config.update", "config.providers", "config.models",
 		"config.switch_model", "config.thinking_levels", "config.set_thinking",
 		"config.set_language", "config.set_story_language",
+		"config.save_provider", "config.test_provider", "config.delete_provider", "config.fetch_provider_models",
 		"diagnostics.snapshot", "diagnostics.export",
 		"usage.snapshot", "logs.replay", "runtime.queue",
 	} {

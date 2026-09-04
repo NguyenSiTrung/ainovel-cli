@@ -245,4 +245,56 @@ describe('settings screen', () => {
     await fireEvent.click(screen.getByTestId('settings-pref-failure'));
     expect(get(notificationPrefs).failure).toBe(true);
   });
+
+  it('shows Add Provider and Edit buttons and opens ProviderEditorModal', async () => {
+    scriptEngine();
+    renderSettings();
+    await vi.waitFor(() => expect(screen.getByTestId('settings-provider-add')).toBeTruthy());
+
+    const addBtn = screen.getByTestId('settings-provider-add');
+    await fireEvent.click(addBtn);
+    expect(screen.getByTestId('provider-editor-modal')).toBeTruthy();
+    expect(screen.getByTestId('provider-modal-title').textContent).toContain('Add provider');
+  });
+
+  it('disables Delete button when active default provider is selected, enables for non-active', async () => {
+    scriptEngine({
+      'config.delete_provider': () => ({ deleted: true, provider: 'ollama' }),
+    });
+    renderSettings();
+    await vi.waitFor(() =>
+      expect((screen.getByTestId('settings-provider-select') as HTMLSelectElement).value).toBe('openai'),
+    );
+
+    const delBtn = screen.getByTestId('settings-provider-delete') as HTMLButtonElement;
+    expect(delBtn.disabled).toBe(true);
+
+    // Change to 'ollama'
+    await fireEvent.change(screen.getByTestId('settings-provider-select'), { target: { value: 'ollama' } });
+    await vi.waitFor(() => expect(delBtn.disabled).toBe(false));
+
+    await fireEvent.click(delBtn);
+    await vi.waitFor(() => expect(callsOf('config.delete_provider')).toBe(1));
+  });
+
+  it('displays empty provider notice when no providers are configured on first run', async () => {
+    scriptEngine({
+      'config.get': () => ({
+        provider: '',
+        model: '',
+        reasoning_effort: '',
+        language: 'en',
+        story_language: 'en',
+        style: 'default',
+        budget_usd: 0,
+        config_path: '/home/user/.ainovel/config.json',
+        providers: [],
+      }),
+    });
+    renderSettings();
+    await vi.waitFor(() => {
+      expect(screen.getByTestId('settings-no-providers')).toBeTruthy();
+    });
+    expect(screen.getByTestId('settings-no-providers').textContent).toContain('No providers configured');
+  });
 });
