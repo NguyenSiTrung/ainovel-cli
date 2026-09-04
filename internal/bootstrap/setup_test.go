@@ -53,3 +53,30 @@ func TestExampleConfigSync(t *testing.T) {
 		t.Errorf("internal/bootstrap/config.example.jsonc does not match root config.example.jsonc")
 	}
 }
+
+func TestSeedDefaultConfig(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	if !NeedsSetup() {
+		t.Fatal("expected NeedsSetup to be true in clean temp home")
+	}
+
+	if err := SeedDefaultConfig(); err != nil {
+		t.Fatalf("SeedDefaultConfig failed: %v", err)
+	}
+
+	if NeedsSetup() {
+		t.Fatal("expected NeedsSetup to be false after SeedDefaultConfig")
+	}
+
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+	cfg.FillDefaults()
+	if err := cfg.ValidateBase(); err != nil {
+		t.Fatalf("ValidateBase failed on seeded config: %v", err)
+	}
+}

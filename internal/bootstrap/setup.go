@@ -198,6 +198,26 @@ func saveExampleConfig() {
 	_ = os.WriteFile(filepath.Join(dir, "config.example.jsonc"), []byte(exampleConfig), 0o644)
 }
 
+// SeedDefaultConfig 在桌面端无交互模式首次启动且配置缺失时，自动落盘默认
+// 配置模板 (~/.ainovel/config.json) 与注释模板 (~/.ainovel/config.example.jsonc)，
+// 让桌面端直接进入可用状态，而无需先在终端运行交互式 TUI。
+func SeedDefaultConfig() error {
+	path := DefaultConfigPath()
+	if path == "" {
+		return fmt.Errorf("cannot resolve default config path")
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	saveExampleConfig()
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err := os.WriteFile(path, []byte(exampleConfig), 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // printStepDone 打印一步完成的确认行。
 func printStepDone(label, value string) {
 	fmt.Fprintf(os.Stderr, "  %s %s: %s\n",

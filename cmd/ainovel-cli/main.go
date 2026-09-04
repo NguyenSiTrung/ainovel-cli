@@ -173,10 +173,12 @@ func runDesktopDaemon(opts cliOptions, args []string) {
 		os.Exit(1)
 	}
 	if bootstrap.NeedsSetup() {
-		msg := "engine setup is missing: run the interactive TUI once to configure providers, then relaunch the desktop app"
-		desktop.StartupError(os.Stdout, desktop.CodeOperationFailed, msg)
-		fmt.Fprintln(os.Stderr, "desktop-daemon:", msg)
-		os.Exit(1)
+		if err := bootstrap.SeedDefaultConfig(); err != nil {
+			msg := "engine setup is missing and default config seeding failed: " + err.Error()
+			desktop.StartupError(os.Stdout, desktop.CodeOperationFailed, msg)
+			fmt.Fprintln(os.Stderr, "desktop-daemon:", msg)
+			os.Exit(1)
+		}
 	}
 	cfg, err := bootstrap.LoadConfig()
 	if err != nil {

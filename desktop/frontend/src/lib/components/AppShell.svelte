@@ -9,6 +9,7 @@
   import { currentLanguage } from '$lib/locale';
   import ActivityPanel from './ActivityPanel.svelte';
   import HeaderBar from './HeaderBar.svelte';
+  import EngineErrorBanner from './EngineErrorBanner.svelte';
   import NotificationToasts from './NotificationToasts.svelte';
   import RecoveryCard from './RecoveryCard.svelte';
   import SideNav from './SideNav.svelte';
@@ -39,6 +40,7 @@
   <div class="shell-body" class:panel-collapsed={!sidePanelOpen}>
     <SideNav />
     <main class="workspace" data-testid="workspace">
+      <EngineErrorBanner />
       <SnapshotErrorBanner />
       <RecoveryCard />
       <UnsavedGuardCard />

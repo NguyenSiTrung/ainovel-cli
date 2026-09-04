@@ -16,8 +16,12 @@ if [ -z "${AINOVEL_SIDECAR:-}" ]; then
     triple=$(rustc -vV | sed -n 's/^host: //p')
     AINOVEL_SIDECAR="$desk/src-tauri/binaries/ainovel-engine-$triple"
     export AINOVEL_SIDECAR
-    if [ ! -x "$AINOVEL_SIDECAR" ]; then
-        echo "dev: sidecar missing, building $triple..." >&2
+    is_placeholder=0
+    if [ -f "$AINOVEL_SIDECAR" ] && grep -q "placeholder sidecar" "$AINOVEL_SIDECAR" 2>/dev/null; then
+        is_placeholder=1
+    fi
+    if [ ! -x "$AINOVEL_SIDECAR" ] || [ "$is_placeholder" -eq 1 ]; then
+        echo "dev: sidecar missing or placeholder, building $triple..." >&2
         sh "$desk/scripts/build-sidecars.sh" "$triple"
     fi
 fi

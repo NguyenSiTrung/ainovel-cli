@@ -12,6 +12,7 @@
   import { validateProjectDir } from '$lib/api/desktop';
   import {
     closeProject,
+    connectionState,
     createProject,
     openProject,
     projectSnapshot,
@@ -34,6 +35,9 @@
 
   let nativeDialogs = canUseNativeDialogs();
   let projectOpen = $derived(snapshot !== null);
+  let connection = $derived($connectionState);
+  let engineFailed = $derived(connection === 'failed');
+
 
   async function chooseParent(): Promise<void> {
     pickingParent = true;
@@ -48,6 +52,12 @@
   }
 
   async function create(): Promise<void> {
+    if (engineFailed) {
+      pushNotification('error', 'Novel engine is not ready — start or restart engine from the header bar.', {
+        source: 'status',
+      });
+      return;
+    }
     const name = newName.trim();
     if (parentDir === null || name === '' || creating) return;
     const path = joinPath(parentDir, name);
@@ -67,6 +77,12 @@
 
   async function open(): Promise<void> {
     if (opening) return;
+    if (engineFailed) {
+      pushNotification('error', 'Novel engine is not ready — start or restart engine from the header bar.', {
+        source: 'status',
+      });
+      return;
+    }
     let path: string | null = null;
     try {
       path = await pickDirectory({ title: 'Choose a project folder' });
@@ -118,14 +134,16 @@
       type="button"
       class="primary action-btn"
       onclick={() => (showNewForm = !showNewForm)}
-      disabled={!nativeDialogs || creating || opening}
+      disabled={!nativeDialogs || engineFailed || creating || opening}
+      title={engineFailed ? 'Engine is unavailable' : undefined}
       data-testid="project-action-new"
     >New project…</button>
     <button
       type="button"
       class="action-btn"
       onclick={() => open()}
-      disabled={!nativeDialogs || opening || creating}
+      disabled={!nativeDialogs || engineFailed || opening || creating}
+      title={engineFailed ? 'Engine is unavailable' : undefined}
       data-testid="project-action-open"
     >{opening ? 'Opening…' : 'Open…'}</button>
     {#if projectOpen}

@@ -25,6 +25,7 @@ import { get } from 'svelte/store';
 
 import ActivityPanel from '$lib/components/ActivityPanel.svelte';
 import AppShell from '$lib/components/AppShell.svelte';
+import EngineErrorBanner from '$lib/components/EngineErrorBanner.svelte';
 import ErrorBanner from '$lib/components/ErrorBanner.svelte';
 import HeaderBar from '$lib/components/HeaderBar.svelte';
 import NotificationToasts from '$lib/components/NotificationToasts.svelte';
@@ -301,5 +302,31 @@ describe('ErrorBanner', () => {
     const banner = screen.getByTestId('error-banner');
     expect(banner.textContent).toContain('Unexpected error');
     expect(banner.textContent).toContain('[future_code]');
+  });
+});
+
+describe('EngineErrorBanner', () => {
+  it('renders when connectionState is failed and displays lastError with retry button', () => {
+    connectionState.set('failed');
+    engineState.set({
+      health: 'failed',
+      stopping: false,
+      restartAttempts: 3,
+      restartsTotal: 3,
+      malformedOutputLines: 0,
+      lastError: 'engine startup error: engine setup is missing: run the interactive TUI once',
+    });
+    render(EngineErrorBanner);
+    const banner = screen.getByTestId('engine-error-banner');
+    expect(banner.textContent).toContain('Novel Engine Unavailable');
+    expect(banner.textContent).toContain('engine setup is missing');
+    expect(banner.textContent).toContain('First-run setup required');
+    expect(screen.getByTestId('engine-retry-btn')).toBeTruthy();
+  });
+
+  it('is hidden when connectionState is ready', () => {
+    connectionState.set('ready');
+    render(EngineErrorBanner);
+    expect(screen.queryByTestId('engine-error-banner')).toBeNull();
   });
 });

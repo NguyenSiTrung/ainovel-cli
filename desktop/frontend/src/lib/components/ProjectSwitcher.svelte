@@ -11,6 +11,7 @@
   import { getPaths, hasTauriBridge, validateProjectDir } from '$lib/api/desktop';
   import {
     closeProject,
+    connectionState,
     createProject,
     openProject,
     projectSnapshot,
@@ -28,6 +29,9 @@
   let snapshot = $derived($projectSnapshot);
   let projectLabel = $derived(snapshot?.book_title ?? snapshot?.status_label ?? null);
   const bridged = hasTauriBridge();
+  let connection = $derived($connectionState);
+  let engineFailed = $derived(connection === 'failed');
+
 
   onMount(() => {
     if (!bridged) return;
@@ -64,6 +68,10 @@
 
   async function open(): Promise<void> {
     if (path.trim() === '' || busy) return;
+    if (engineFailed) {
+      reportError({ code: 'engine_unavailable', message: 'Engine is unavailable' }, 'project.open');
+      return;
+    }
     busy = true;
     try {
       await openProject(path.trim());
@@ -76,6 +84,10 @@
 
   async function create(): Promise<void> {
     if (path.trim() === '' || busy) return;
+    if (engineFailed) {
+      reportError({ code: 'engine_unavailable', message: 'Engine is unavailable' }, 'project.create');
+      return;
+    }
     busy = true;
     try {
       await createProject(path.trim());
@@ -146,7 +158,8 @@
       type="button"
       class="primary"
       onclick={() => open()}
-      disabled={!bridged || busy || validating || path.trim() === ''}
+      disabled={!bridged || busy || validating || engineFailed || path.trim() === ''}
+      title={engineFailed ? 'Engine is unavailable' : undefined}
       data-testid="open-project"
     >
       Open
@@ -156,7 +169,8 @@
         type="button"
         class="ghost"
         onclick={() => create()}
-        disabled={!bridged || busy || validating}
+        disabled={!bridged || busy || validating || engineFailed}
+        title={engineFailed ? 'Engine is unavailable' : undefined}
         data-testid="create-project"
       >
         Create here
