@@ -162,6 +162,22 @@ describe('settings screen', () => {
     expect(screen.getByTestId('settings-active-summary').textContent).toContain('medium');
   });
 
+  it('keeps technical settings collapsed until the user asks for them', async () => {
+    scriptEngine();
+    renderSettings();
+
+    await vi.waitFor(() => expect(screen.getByTestId('settings-budget').textContent).toBe('$25.00'));
+    const advanced = screen.getByTestId('settings-advanced') as HTMLDetailsElement;
+    expect(advanced.open).toBe(false);
+    expect(advanced.textContent).toContain('Engine-managed details');
+    expect(advanced.textContent).toContain('Connection details');
+
+    const summary = advanced.querySelector('summary');
+    expect(summary).not.toBeNull();
+    await fireEvent.click(summary as HTMLElement);
+    expect(advanced.open).toBe(true);
+  });
+
   it('secrets never render: rogue plaintext fields from the fixture are absent', async () => {
     scriptEngine();
     renderSettings();

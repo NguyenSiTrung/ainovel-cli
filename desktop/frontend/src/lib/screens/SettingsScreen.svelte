@@ -151,7 +151,7 @@
   }
 
   function money(value: number | undefined): string {
-    return typeof value === 'number' && Number.isFinite(value) ? `$${value.toFixed(2)}` : '—';
+    return typeof value === 'number' && Number.isFinite(value) ? `$${value.toFixed(2)}` : '-';
   }
 
   function openAddProvider(): void {
@@ -189,7 +189,7 @@
         disabled={settings.status === 'loading'}
         data-testid="settings-refresh"
       >
-        {settings.status === 'loading' ? 'Refreshing…' : 'Refresh configuration'}
+        {settings.status === 'loading' ? 'Refreshing…' : 'Refresh'}
       </button>
     {/if}
   </header>
@@ -224,9 +224,13 @@
 
     <section class="active-summary" data-testid="settings-active-summary" aria-label="Active AI configuration">
       <div class="active-summary-heading">
-        <span class="section-label">Current configuration</span>
-        <h3>Ready for your next chapter</h3>
-        <p>Your selected provider, model, and reasoning level work together for every run.</p>
+        <span class="section-label">Writing engine</span>
+        <h3>{view?.model || 'Choose a model'}</h3>
+        <p>
+          {view?.provider
+            ? `${view.provider} is ready for planning, drafting, and revision.`
+            : 'Add a provider to start writing with AI.'}
+        </p>
       </div>
       <dl class="active-summary-data">
         <div>
@@ -234,12 +238,12 @@
           <dd class="mono">{view?.provider || 'Not configured'}</dd>
         </div>
         <div>
-          <dt>Model</dt>
-          <dd class="mono">{view?.model || 'Not configured'}</dd>
-        </div>
-        <div>
           <dt>Thinking</dt>
           <dd>{view?.reasoning_effort || 'Default'}</dd>
+        </div>
+        <div>
+          <dt>Story language</dt>
+          <dd>{LANGUAGE_LABELS[view?.story_language ?? ''] ?? view?.story_language ?? 'Default'}</dd>
         </div>
       </dl>
     </section>
@@ -248,12 +252,11 @@
       <article class="card model-card" data-testid="settings-model">
         <header class="card-header">
           <div>
-            <span class="section-label">AI configuration</span>
-            <h3>Provider &amp; model</h3>
-            <p class="meta">Select the model that powers your planning and writing.</p>
+            <h3>AI model</h3>
+            <p class="meta">Choose the provider and model used across your writing workflow.</p>
           </div>
+          <p class="active-pair">Active <span class="mono">{view?.provider || 'Not configured'} / {view?.model || 'Not configured'}</span></p>
         </header>
-        <p class="active-pair">Active: <span class="mono">{view?.provider || 'Not configured'} / {view?.model || 'Not configured'}</span></p>
 
         {#if providerNames.length === 0}
           <div class="empty-provider-notice" data-testid="settings-no-providers">
@@ -326,67 +329,48 @@
           </button>
         </div>
 
-        {#if activeProviderSummary}
-          <details class="provider-details">
-            <summary>Connection details</summary>
-            <dl class="facts" data-testid="settings-provider-credentials">
-              <div><dt>API key configured</dt><dd>{activeProviderSummary.has_api_key === true ? 'yes' : 'no'}</dd></div>
-              {#if activeProviderSummary.api_key_hint}
-                <div><dt>Key hint</dt><dd class="mono" data-testid="settings-key-hint">{activeProviderSummary.api_key_hint}</dd></div>
-              {/if}
-              <div><dt>Key required</dt><dd>{activeProviderSummary.requires_api_key === true ? 'yes' : 'no'}</dd></div>
-              {#if activeProviderSummary.base_url}
-                <div><dt>Base URL</dt><dd class="mono">{activeProviderSummary.base_url}</dd></div>
-              {/if}
-            </dl>
-            <p class="meta">Credentials stay engine-side. Only a masked key hint reaches the app.</p>
-          </details>
-        {/if}
       </article>
 
       <article class="card" data-testid="settings-thinking">
         <header class="card-header">
           <div>
-            <span class="section-label">Reasoning</span>
             <h3>Thinking level</h3>
-            <p class="meta">
-              Active: <span class="mono">{view?.reasoning_effort ?? 'Default'}</span>
-              {#if settings.thinking.model} for {settings.thinking.provider ?? 'provider'} / {settings.thinking.model}{/if}
-            </p>
+            <p class="meta">Control how much reasoning the current model uses before it writes.</p>
           </div>
+          <span class="current-value">Current: {view?.reasoning_effort ?? 'Default'}</span>
         </header>
         {#if settings.thinking.error}
           <div class="error-box" role="alert">
             <p>{presentError(settings.thinking.error.code).title}: {settings.thinking.error.message}</p>
           </div>
         {:else}
-          <label>
-            Level
-            <select value={selectedThinking} onchange={changeThinking} data-testid="settings-thinking-select">
-              {#each settings.thinking.levels as level (level)}
-                <option value={level}>{level}</option>
-              {/each}
-            </select>
-          </label>
-          <button
-            type="button"
-            class="primary"
-            onclick={() => setThinkingFromUi(selectedThinking)}
-            disabled={selectedThinking === '' || settings.mutations.thinking !== 'idle'}
-            data-testid="settings-thinking-apply"
-          >
-            {settings.mutations.thinking === 'applying' ? 'Applying…' : 'Set thinking level'}
-          </button>
-          <p class="meta card-footer-note">Levels are provided by the engine for the current model.</p>
+          <div class="preference-control">
+            <label>
+              Level
+              <select value={selectedThinking} onchange={changeThinking} data-testid="settings-thinking-select">
+                {#each settings.thinking.levels as level (level)}
+                  <option value={level}>{level}</option>
+                {/each}
+              </select>
+            </label>
+            <button
+              type="button"
+              class="primary"
+              onclick={() => setThinkingFromUi(selectedThinking)}
+              disabled={selectedThinking === '' || settings.mutations.thinking !== 'idle'}
+              data-testid="settings-thinking-apply"
+            >
+              {settings.mutations.thinking === 'applying' ? 'Applying…' : 'Apply'}
+            </button>
+          </div>
         {/if}
       </article>
 
       <article class="card" data-testid="settings-languages">
         <header class="card-header">
           <div>
-            <span class="section-label">Writing preferences</span>
             <h3>{t('settings.languages.title', lang)}</h3>
-            <p class="meta">Keep the app and your story in the language that serves you best.</p>
+            <p class="meta">Set the language used by the app and the language used in generated prose.</p>
           </div>
         </header>
         <div class="language-control">
@@ -433,9 +417,8 @@
       <article class="card" data-testid="settings-notifications">
         <header class="card-header">
           <div>
-            <span class="section-label">Focus</span>
             <h3>Notifications</h3>
-            <p class="meta">Choose which engine events deserve your attention.</p>
+            <p class="meta">Choose which run events should interrupt your writing session.</p>
           </div>
         </header>
         <label class="check">
@@ -477,28 +460,53 @@
         <p class="meta card-footer-note">Errors from your own actions always appear.</p>
       </article>
 
-      <details class="engine-details" open data-testid="settings-readonly">
+      <details class="engine-details" data-testid="settings-advanced">
         <summary>
           <span>
-            <span class="section-label">System</span>
-            <strong>Engine-managed details</strong>
+            <strong>Advanced</strong>
+            <small>Credentials, file locations, and engine-managed values</small>
           </span>
-          <span class="summary-hint">Read-only</span>
+          <span class="summary-hint">Details</span>
         </summary>
-        <div class="engine-details-content">
-          <dl class="facts">
-            <div><dt>Budget limit</dt><dd data-testid="settings-budget">{money(view?.budget_usd)}</dd></div>
-            {#if view?.style}<div><dt>Style</dt><dd>{view.style}</dd></div>{/if}
-            {#if view?.config_path}<div><dt>Config file</dt><dd class="mono">{view.config_path}</dd></div>{/if}
-            {#if projectsDir}<div><dt>Projects directory</dt><dd class="mono">{projectsDir}</dd></div>{/if}
-          </dl>
-          <p class="meta">
-            Budget and style have no public engine setters (config.update rejects them). Export and
-            diagnostics destinations are chosen per run through native dialogs.
-          </p>
-          <p class="meta" data-testid="settings-update-channel">
-            App updates are managed outside this app. The engine exposes no update setting.
-          </p>
+        <div class="advanced-content">
+          {#if activeProviderSummary}
+            <section class="advanced-group">
+              <header>
+                <h4>Connection details</h4>
+                <p>Credentials stay inside the engine. The app receives only a masked key hint.</p>
+              </header>
+              <dl class="facts" data-testid="settings-provider-credentials">
+                <div><dt>API key configured</dt><dd>{activeProviderSummary.has_api_key === true ? 'yes' : 'no'}</dd></div>
+                {#if activeProviderSummary.api_key_hint}
+                  <div><dt>Key hint</dt><dd class="mono" data-testid="settings-key-hint">{activeProviderSummary.api_key_hint}</dd></div>
+                {/if}
+                <div><dt>Key required</dt><dd>{activeProviderSummary.requires_api_key === true ? 'yes' : 'no'}</dd></div>
+                {#if activeProviderSummary.base_url}
+                  <div><dt>Base URL</dt><dd class="mono">{activeProviderSummary.base_url}</dd></div>
+                {/if}
+              </dl>
+            </section>
+          {/if}
+
+          <section class="advanced-group" data-testid="settings-readonly">
+            <header>
+              <h4>Engine-managed details</h4>
+              <p>Reference values controlled by the engine or selected per run.</p>
+            </header>
+            <dl class="facts">
+              <div><dt>Budget limit</dt><dd data-testid="settings-budget">{money(view?.budget_usd)}</dd></div>
+              {#if view?.style}<div><dt>Style</dt><dd>{view.style}</dd></div>{/if}
+              {#if view?.config_path}<div><dt>Config file</dt><dd class="mono">{view.config_path}</dd></div>{/if}
+              {#if projectsDir}<div><dt>Projects directory</dt><dd class="mono">{projectsDir}</dd></div>{/if}
+            </dl>
+            <p class="meta">
+              Budget and style have no public engine setters (config.update rejects them). Export and
+              diagnostics destinations are chosen per run through native dialogs.
+            </p>
+            <p class="meta" data-testid="settings-update-channel">
+              App updates are managed outside this app. The engine exposes no update setting.
+            </p>
+          </section>
         </div>
       </details>
     </div>
@@ -519,35 +527,41 @@
   .screen {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
-    width: min(100%, 72rem);
+    gap: 1.4rem;
+    width: min(100%, 64rem);
     margin: 0 auto;
-    padding: 1.75rem 2rem 2.5rem;
+    padding: 2.25rem 2.25rem 3.5rem;
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    container-type: inline-size;
   }
   .settings-header {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: 1.5rem;
   }
   .settings-header h2 {
     margin: 0;
-    font-size: 1.55rem;
+    font-size: 1.7rem;
     font-weight: 700;
-    letter-spacing: -0.035em;
+    letter-spacing: -0.04em;
+    line-height: 1.15;
   }
   .screen-description {
-    margin: 0.2rem 0 0;
+    margin: 0.35rem 0 0;
     color: var(--text-dim);
     font-size: 0.88rem;
-    max-width: 42rem;
+    max-width: 38rem;
+    text-wrap: pretty;
   }
   .refresh-button {
     flex: none;
     white-space: nowrap;
+    color: var(--text-dim);
+    background: transparent;
+    border-color: var(--border-subtle);
   }
   .section-label {
     display: block;
@@ -611,27 +625,32 @@
   }
   .active-summary {
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(24rem, 1fr);
-    gap: 1.75rem;
-    align-items: end;
-    padding: 1.35rem 1.5rem;
-    border: 1px solid color-mix(in srgb, var(--accent) 31%, var(--border));
+    grid-template-columns: minmax(0, 1fr) minmax(24rem, 0.9fr);
+    gap: 2rem;
+    align-items: center;
+    padding: 1.5rem 1.6rem 1.65rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
     border-radius: var(--radius-lg);
     background:
-      linear-gradient(115deg, color-mix(in srgb, var(--accent) 13%, var(--surface-1)), var(--surface-1) 62%),
+      radial-gradient(circle at 0 0, color-mix(in srgb, var(--accent) 13%, transparent), transparent 42%),
       var(--surface-1);
-    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 5%, transparent);
+    box-shadow: var(--shadow-sm), inset 0 1px 0 color-mix(in srgb, var(--text) 5%, transparent);
   }
   .active-summary-heading h3 {
-    margin: 0.25rem 0 0;
-    font-size: 1.1rem;
-    letter-spacing: -0.025em;
+    margin: 0.32rem 0 0;
+    font-family: var(--font-serif);
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
   }
   .active-summary-heading p {
-    max-width: 36rem;
-    margin: 0.32rem 0 0;
+    max-width: 32rem;
+    margin: 0.42rem 0 0;
     color: var(--text-dim);
     font-size: 0.84rem;
+    text-wrap: pretty;
   }
   .active-summary-data {
     display: grid;
@@ -641,10 +660,8 @@
   }
   .active-summary-data div {
     min-width: 0;
-    padding: 0.6rem 0.7rem;
-    border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-    border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--surface-0) 48%, transparent);
+    padding-left: 0.75rem;
+    border-left: 1px solid color-mix(in srgb, var(--border-hover) 65%, transparent);
   }
   .active-summary-data dt {
     color: var(--text-faint);
@@ -660,21 +677,39 @@
     font-weight: 600;
   }
   .settings-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.18fr) minmax(19rem, 0.82fr);
-    gap: 1rem;
-    align-items: start;
-  }
-  .card {
-    background: var(--surface-1);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 1.25rem;
-    min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
-    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 3%, transparent);
+  }
+  .card {
+    display: grid;
+    grid-template-columns: minmax(13rem, 0.72fr) minmax(0, 1.28fr);
+    align-items: start;
+    gap: 0.75rem 2rem;
+    min-width: 0;
+    padding: 1.45rem 0.25rem 1.6rem;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .card > .card-header {
+    grid-column: 1;
+  }
+  .card > :not(.card-header) {
+    grid-column: 2;
+  }
+  .model-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    margin-bottom: 0.2rem;
+    padding: 1.45rem 1.5rem 1.55rem;
+    background: color-mix(in srgb, var(--surface-1) 92%, var(--accent));
+    border: 1px solid color-mix(in srgb, var(--accent) 19%, var(--border));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm), inset 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent);
+  }
+  .model-card > .card-header,
+  .model-card > :not(.card-header) {
+    grid-column: auto;
+    grid-row: auto;
   }
   .card-header {
     display: flex;
@@ -683,20 +718,37 @@
     gap: 0.75rem;
   }
   .card-header h3 {
-    margin: 0.22rem 0 0;
+    margin: 0;
     color: var(--text);
-    font-size: 1rem;
+    font-size: 1.02rem;
     font-weight: 650;
-    letter-spacing: -0.015em;
+    letter-spacing: -0.02em;
   }
   .card-header .meta {
-    margin-top: 0.28rem;
-    max-width: 36rem;
+    margin-top: 0.38rem;
+    max-width: 30rem;
+    line-height: 1.45;
+    text-wrap: pretty;
   }
   .active-pair {
-    margin: -0.2rem 0 0;
+    flex: none;
+    margin: 0.08rem 0 0;
     color: var(--text-dim);
-    font-size: 0.77rem;
+    font-size: 0.73rem;
+    text-align: right;
+  }
+  .active-pair span {
+    display: block;
+    margin-top: 0.18rem;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+  }
+  .current-value {
+    display: block;
+    margin-top: 0.45rem;
+    color: var(--text-dim);
+    font-size: 0.73rem;
+    font-weight: 600;
   }
   .empty-provider-notice {
     font-size: 0.8rem;
@@ -710,37 +762,68 @@
   .field-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.65rem;
+    gap: 0.75rem;
   }
   label {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--text-dim);
     font-weight: 600;
   }
   label.check {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
     flex-direction: row;
     align-items: center;
-    gap: 0.65rem;
-    padding: 0.58rem 0.6rem;
-    border: 1px solid transparent;
+    gap: 1rem;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: color var(--transition-fast);
+  }
+  label.check:last-of-type {
+    border-bottom: 0;
+  }
+  label.check input {
+    position: relative;
+    grid-column: 2;
+    grid-row: 1;
+    width: 2.35rem;
+    height: 1.3rem;
+    margin: 0;
+    appearance: none;
+    border: 1px solid var(--border-hover);
+    border-radius: var(--radius-full);
+    background: var(--surface-3);
     cursor: pointer;
     transition: background var(--transition-fast), border-color var(--transition-fast);
   }
-  label.check:hover {
-    border-color: var(--border-subtle);
-    background: var(--surface-2);
+  label.check input::before {
+    content: '';
+    position: absolute;
+    top: 0.16rem;
+    left: 0.17rem;
+    width: 0.82rem;
+    height: 0.82rem;
+    border-radius: var(--radius-full);
+    background: var(--text-dim);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-fast), background var(--transition-fast);
   }
-  label.check input {
-    width: 0.95rem;
-    height: 0.95rem;
-    margin: 0;
-    accent-color: var(--accent);
+  label.check input:checked {
+    border-color: color-mix(in srgb, var(--accent) 72%, var(--border));
+    background: color-mix(in srgb, var(--accent) 68%, var(--surface-3));
+  }
+  label.check input:checked::before {
+    transform: translateX(1rem);
+    background: #f7f9fc;
+  }
+  label.check input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
   label.check strong,
   label.check small {
@@ -760,6 +843,7 @@
   select {
     font-size: 0.84rem;
     width: 100%;
+    min-height: 2.25rem;
   }
   .apply-row {
     display: flex;
@@ -770,11 +854,18 @@
   }
   .apply-row .meta {
     max-width: 22rem;
+    color: var(--text-dim);
   }
-  .provider-details {
-    margin-top: 0.05rem;
+  .preference-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    align-items: end;
   }
-  .provider-details summary,
+  .preference-control .primary,
+  .language-control .primary {
+    min-width: 4.75rem;
+  }
   .engine-details summary {
     display: flex;
     align-items: center;
@@ -785,16 +876,13 @@
     font-size: 0.79rem;
     font-weight: 600;
   }
-  .provider-details summary:hover,
   .engine-details summary:hover {
     color: var(--text);
-  }
-  .provider-details[open] summary {
-    margin-bottom: 0.6rem;
   }
   .facts {
     margin: 0;
     display: flex;
+    flex-direction: column;
     gap: 0.4rem;
     padding: 0.7rem 0.8rem;
     background: var(--surface-2);
@@ -824,7 +912,7 @@
   }
   .meta {
     margin: 0;
-    color: var(--text-faint);
+    color: var(--text-dim);
     font-size: 0.8rem;
   }
   .card-footer-note {
@@ -876,50 +964,127 @@
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.65rem;
     align-items: end;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-subtle);
   }
-  .language-control .primary {
-    min-width: 4.75rem;
+  .language-control + .language-control {
+    padding-top: 0.1rem;
   }
   .engine-details {
-    grid-column: 1 / -1;
-    padding: 1rem 1.25rem;
+    margin-top: 0.15rem;
+    padding: 1.05rem 0.25rem 0;
     border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    background: color-mix(in srgb, var(--surface-1) 76%, var(--surface-0));
+    border-width: 1px 0 0;
   }
   .engine-details summary strong {
     display: block;
-    margin-top: 0.2rem;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+  .engine-details summary small {
+    display: block;
+    margin-top: 0.18rem;
+    color: var(--text-dim);
+    font-size: 0.76rem;
+    font-weight: 500;
   }
   .summary-hint {
     color: var(--text-faint);
     font-size: 0.72rem;
     font-weight: 600;
   }
-  .engine-details-content {
+  .advanced-content {
     display: grid;
-    grid-template-columns: minmax(16rem, 0.8fr) minmax(0, 1.2fr);
-    gap: 0.65rem 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
     align-items: start;
-    margin-top: 0.9rem;
+    margin-top: 1.1rem;
+    padding-bottom: 0.25rem;
   }
-  .engine-details-content .facts {
-    grid-row: span 2;
+  .advanced-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--surface-1) 72%, var(--surface-0));
+  }
+  .advanced-group h4 {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+  }
+  .advanced-group header p {
+    margin: 0.25rem 0 0;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    line-height: 1.45;
+  }
+
+  @container (max-width: 50rem) {
+    .active-summary {
+      grid-template-columns: 1fr;
+      gap: 1.15rem;
+    }
+  }
+
+  @container (max-width: 42rem) {
+    .card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      padding: 1.25rem 0.1rem;
+    }
+    .model-card {
+      padding: 1.2rem;
+    }
+    .card-header,
+    .model-card .card-header {
+      width: 100%;
+    }
+  }
+
+  @container (max-width: 34rem) {
+    .model-card .card-header,
+    .apply-row {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .active-pair {
+      text-align: left;
+    }
+    .active-summary-data,
+    .field-grid,
+    .advanced-content {
+      grid-template-columns: 1fr;
+    }
+    .active-summary-data div {
+      padding: 0.45rem 0 0;
+      border-top: 1px solid color-mix(in srgb, var(--border-hover) 65%, transparent);
+      border-left: 0;
+    }
+    .language-control,
+    .preference-control {
+      grid-template-columns: 1fr;
+    }
+    .language-control .primary,
+    .preference-control .primary {
+      width: 100%;
+    }
   }
 
   @media (max-width: 58rem) {
-    .active-summary,
-    .settings-grid {
+    .active-summary {
       grid-template-columns: 1fr;
     }
-    .engine-details {
-      grid-column: auto;
+    .card {
+      grid-template-columns: minmax(11rem, 0.65fr) minmax(0, 1.35fr);
     }
   }
 
-  @media (max-width: 40rem) {
+  @media (max-width: 46rem) {
     .screen {
       gap: 1rem;
       padding: 1.25rem 1rem 2rem;
@@ -939,11 +1104,29 @@
     }
     .active-summary-data,
     .field-grid,
-    .engine-details-content {
+    .advanced-content {
       grid-template-columns: 1fr;
     }
-    .engine-details-content .facts {
-      grid-row: auto;
+    .card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      padding: 1.25rem 0.1rem;
+    }
+    .model-card {
+      padding: 1.2rem;
+    }
+    .card-header,
+    .model-card .card-header {
+      width: 100%;
+    }
+    .language-control,
+    .preference-control {
+      grid-template-columns: 1fr;
+    }
+    .language-control .primary,
+    .preference-control .primary {
+      width: 100%;
     }
   }
 </style>
