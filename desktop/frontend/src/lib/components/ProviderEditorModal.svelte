@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { ProviderSummary } from '$lib/api/desktop';
-  import { fetchProviderModelsFromUi, PROVIDER_PRESETS, saveProviderFromUi, testProviderFromUi, type ProviderPreset } from '$lib/settings';
+  import { fetchProviderModelsFromUi, PROVIDER_PRESETS, saveProviderFromUi, testProviderFromUi } from '$lib/settings';
 
   interface Props {
     open: boolean;

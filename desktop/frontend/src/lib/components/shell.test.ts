@@ -18,7 +18,7 @@ vi.mock('@tauri-apps/api/event', async () => {
   };
 });
 
-import { cleanup, render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 
 import { tick } from 'svelte';
 import { get } from 'svelte/store';
@@ -274,6 +274,32 @@ describe('NotificationToasts', () => {
     setNotificationPref('completion', true);
     await vi.waitFor(() => expect(screen.getByText('run completed')).toBeTruthy());
     expect(get(notificationPrefs)).toEqual({ completion: true, pause: true, warning: true, failure: true });
+  });
+
+  it('does not render clear all button when 0 or 1 notification exists', () => {
+    const { unmount } = render(NotificationToasts);
+    expect(screen.queryByTestId('clear-all-notifications')).toBeNull();
+    unmount();
+
+    pushNotification('info', 'only one note');
+    render(NotificationToasts);
+    expect(screen.queryByTestId('clear-all-notifications')).toBeNull();
+  });
+
+  it('renders clear all button when 2+ notifications exist and clears all when clicked', async () => {
+    pushNotification('info', 'note 1');
+    pushNotification('warning', 'note 2');
+    render(NotificationToasts);
+
+    const clearAllBtn = screen.getByTestId('clear-all-notifications');
+    expect(clearAllBtn).toBeTruthy();
+    expect(clearAllBtn.textContent?.trim()).toBe('Clear all');
+
+    await fireEvent.click(clearAllBtn);
+    await vi.waitFor(() => expect(screen.queryByTestId('clear-all-notifications')).toBeNull());
+    expect(screen.queryByTestId('toast-info')).toBeNull();
+    expect(screen.queryByTestId('toast-warning')).toBeNull();
+    expect(get(notifications)).toEqual([]);
   });
 });
 

@@ -8,6 +8,7 @@
    * error list; uncategorized ones (request errors, info notes) always show.
    */
   import {
+    clearNotifications,
     dismissNotification,
     notificationPrefs,
     notificationVisible,
@@ -19,6 +20,18 @@
 </script>
 
 <div class="toasts" data-testid="notification-toasts" aria-live="polite">
+  {#if visible.length > 1}
+    <div class="toasts-actions">
+      <button
+        type="button"
+        class="clear-all-btn"
+        onclick={() => clearNotifications()}
+        data-testid="clear-all-notifications"
+      >
+        Clear all
+      </button>
+    </div>
+  {/if}
   {#each visible as note (note.id)}
     <div class="toast {note.level}" data-testid={`toast-${note.level}`}>
       <div class="toast-body">
@@ -54,6 +67,27 @@
     gap: 0.5rem;
     max-width: 26rem;
     z-index: 100;
+  }
+  .toasts-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .clear-all-btn {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm, 6px);
+    color: var(--text-dim);
+    font-size: 0.76rem;
+    font-weight: 500;
+    padding: 0.2rem 0.55rem;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 25%);
+    transition: background var(--transition-fast, 120ms ease), color var(--transition-fast, 120ms ease), border-color var(--transition-fast, 120ms ease);
+  }
+  .clear-all-btn:hover {
+    background: var(--surface-3);
+    color: var(--text);
+    border-color: var(--border-hover);
   }
   .toast {
     display: flex;
