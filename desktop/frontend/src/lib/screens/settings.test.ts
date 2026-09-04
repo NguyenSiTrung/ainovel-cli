@@ -151,6 +151,17 @@ describe('settings screen', () => {
     expect(screen.getByTestId('settings-budget').textContent).toBe('$25.00');
   });
 
+  it('surfaces the active AI configuration before its controls', async () => {
+    scriptEngine();
+    renderSettings();
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId('settings-active-summary').textContent).toContain('openai');
+    });
+    expect(screen.getByTestId('settings-active-summary').textContent).toContain('gpt-4o-mini');
+    expect(screen.getByTestId('settings-active-summary').textContent).toContain('medium');
+  });
+
   it('secrets never render: rogue plaintext fields from the fixture are absent', async () => {
     scriptEngine();
     renderSettings();

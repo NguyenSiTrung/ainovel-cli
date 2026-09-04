@@ -322,10 +322,14 @@
           </div>
         {/if}
 
-        {#if isNew}
-          <div class="form-row preset-row">
+        <section class="form-section essentials-section">
+          <div class="section-heading">
+            <span>Provider</span>
+            <p>Start with a preset or define the service you want to use.</p>
+          </div>
+          {#if isNew}
             <label>
-              Provider Preset
+              Choose a preset
               <select
                 value={selectedPresetId}
                 onchange={onPresetChange}
@@ -336,12 +340,9 @@
                 {/each}
               </select>
             </label>
-          </div>
-        {/if}
-
-        <div class="form-row">
+          {/if}
           <label>
-            Provider ID / Name
+            Provider name
             <input
               type="text"
               bind:value={name}
@@ -350,73 +351,47 @@
               data-testid="provider-name-input"
             />
           </label>
-          <label>
-            Protocol Type
-            <select bind:value={type} data-testid="provider-type-select">
-              <option value="openai">OpenAI Compatible</option>
-              <option value="anthropic">Anthropic</option>
-              <option value="gemini">Google Gemini</option>
-            </select>
-          </label>
-        </div>
+        </section>
 
-        {#if type === 'openai'}
-          <div class="form-row">
-            <label>
-              API Endpoint Style
-              <select bind:value={api} data-testid="provider-api-select">
-                <option value="chat">Chat (/chat/completions)</option>
-                <option value="responses">Responses (/responses)</option>
-              </select>
-            </label>
-          </div>
-        {/if}
-
-        <label>
-          Base URL
-          <input
-            type="text"
-            bind:value={baseUrl}
-            placeholder={type === 'openai' ? 'http://localhost:11434/v1 or https://api.deepseek.com/v1' : 'Leave empty for official endpoint'}
-            data-testid="provider-baseurl-input"
-          />
-        </label>
-
-        <div class="credentials-group">
-          <span class="group-label">API Key</span>
-          {#if !isNew}
-            <div class="key-actions">
-              <label class="radio-label">
-                <input type="radio" name="apiKeyAction" value="keep" bind:group={apiKeyAction} data-testid="provider-keyaction-keep" />
-                Keep existing key ({provider?.api_key_hint || 'none'})
+        <details class="advanced-settings" data-testid="provider-advanced-settings">
+          <summary data-testid="provider-advanced-settings-trigger">
+            <span>
+              <strong>Connection and authentication</strong>
+              <small>Endpoint, protocol, and API key</small>
+            </span>
+          </summary>
+          <div class="advanced-settings-content">
+            <div class="form-row">
+              <label>
+                Protocol type
+                <select bind:value={type} data-testid="provider-type-select">
+                  <option value="openai">OpenAI Compatible</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="gemini">Google Gemini</option>
+                </select>
               </label>
-              <label class="radio-label">
-                <input type="radio" name="apiKeyAction" value="replace" bind:group={apiKeyAction} data-testid="provider-keyaction-replace" />
-                Replace key
-              </label>
-              <label class="radio-label">
-                <input type="radio" name="apiKeyAction" value="clear" bind:group={apiKeyAction} data-testid="provider-keyaction-clear" />
-                Clear key
-              </label>
+              {#if type === 'openai'}
+                <label>
+                  Endpoint style
+                  <select bind:value={api} data-testid="provider-api-select">
+                    <option value="chat">Chat (/chat/completions)</option>
+                    <option value="responses">Responses (/responses)</option>
+                  </select>
+                </label>
+              {/if}
             </div>
-          {/if}
 
-          {#if isNew || apiKeyAction === 'replace'}
-            <input
-              type="password"
-              bind:value={apiKey}
-              placeholder={isApiKeyOptional ? 'Optional (leave blank if unauthenticated or local)' : 'sk-...'}
-              autocomplete="new-password"
-              data-testid="provider-apikey-input"
-            />
-          {/if}
-          <p class="meta">Credentials remain engine-side; only a masked hint will ever be stored in memory.</p>
-        </div>
-
-        <div class="models-group">
-          <div class="group-header">
-            <span class="group-label">Models</span>
-            <div class="model-header-actions">
+            <div class="base-url-row">
+              <label>
+                Base URL
+                <input
+                  type="text"
+                  bind:value={baseUrl}
+                  placeholder={type === 'openai' ? 'http://localhost:11434/v1 or https://api.deepseek.com/v1' : 'Leave empty for official endpoint'}
+                  data-testid="provider-baseurl-input"
+                />
+                <small class="field-hint">Leave blank to use an official provider endpoint.</small>
+              </label>
               <button
                 type="button"
                 class="small secondary"
@@ -427,6 +402,48 @@
               >
                 {fetchingModels ? 'Fetching…' : 'Fetch models'}
               </button>
+            </div>
+
+            <div class="credentials-group">
+              <span class="group-label">API key</span>
+              {#if !isNew}
+                <div class="key-actions">
+                  <label class="radio-label">
+                    <input type="radio" name="apiKeyAction" value="keep" bind:group={apiKeyAction} data-testid="provider-keyaction-keep" />
+                    Keep existing key ({provider?.api_key_hint || 'none'})
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="apiKeyAction" value="replace" bind:group={apiKeyAction} data-testid="provider-keyaction-replace" />
+                    Replace key
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="apiKeyAction" value="clear" bind:group={apiKeyAction} data-testid="provider-keyaction-clear" />
+                    Clear key
+                  </label>
+                </div>
+              {/if}
+
+              {#if isNew || apiKeyAction === 'replace'}
+                <input
+                  type="password"
+                  bind:value={apiKey}
+                  placeholder={isApiKeyOptional ? 'Optional for local or unauthenticated providers' : 'sk-...'}
+                  autocomplete="new-password"
+                  data-testid="provider-apikey-input"
+                />
+              {/if}
+              <p class="meta">Credentials remain engine-side. Only a masked key hint is shown in the app.</p>
+            </div>
+          </div>
+        </details>
+
+        <section class="form-section models-section">
+          <div class="section-heading models-heading">
+            <div>
+              <span>Models</span>
+              <p>Add the models this provider is allowed to use.</p>
+            </div>
+            <div class="model-header-actions">
               <button type="button" class="small" onclick={addModel} data-testid="model-add-button">+ Add model</button>
             </div>
           </div>
@@ -439,20 +456,26 @@
           <div class="models-list">
             {#each models as model, index (index)}
               <div class="model-row">
-                <input
-                  type="text"
-                  bind:value={model.name}
-                  placeholder="Model name (e.g. gpt-4o, deepseek-chat)"
-                  data-testid="model-name-input"
-                />
-                <input
-                  type="number"
-                  bind:value={model.context_window}
-                  placeholder="Tokens (e.g. 128000)"
-                  min="0"
-                  step="1000"
-                  data-testid="model-context-input"
-                />
+                <label>
+                  <span class="sr-only">Model name</span>
+                  <input
+                    type="text"
+                    bind:value={model.name}
+                    placeholder="Model name, for example gpt-4o or deepseek-chat"
+                    data-testid="model-name-input"
+                  />
+                </label>
+                <label>
+                  <span class="sr-only">Context window</span>
+                  <input
+                    type="number"
+                    bind:value={model.context_window}
+                    placeholder="Context tokens"
+                    min="0"
+                    step="1000"
+                    data-testid="model-context-input"
+                  />
+                </label>
                 <button
                   type="button"
                   class="small danger"
@@ -460,16 +483,20 @@
                   disabled={models.length <= 1 && model.name === ''}
                   data-testid="model-remove-button"
                   aria-label="Remove model"
-                >✕</button>
+                >Remove</button>
               </div>
             {/each}
           </div>
-        </div>
+        </section>
 
-        <div class="test-group">
+        <section class="test-group">
+          <div class="section-heading test-heading">
+            <span>Connection check</span>
+            <p>Test the selected model before saving.</p>
+          </div>
           <div class="test-controls">
             <label>
-              Test model:
+              Test model
               <select bind:value={testModel} disabled={validModels.length === 0 || testStatus === 'testing'}>
                 {#each validModels as m (m.name)}
                   <option value={m.name}>{m.name}</option>
@@ -490,7 +517,7 @@
               {testFeedback}
             </div>
           {/if}
-        </div>
+        </section>
       </div>
 
       <footer class="modal-footer">
@@ -577,12 +604,12 @@
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.65);
+    background: rgba(5, 8, 13, 0.72);
     backdrop-filter: blur(3px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 999;
+    z-index: 20;
     padding: 1rem;
   }
   .modal-card {
@@ -590,8 +617,8 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     width: 100%;
-    max-width: 32rem;
-    max-height: 90vh;
+    max-width: 38rem;
+    max-height: min(90vh, 52rem);
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-lg);
@@ -605,8 +632,8 @@
   }
   .modal-header h3 {
     margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: 1.08rem;
+    font-weight: 650;
     color: var(--text);
   }
   .icon-btn {
@@ -621,11 +648,11 @@
     color: var(--text);
   }
   .modal-body {
-    padding: 1.25rem;
+    padding: 1.35rem;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
+    gap: 1rem;
   }
   .modal-footer {
     display: flex;
@@ -651,6 +678,23 @@
     color: var(--text-dim);
     font-weight: 500;
   }
+  .field-hint {
+    color: var(--text-faint);
+    font-size: 0.72rem;
+    font-weight: 400;
+    line-height: 1.35;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
   input[type="text"],
   input[type="password"],
   input[type="number"],
@@ -668,28 +712,107 @@
     outline: none;
     border-color: var(--accent);
   }
-  .credentials-group,
-  .models-group,
+  .form-section,
   .test-group {
-    background: var(--surface-2);
+    background: color-mix(in srgb, var(--surface-2) 76%, var(--surface-1));
     border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-sm);
-    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    padding: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .section-heading > span,
+  .section-heading > div > span {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 650;
+  }
+  .section-heading p {
+    margin: 0.15rem 0 0;
+    color: var(--text-faint);
+    font-size: 0.75rem;
+  }
+  .models-heading,
+  .test-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .advanced-settings {
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--surface-1);
+  }
+  .advanced-settings summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 3.55rem;
+    padding: 0.75rem 0.9rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    list-style: none;
+  }
+  .advanced-settings summary::-webkit-details-marker {
+    display: none;
+  }
+  .advanced-settings summary::after {
+    content: '+';
+    color: var(--accent);
+    font-size: 1.2rem;
+    font-weight: 400;
+  }
+  .advanced-settings[open] summary::after {
+    content: '−';
+  }
+  .advanced-settings summary strong,
+  .advanced-settings summary small {
+    display: block;
+  }
+  .advanced-settings summary strong {
+    font-size: 0.82rem;
+    font-weight: 650;
+  }
+  .advanced-settings summary small {
+    margin-top: 0.12rem;
+    color: var(--text-faint);
+    font-size: 0.74rem;
+    font-weight: 500;
+  }
+  .advanced-settings-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 0 0.9rem 0.9rem;
+  }
+  .base-url-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    align-items: end;
+  }
+  .base-url-row button {
+    margin-bottom: 1.62rem;
+    white-space: nowrap;
+  }
+  .credentials-group {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
   }
   .group-label {
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     font-weight: 600;
     color: var(--text-dim);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-  }
-  .group-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
   }
   .key-actions {
     display: flex;
@@ -706,18 +829,24 @@
   .models-list {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.5rem;
   }
   .model-row {
     display: flex;
     gap: 0.5rem;
     align-items: center;
   }
-  .model-row input[type="text"] {
+  .model-row label {
+    min-width: 0;
+  }
+  .model-row label:first-child {
     flex: 2;
   }
-  .model-row input[type="number"] {
+  .model-row label:nth-child(2) {
     flex: 1;
+  }
+  .model-row input {
+    width: 100%;
   }
   .test-controls {
     display: flex;
@@ -783,6 +912,7 @@
     display: flex;
     gap: 0.45rem;
     align-items: center;
+    flex-wrap: wrap;
   }
   button.secondary {
     background: var(--surface-3);
@@ -819,7 +949,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1001;
+    z-index: 30;
     padding: 1rem;
   }
   .picker-card {
@@ -912,5 +1042,38 @@
   .empty-search {
     padding: 1rem;
     text-align: center;
+  }
+  @media (max-width: 34rem) {
+    .modal-overlay {
+      align-items: flex-end;
+      padding: 0.5rem;
+    }
+    .modal-card {
+      max-height: 94vh;
+    }
+    .modal-body {
+      padding: 1rem;
+    }
+    .form-row,
+    .test-controls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .base-url-row {
+      grid-template-columns: 1fr;
+    }
+    .base-url-row button {
+      margin-bottom: 0;
+    }
+    .models-heading {
+      flex-direction: column;
+    }
+    .model-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .model-row label:first-child {
+      grid-column: 1 / -1;
+    }
   }
 </style>

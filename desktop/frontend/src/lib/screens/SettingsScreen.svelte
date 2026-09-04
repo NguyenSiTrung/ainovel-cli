@@ -176,9 +176,22 @@
 </script>
 
 <section class="settings-screen screen" data-testid="settings-screen">
-  <header class="screen-header">
-    <h2>{title}</h2>
-    <p class="screen-description">{description} <span class="owner">({owner})</span></p>
+  <header class="settings-header">
+    <div>
+      <h2>{title}</h2>
+      <p class="screen-description">{description} <span class="owner">({owner})</span></p>
+    </div>
+    {#if snapshot !== null}
+      <button
+        type="button"
+        class="refresh-button"
+        onclick={() => refresh()}
+        disabled={settings.status === 'loading'}
+        data-testid="settings-refresh"
+      >
+        {settings.status === 'loading' ? 'Refreshing…' : 'Refresh configuration'}
+      </button>
+    {/if}
   </header>
 
   {#if snapshot === null}
@@ -187,51 +200,93 @@
       <p>{t('settings.empty.hint', lang)}</p>
     </div>
   {:else}
-    <div class="actions-row">
-      <button type="button" onclick={() => refresh()} disabled={settings.status === 'loading'} data-testid="settings-refresh">
-        Refresh configuration
-      </button>
-      {#if settings.message}
-        <span class="applied" data-testid="settings-applied">{settings.message}</span>
-        <button type="button" class="small" onclick={() => dismissSettingsMessage()} data-testid="settings-dismiss-applied">
+    {#if settings.message}
+      <div class="applied" role="status" data-testid="settings-applied">
+        <span>{settings.message}</span>
+        <button
+          type="button"
+          class="dismiss-message"
+          onclick={() => dismissSettingsMessage()}
+          data-testid="settings-dismiss-applied"
+          aria-label="Dismiss confirmation"
+        >
           Dismiss
         </button>
-      {/if}
-    </div>
+      </div>
+    {/if}
 
     {#if settings.error}
-      <div class="error-box" data-testid="settings-error">
-        <p>{configError?.title} — {settings.error.message} <span class="code">[{settings.error.code}]</span></p>
+      <div class="error-box" role="alert" data-testid="settings-error">
+        <p>{configError?.title}: {settings.error.message} <span class="code">[{settings.error.code}]</span></p>
         <p class="meta">{configError?.action ?? ''}</p>
       </div>
     {/if}
 
-    <div class="card-grid">
-      <article class="card" data-testid="settings-model">
-        <h3>Provider &amp; model</h3>
-        <p class="meta">
-          Active: <span class="mono">{view?.provider || '—'} / {view?.model || '—'}</span>
-        </p>
+    <section class="active-summary" data-testid="settings-active-summary" aria-label="Active AI configuration">
+      <div class="active-summary-heading">
+        <span class="section-label">Current configuration</span>
+        <h3>Ready for your next chapter</h3>
+        <p>Your selected provider, model, and reasoning level work together for every run.</p>
+      </div>
+      <dl class="active-summary-data">
+        <div>
+          <dt>Provider</dt>
+          <dd class="mono">{view?.provider || 'Not configured'}</dd>
+        </div>
+        <div>
+          <dt>Model</dt>
+          <dd class="mono">{view?.model || 'Not configured'}</dd>
+        </div>
+        <div>
+          <dt>Thinking</dt>
+          <dd>{view?.reasoning_effort || 'Default'}</dd>
+        </div>
+      </dl>
+    </section>
+
+    <div class="settings-grid">
+      <article class="card model-card" data-testid="settings-model">
+        <header class="card-header">
+          <div>
+            <span class="section-label">AI configuration</span>
+            <h3>Provider &amp; model</h3>
+            <p class="meta">Select the model that powers your planning and writing.</p>
+          </div>
+        </header>
+        <p class="active-pair">Active: <span class="mono">{view?.provider || 'Not configured'} / {view?.model || 'Not configured'}</span></p>
+
         {#if providerNames.length === 0}
           <div class="empty-provider-notice" data-testid="settings-no-providers">
             No providers configured yet. Click "+ Add provider" below to get started.
           </div>
         {/if}
-        <label>
-          provider
-          <select value={selectedProvider} onchange={changeProvider} data-testid="settings-provider-select">
-            {#if providerNames.length === 0}
-              <option value="" disabled selected>No providers configured</option>
-            {/if}
-            {#each providerNames as name (name)}
-              <option value={name}>{name}</option>
-            {/each}
-          </select>
-        </label>
+
+        <div class="field-grid">
+          <label>
+            Provider
+            <select value={selectedProvider} onchange={changeProvider} data-testid="settings-provider-select">
+              {#if providerNames.length === 0}
+                <option value="" disabled selected>No providers configured</option>
+              {/if}
+              {#each providerNames as name (name)}
+                <option value={name}>{name}</option>
+              {/each}
+            </select>
+          </label>
+          <label>
+            Model
+            <select value={selectedModel} onchange={changeModel} data-testid="settings-model-select">
+              {#each modelNames as name (name)}
+                <option value={name}>{name}</option>
+              {/each}
+            </select>
+          </label>
+        </div>
+
         <div class="provider-actions">
           <button
             type="button"
-            class="small"
+            class="small secondary"
             onclick={openAddProvider}
             data-testid="settings-provider-add"
           >
@@ -257,52 +312,56 @@
             Delete
           </button>
         </div>
-        <label>
-          model
-          <select value={selectedModel} onchange={changeModel} data-testid="settings-model-select">
-            {#each modelNames as name (name)}
-              <option value={name}>{name}</option>
-            {/each}
-          </select>
-        </label>
-        <button
-          type="button"
-          class="primary"
-          onclick={() => switchModelFromUi(selectedProvider, selectedModel)}
-          disabled={!modelChoiceValid || settings.mutations.model !== 'idle'}
-          data-testid="settings-model-apply"
-        >
-          {settings.mutations.model === 'applying' ? 'Switching…' : 'Switch model'}
-        </button>
+
+        <div class="apply-row">
+          <p class="meta">Changes apply to the active project after you confirm them.</p>
+          <button
+            type="button"
+            class="primary"
+            onclick={() => switchModelFromUi(selectedProvider, selectedModel)}
+            disabled={!modelChoiceValid || settings.mutations.model !== 'idle'}
+            data-testid="settings-model-apply"
+          >
+            {settings.mutations.model === 'applying' ? 'Switching…' : 'Use this model'}
+          </button>
+        </div>
 
         {#if activeProviderSummary}
-          <dl class="facts" data-testid="settings-provider-credentials">
-            <div><dt>API key configured</dt><dd>{activeProviderSummary.has_api_key === true ? 'yes' : 'no'}</dd></div>
-            {#if activeProviderSummary.api_key_hint}
-              <div><dt>Key hint</dt><dd class="mono" data-testid="settings-key-hint">{activeProviderSummary.api_key_hint}</dd></div>
-            {/if}
-            <div><dt>Key required</dt><dd>{activeProviderSummary.requires_api_key === true ? 'yes' : 'no'}</dd></div>
-            {#if activeProviderSummary.base_url}
-              <div><dt>Base URL</dt><dd class="mono">{activeProviderSummary.base_url}</dd></div>
-            {/if}
-          </dl>
-          <p class="meta">Credentials stay engine-side; only a masked hint ever reaches the UI.</p>
+          <details class="provider-details">
+            <summary>Connection details</summary>
+            <dl class="facts" data-testid="settings-provider-credentials">
+              <div><dt>API key configured</dt><dd>{activeProviderSummary.has_api_key === true ? 'yes' : 'no'}</dd></div>
+              {#if activeProviderSummary.api_key_hint}
+                <div><dt>Key hint</dt><dd class="mono" data-testid="settings-key-hint">{activeProviderSummary.api_key_hint}</dd></div>
+              {/if}
+              <div><dt>Key required</dt><dd>{activeProviderSummary.requires_api_key === true ? 'yes' : 'no'}</dd></div>
+              {#if activeProviderSummary.base_url}
+                <div><dt>Base URL</dt><dd class="mono">{activeProviderSummary.base_url}</dd></div>
+              {/if}
+            </dl>
+            <p class="meta">Credentials stay engine-side. Only a masked key hint reaches the app.</p>
+          </details>
         {/if}
       </article>
 
       <article class="card" data-testid="settings-thinking">
-        <h3>Thinking level</h3>
-        <p class="meta">
-          Active: <span class="mono">{view?.reasoning_effort ?? '—'}</span>
-          {#if settings.thinking.model}for {settings.thinking.provider ?? '?'} / {settings.thinking.model}{/if}
-        </p>
+        <header class="card-header">
+          <div>
+            <span class="section-label">Reasoning</span>
+            <h3>Thinking level</h3>
+            <p class="meta">
+              Active: <span class="mono">{view?.reasoning_effort ?? 'Default'}</span>
+              {#if settings.thinking.model} for {settings.thinking.provider ?? 'provider'} / {settings.thinking.model}{/if}
+            </p>
+          </div>
+        </header>
         {#if settings.thinking.error}
-          <div class="error-box">
-            <p>{presentError(settings.thinking.error.code).title} — {settings.thinking.error.message}</p>
+          <div class="error-box" role="alert">
+            <p>{presentError(settings.thinking.error.code).title}: {settings.thinking.error.message}</p>
           </div>
         {:else}
           <label>
-            level
+            Level
             <select value={selectedThinking} onchange={changeThinking} data-testid="settings-thinking-select">
               {#each settings.thinking.levels as level (level)}
                 <option value={level}>{level}</option>
@@ -318,52 +377,67 @@
           >
             {settings.mutations.thinking === 'applying' ? 'Applying…' : 'Set thinking level'}
           </button>
-          <p class="meta">Levels come from the engine for the active model (config.thinking_levels).</p>
+          <p class="meta card-footer-note">Levels are provided by the engine for the current model.</p>
         {/if}
       </article>
 
       <article class="card" data-testid="settings-languages">
-        <h3>{t('settings.languages.title', lang)}</h3>
-        <label>
-          {t('settings.languages.interfaceLabel', lang)}
-          <select value={selectedLanguage} onchange={changeLanguage} data-testid="settings-language-select">
-            {#each languageChoices as code (code)}
-              <option value={code}>{LANGUAGE_LABELS[code] ?? code}</option>
-            {/each}
-          </select>
-        </label>
-        <button
-          type="button"
-          class="primary"
-          onclick={() => setLanguageFromUi(selectedLanguage)}
-          disabled={selectedLanguage === '' || settings.mutations.language !== 'idle'}
-          data-testid="settings-language-apply"
-        >
-          {settings.mutations.language === 'applying' ? t('settings.languages.applying', lang) : t('settings.languages.setInterface', lang)}
-        </button>
-        <label class="form-gap">
-          {t('settings.languages.storyLabel', lang)}
-          <select value={selectedStoryLanguage} onchange={changeStoryLanguage} data-testid="settings-story-language-select">
-            {#each languageChoices as code (code)}
-              <option value={code}>{LANGUAGE_LABELS[code] ?? code}</option>
-            {/each}
-          </select>
-        </label>
-        <button
-          type="button"
-          class="primary"
-          onclick={() => setStoryLanguageFromUi(selectedStoryLanguage)}
-          disabled={selectedStoryLanguage === '' || settings.mutations.storyLanguage !== 'idle'}
-          data-testid="settings-story-language-apply"
-        >
-          {settings.mutations.storyLanguage === 'applying' ? t('settings.languages.applying', lang) : t('settings.languages.setStory', lang)}
-        </button>
-        <p class="meta">{t('settings.languages.hint', lang)}</p>
+        <header class="card-header">
+          <div>
+            <span class="section-label">Writing preferences</span>
+            <h3>{t('settings.languages.title', lang)}</h3>
+            <p class="meta">Keep the app and your story in the language that serves you best.</p>
+          </div>
+        </header>
+        <div class="language-control">
+          <label>
+            {t('settings.languages.interfaceLabel', lang)}
+            <select value={selectedLanguage} onchange={changeLanguage} data-testid="settings-language-select">
+              {#each languageChoices as code (code)}
+                <option value={code}>{LANGUAGE_LABELS[code] ?? code}</option>
+              {/each}
+            </select>
+          </label>
+          <button
+            type="button"
+            class="primary"
+            onclick={() => setLanguageFromUi(selectedLanguage)}
+            disabled={selectedLanguage === '' || settings.mutations.language !== 'idle'}
+            data-testid="settings-language-apply"
+          >
+            {settings.mutations.language === 'applying' ? t('settings.languages.applying', lang) : t('settings.languages.setInterface', lang)}
+          </button>
+        </div>
+        <div class="language-control">
+          <label>
+            {t('settings.languages.storyLabel', lang)}
+            <select value={selectedStoryLanguage} onchange={changeStoryLanguage} data-testid="settings-story-language-select">
+              {#each languageChoices as code (code)}
+                <option value={code}>{LANGUAGE_LABELS[code] ?? code}</option>
+              {/each}
+            </select>
+          </label>
+          <button
+            type="button"
+            class="primary"
+            onclick={() => setStoryLanguageFromUi(selectedStoryLanguage)}
+            disabled={selectedStoryLanguage === '' || settings.mutations.storyLanguage !== 'idle'}
+            data-testid="settings-story-language-apply"
+          >
+            {settings.mutations.storyLanguage === 'applying' ? t('settings.languages.applying', lang) : t('settings.languages.setStory', lang)}
+          </button>
+        </div>
+        <p class="meta card-footer-note">{t('settings.languages.hint', lang)}</p>
       </article>
 
       <article class="card" data-testid="settings-notifications">
-        <h3>Notifications</h3>
-        <p class="meta">Local toast preferences for engine events (this app session).</p>
+        <header class="card-header">
+          <div>
+            <span class="section-label">Focus</span>
+            <h3>Notifications</h3>
+            <p class="meta">Choose which engine events deserve your attention.</p>
+          </div>
+        </header>
         <label class="check">
           <input
             type="checkbox"
@@ -371,7 +445,7 @@
             onchange={(event) => togglePref('completion', event)}
             data-testid="settings-pref-completion"
           />
-          completion notifications
+          <span><strong>Completion</strong><small>When a run finishes</small></span>
         </label>
         <label class="check">
           <input
@@ -380,7 +454,7 @@
             onchange={(event) => togglePref('pause', event)}
             data-testid="settings-pref-pause"
           />
-          pause notifications
+          <span><strong>Paused runs</strong><small>When input is needed</small></span>
         </label>
         <label class="check">
           <input
@@ -389,7 +463,7 @@
             onchange={(event) => togglePref('warning', event)}
             data-testid="settings-pref-warning"
           />
-          warning notifications
+          <span><strong>Warnings</strong><small>When the engine needs attention</small></span>
         </label>
         <label class="check">
           <input
@@ -398,27 +472,35 @@
             onchange={(event) => togglePref('failure', event)}
             data-testid="settings-pref-failure"
           />
-          failure notifications
+          <span><strong>Failures</strong><small>When a run cannot continue</small></span>
         </label>
-        <p class="meta">Errors from your own actions always surface.</p>
+        <p class="meta card-footer-note">Errors from your own actions always appear.</p>
       </article>
 
-      <article class="card" data-testid="settings-readonly">
-        <h3>Engine-managed (read-only)</h3>
-        <dl class="facts">
-          <div><dt>Budget limit</dt><dd data-testid="settings-budget">{money(view?.budget_usd)}</dd></div>
-          {#if view?.style}<div><dt>Style</dt><dd>{view.style}</dd></div>{/if}
-          {#if view?.config_path}<div><dt>Config file</dt><dd class="mono">{view.config_path}</dd></div>{/if}
-          {#if projectsDir}<div><dt>Projects directory</dt><dd class="mono">{projectsDir}</dd></div>{/if}
-        </dl>
-        <p class="meta">
-          Budget and style have no public engine setters (config.update rejects them); export and
-          diagnostics destinations are chosen per-run through native dialogs.
-        </p>
-        <p class="meta" data-testid="settings-update-channel">
-          Update channel: app updates are managed outside this app — the engine exposes no setting.
-        </p>
-      </article>
+      <details class="engine-details" open data-testid="settings-readonly">
+        <summary>
+          <span>
+            <span class="section-label">System</span>
+            <strong>Engine-managed details</strong>
+          </span>
+          <span class="summary-hint">Read-only</span>
+        </summary>
+        <div class="engine-details-content">
+          <dl class="facts">
+            <div><dt>Budget limit</dt><dd data-testid="settings-budget">{money(view?.budget_usd)}</dd></div>
+            {#if view?.style}<div><dt>Style</dt><dd>{view.style}</dd></div>{/if}
+            {#if view?.config_path}<div><dt>Config file</dt><dd class="mono">{view.config_path}</dd></div>{/if}
+            {#if projectsDir}<div><dt>Projects directory</dt><dd class="mono">{projectsDir}</dd></div>{/if}
+          </dl>
+          <p class="meta">
+            Budget and style have no public engine setters (config.update rejects them). Export and
+            diagnostics destinations are chosen per run through native dialogs.
+          </p>
+          <p class="meta" data-testid="settings-update-channel">
+            App updates are managed outside this app. The engine exposes no update setting.
+          </p>
+        </div>
+      </details>
     </div>
   {/if}
   <ProviderEditorModal
@@ -437,21 +519,44 @@
   .screen {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    padding: 1.25rem 1.5rem 2rem;
+    gap: 1.25rem;
+    width: min(100%, 72rem);
+    margin: 0 auto;
+    padding: 1.75rem 2rem 2.5rem;
     flex: 1;
     min-height: 0;
     overflow-y: auto;
   }
-  .screen-header h2 {
+  .settings-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .settings-header h2 {
     margin: 0;
-    font-size: 1.35rem;
+    font-size: 1.55rem;
     font-weight: 700;
+    letter-spacing: -0.035em;
   }
   .screen-description {
-    margin: 0.15rem 0 0;
+    margin: 0.2rem 0 0;
     color: var(--text-dim);
-    font-size: 0.84rem;
+    font-size: 0.88rem;
+    max-width: 42rem;
+  }
+  .refresh-button {
+    flex: none;
+    white-space: nowrap;
+  }
+  .section-label {
+    display: block;
+    color: var(--accent);
+    font-size: 0.69rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    text-transform: uppercase;
   }
   .owner {
     font-style: italic;
@@ -480,36 +585,118 @@
     color: var(--text-dim);
     font-size: 0.88rem;
   }
-  .actions-row {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-    flex-wrap: wrap;
-  }
   .applied {
-    color: var(--ok);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    color: color-mix(in srgb, var(--ok) 72%, var(--text));
     font-size: 0.82rem;
     font-weight: 500;
     background: var(--ok-subtle);
-    padding: 0.25rem 0.65rem;
-    border-radius: var(--radius-full);
+    border: 1px solid color-mix(in srgb, var(--ok) 28%, transparent);
+    border-radius: var(--radius-md);
+    padding: 0.55rem 0.65rem 0.55rem 0.85rem;
   }
-  .card-grid {
+  .dismiss-message {
+    padding: 0.15rem 0.35rem;
+    color: inherit;
+    background: transparent;
+    border-color: transparent;
+    font-size: 0.75rem;
+  }
+  .dismiss-message:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--ok) 14%, transparent);
+    border-color: transparent;
+  }
+  .active-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-    gap: 0.85rem;
+    grid-template-columns: minmax(0, 1.15fr) minmax(24rem, 1fr);
+    gap: 1.75rem;
+    align-items: end;
+    padding: 1.35rem 1.5rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 31%, var(--border));
+    border-radius: var(--radius-lg);
+    background:
+      linear-gradient(115deg, color-mix(in srgb, var(--accent) 13%, var(--surface-1)), var(--surface-1) 62%),
+      var(--surface-1);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 5%, transparent);
+  }
+  .active-summary-heading h3 {
+    margin: 0.25rem 0 0;
+    font-size: 1.1rem;
+    letter-spacing: -0.025em;
+  }
+  .active-summary-heading p {
+    max-width: 36rem;
+    margin: 0.32rem 0 0;
+    color: var(--text-dim);
+    font-size: 0.84rem;
+  }
+  .active-summary-data {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0;
+  }
+  .active-summary-data div {
+    min-width: 0;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--surface-0) 48%, transparent);
+  }
+  .active-summary-data dt {
+    color: var(--text-faint);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  .active-summary-data dd {
+    margin: 0.16rem 0 0;
+    overflow-wrap: anywhere;
+    color: var(--text);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .settings-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.18fr) minmax(19rem, 0.82fr);
+    gap: 1rem;
     align-items: start;
   }
   .card {
     background: var(--surface-1);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    padding: 1.1rem 1.25rem;
+    padding: 1.25rem;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.65rem;
-    box-shadow: var(--shadow-sm);
+    gap: 0.8rem;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 3%, transparent);
+  }
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .card-header h3 {
+    margin: 0.22rem 0 0;
+    color: var(--text);
+    font-size: 1rem;
+    font-weight: 650;
+    letter-spacing: -0.015em;
+  }
+  .card-header .meta {
+    margin-top: 0.28rem;
+    max-width: 36rem;
+  }
+  .active-pair {
+    margin: -0.2rem 0 0;
+    color: var(--text-dim);
+    font-size: 0.77rem;
   }
   .empty-provider-notice {
     font-size: 0.8rem;
@@ -520,45 +707,96 @@
     padding: 0.5rem 0.65rem;
     line-height: 1.4;
   }
-  .card h3 {
-    margin: 0;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-dim);
-    font-weight: 700;
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
   }
   label {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.35rem;
     font-size: 0.8rem;
     color: var(--text-dim);
-    font-weight: 500;
+    font-weight: 600;
   }
   label.check {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
     flex-direction: row;
     align-items: center;
-    gap: 0.55rem;
+    gap: 0.65rem;
+    padding: 0.58rem 0.6rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
     cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
   }
-  label.form-gap {
-    margin-top: 0.5rem;
+  label.check:hover {
+    border-color: var(--border-subtle);
+    background: var(--surface-2);
+  }
+  label.check input {
+    width: 0.95rem;
+    height: 0.95rem;
+    margin: 0;
+    accent-color: var(--accent);
+  }
+  label.check strong,
+  label.check small {
+    display: block;
+  }
+  label.check strong {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  label.check small {
+    margin-top: 0.08rem;
+    color: var(--text-faint);
+    font-size: 0.73rem;
+    font-weight: 500;
   }
   select {
     font-size: 0.84rem;
     width: 100%;
   }
-  button.primary {
-    align-self: flex-start;
-    margin-top: 0.2rem;
+  .apply-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    padding-top: 0.15rem;
+  }
+  .apply-row .meta {
+    max-width: 22rem;
+  }
+  .provider-details {
+    margin-top: 0.05rem;
+  }
+  .provider-details summary,
+  .engine-details summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.79rem;
+    font-weight: 600;
+  }
+  .provider-details summary:hover,
+  .engine-details summary:hover {
+    color: var(--text);
+  }
+  .provider-details[open] summary {
+    margin-bottom: 0.6rem;
   }
   .facts {
-    margin: 0.35rem 0 0;
+    margin: 0;
     display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    padding: 0.65rem 0.8rem;
+    gap: 0.4rem;
+    padding: 0.7rem 0.8rem;
     background: var(--surface-2);
     border-radius: var(--radius-sm);
     border: 1px solid var(--border-subtle);
@@ -577,7 +815,8 @@
     margin: 0;
     text-align: right;
     overflow-wrap: anywhere;
-    font-weight: 500;
+    color: var(--text-secondary);
+    font-weight: 600;
   }
   .mono {
     font-family: var(--mono);
@@ -587,6 +826,10 @@
     margin: 0;
     color: var(--text-faint);
     font-size: 0.8rem;
+  }
+  .card-footer-note {
+    margin-top: auto;
+    padding-top: 0.15rem;
   }
   .error-box {
     border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent);
@@ -605,14 +848,20 @@
   }
   button.small {
     font-size: 0.75rem;
-    padding: 0.2rem 0.65rem;
-    border-radius: var(--radius-full);
+    padding: 0.24rem 0.55rem;
+    border-radius: var(--radius-sm);
   }
   .provider-actions {
     display: flex;
     gap: 0.45rem;
     align-items: center;
-    margin-top: 0.15rem;
+    flex-wrap: wrap;
+    margin-top: -0.1rem;
+  }
+  button.secondary {
+    color: var(--text-secondary);
+    background: var(--surface-2);
+    border-color: var(--border);
   }
   button.danger {
     background: var(--danger-subtle);
@@ -621,5 +870,80 @@
   }
   button.danger:hover:not(:disabled) {
     background: color-mix(in srgb, var(--danger) 25%, transparent);
+  }
+  .language-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    align-items: end;
+  }
+  .language-control .primary {
+    min-width: 4.75rem;
+  }
+  .engine-details {
+    grid-column: 1 / -1;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--surface-1) 76%, var(--surface-0));
+  }
+  .engine-details summary strong {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+  .summary-hint {
+    color: var(--text-faint);
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .engine-details-content {
+    display: grid;
+    grid-template-columns: minmax(16rem, 0.8fr) minmax(0, 1.2fr);
+    gap: 0.65rem 1rem;
+    align-items: start;
+    margin-top: 0.9rem;
+  }
+  .engine-details-content .facts {
+    grid-row: span 2;
+  }
+
+  @media (max-width: 58rem) {
+    .active-summary,
+    .settings-grid {
+      grid-template-columns: 1fr;
+    }
+    .engine-details {
+      grid-column: auto;
+    }
+  }
+
+  @media (max-width: 40rem) {
+    .screen {
+      gap: 1rem;
+      padding: 1.25rem 1rem 2rem;
+    }
+    .settings-header,
+    .apply-row {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .refresh-button,
+    .apply-row .primary {
+      width: 100%;
+    }
+    .active-summary {
+      gap: 1rem;
+      padding: 1.1rem;
+    }
+    .active-summary-data,
+    .field-grid,
+    .engine-details-content {
+      grid-template-columns: 1fr;
+    }
+    .engine-details-content .facts {
+      grid-row: auto;
+    }
   }
 </style>

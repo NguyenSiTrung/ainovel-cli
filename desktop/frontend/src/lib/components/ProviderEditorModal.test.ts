@@ -44,6 +44,17 @@ describe('ProviderEditorModal component', () => {
     expect(modelInputs.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('keeps advanced connection options closed until needed', async () => {
+    render(ProviderEditorModal, { props: { open: true, provider: null } });
+
+    const advanced = screen.getByTestId('provider-advanced-settings') as HTMLDetailsElement;
+    expect(advanced.open).toBe(false);
+    expect(advanced).toContain(screen.getByTestId('model-fetch-button'));
+
+    await fireEvent.click(screen.getByTestId('provider-advanced-settings-trigger'));
+    expect(advanced.open).toBe(true);
+  });
+
   it('renders in edit mode with provider data pre-populated and name locked', () => {
     const existing = {
       name: 'deepseek',
