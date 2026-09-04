@@ -15,6 +15,7 @@
 
   import { getPaths, type ProviderSummary } from '$lib/api/desktop';
   import ProviderEditorModal from '$lib/components/ProviderEditorModal.svelte';
+  import CustomSelect, { type OptionItem } from '$lib/components/CustomSelect.svelte';
   import { currentLanguage, t } from '$lib/locale';
   import {
     deleteProviderFromUi,
@@ -122,6 +123,52 @@
     }
     return choices;
   });
+
+  let providerOptions = $derived<OptionItem[]>(
+    providers.map((p) => ({
+      value: p.name ?? '',
+      label: p.name ?? '',
+      badge: p.type ?? undefined,
+      description: p.requires_api_key
+        ? p.has_api_key
+          ? 'API key configured'
+          : 'Missing API key'
+        : 'Local / no key needed',
+    })),
+  );
+
+  let modelOptionsList = $derived.by<OptionItem[]>(() => {
+    if (settings.modelOptions.status === 'ready' && settings.modelOptions.provider === selectedProvider) {
+      const list = settings.modelOptions.options
+        .filter((m) => !!m.name)
+        .map((m) => ({
+          value: m.name ?? '',
+          label: m.name ?? '',
+          badge: m.context_window ? `${Math.round(m.context_window / 1000)}k` : undefined,
+          description: m.context_source ? `Source: ${m.context_source}` : undefined,
+        }));
+      if (list.length > 0) return list;
+    }
+    return (activeProviderSummary?.models ?? []).map((name) => ({
+      value: name,
+      label: name,
+    }));
+  });
+
+  let thinkingOptions = $derived<OptionItem[]>(
+    settings.thinking.levels.map((lvl) => ({
+      value: lvl,
+      label: lvl.charAt(0).toUpperCase() + lvl.slice(1),
+    })),
+  );
+
+  let languageOptions = $derived<OptionItem[]>(
+    languageChoices.map((code) => ({
+      value: code,
+      label: LANGUAGE_LABELS[code] ?? code,
+      badge: code.toUpperCase(),
+    })),
+  );
 
   function changeProvider(event: Event): void {
     const select = event.currentTarget as HTMLSelectElement;
@@ -251,11 +298,28 @@
     <div class="settings-grid">
       <article class="card model-card" data-testid="settings-model">
         <header class="card-header">
-          <div>
-            <h3>AI model</h3>
-            <p class="meta">Choose the provider and model used across your writing workflow.</p>
+          <div class="card-title-group">
+            <div class="card-icon-badge" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+              </svg>
+            </div>
+            <div>
+              <div class="card-title-row">
+                <h3>AI model</h3>
+                {#if selectedProvider === view?.provider && selectedModel === view?.model}
+                  <span class="status-pill active" title="Currently active in writing engine">
+                    <span class="status-dot"></span> Active
+                  </span>
+                {:else if modelChoiceValid}
+                  <span class="status-pill pending" title="Changes not applied yet">
+                    <span class="status-dot"></span> Pending switch
+                  </span>
+                {/if}
+              </div>
+              <p class="meta">Choose the provider and model used across your writing workflow.</p>
+            </div>
           </div>
-          <p class="active-pair">Active <span class="mono">{view?.provider || 'Not configured'} / {view?.model || 'Not configured'}</span></p>
         </header>
 
         {#if providerNames.length === 0}
@@ -265,70 +329,131 @@
         {/if}
 
         <div class="field-grid">
-          <label>
-            Provider
-            <select value={selectedProvider} onchange={changeProvider} data-testid="settings-provider-select">
-              {#if providerNames.length === 0}
-                <option value="" disabled selected>No providers configured</option>
-              {/if}
-              {#each providerNames as name (name)}
-                <option value={name}>{name}</option>
-              {/each}
-            </select>
-          </label>
-          <label>
-            Model
-            <select value={selectedModel} onchange={changeModel} data-testid="settings-model-select">
-              {#each modelNames as name (name)}
-                <option value={name}>{name}</option>
-              {/each}
-            </select>
-          </label>
-        </div>
+          <div class="model-field">
+            <div class="field-top-row">
+              <span class="field-label-text">Provider</span>
+              <div class="provider-actions">
+                <button
+                  type="button"
+                  class="action-pill primary-ghost"
+                  onclick={openAddProvider}
+                  data-testid="settings-provider-add"
+                  title="Add new provider"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  <span>Add</span>
+                </button>
+                <button
+                  type="button"
+                  class="action-pill ghost"
+                  disabled={!selectedProvider}
+                  onclick={openEditProvider}
+                  data-testid="settings-provider-edit"
+                  title="Edit provider settings"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  class="action-pill danger"
+                  disabled={!selectedProvider || selectedProvider === view?.provider || settings.mutations.provider !== 'idle'}
+                  title={selectedProvider === view?.provider ? 'Active default provider cannot be deleted' : undefined}
+                  onclick={handleDeleteProvider}
+                  data-testid="settings-provider-delete"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
 
-        <div class="provider-actions">
-          <button
-            type="button"
-            class="small secondary"
-            onclick={openAddProvider}
-            data-testid="settings-provider-add"
-          >
-            + Add provider
-          </button>
-          <button
-            type="button"
-            class="small"
-            disabled={!selectedProvider}
-            onclick={openEditProvider}
-            data-testid="settings-provider-edit"
-          >
-            Edit
-          </button>
-          <button
-            type="button"
-            class="small danger"
-            disabled={!selectedProvider || selectedProvider === view?.provider || settings.mutations.provider !== 'idle'}
-            title={selectedProvider === view?.provider ? 'Active default provider cannot be deleted' : undefined}
-            onclick={handleDeleteProvider}
-            data-testid="settings-provider-delete"
-          >
-            Delete
-          </button>
+            <CustomSelect
+              value={selectedProvider}
+              options={providerOptions}
+              placeholder={providerNames.length === 0 ? 'No providers configured' : 'Select provider…'}
+              dataTestId="settings-provider-select"
+              onchange={changeProvider}
+            />
+
+            <div class="field-footer-info">
+              {#if activeProviderSummary}
+                <span class="provider-type-tag">{activeProviderSummary.type || 'standard'}</span>
+                {#if activeProviderSummary.requires_api_key}
+                  <span class="provider-auth-tag" class:authed={activeProviderSummary.has_api_key}>
+                    {activeProviderSummary.has_api_key ? '● Key configured' : '○ Missing key'}
+                  </span>
+                {/if}
+              {:else}
+                <span class="control-note">Choose a provider to configure models</span>
+              {/if}
+            </div>
+          </div>
+
+          <div class="model-field">
+            <div class="field-top-row">
+              <span class="field-label-text">Model</span>
+              <span class="model-count-tag" class:loading={settings.modelOptions.status === 'loading'}>
+                {settings.modelOptions.status === 'loading'
+                  ? 'Loading models…'
+                  : `${modelNames.length} ${modelNames.length === 1 ? 'model' : 'models'} available`}
+              </span>
+            </div>
+
+            <CustomSelect
+              value={selectedModel}
+              options={modelOptionsList}
+              placeholder="Select model…"
+              dataTestId="settings-model-select"
+              mono={true}
+              searchable={true}
+              searchPlaceholder="Filter models…"
+              onchange={changeModel}
+            />
+
+            <div class="field-footer-info">
+              {#if selectedModel}
+                <span class="target-model-preview">
+                  Target: <strong class="mono">{selectedModel}</strong>
+                </span>
+              {:else}
+                <span class="control-note">No model selected</span>
+              {/if}
+            </div>
+          </div>
         </div>
 
         <div class="apply-row">
-          <p class="meta">Changes apply to the active project after you confirm them.</p>
+          <div class="selection-preview" data-testid="settings-model-selection">
+            <span class="selection-preview-label">Selected setup</span>
+            <div class="selection-preview-val">
+              <strong class="mono">{selectedProvider || 'No provider'} / {selectedModel || 'No model'}</strong>
+              {#if selectedProvider === view?.provider && selectedModel === view?.model}
+                <span class="status-tag active">Active in engine</span>
+              {:else if modelChoiceValid}
+                <span class="status-tag pending">Pending apply</span>
+              {/if}
+            </div>
+          </div>
           <button
             type="button"
-            class="primary"
+            class="primary apply-model-btn"
             onclick={() => switchModelFromUi(selectedProvider, selectedModel)}
             disabled={!modelChoiceValid || settings.mutations.model !== 'idle'}
             data-testid="settings-model-apply"
           >
-            {settings.mutations.model === 'applying' ? 'Switching…' : 'Use this model'}
+            {#if settings.mutations.model === 'applying'}
+              <span class="spinner-inline" aria-hidden="true"></span>
+              <span>Switching…</span>
+            {:else}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Use this model</span>
+            {/if}
           </button>
         </div>
-
       </article>
 
       <article class="card" data-testid="settings-thinking">
@@ -337,31 +462,34 @@
             <h3>Thinking level</h3>
             <p class="meta">Control how much reasoning the current model uses before it writes.</p>
           </div>
-          <span class="current-value">Current: {view?.reasoning_effort ?? 'Default'}</span>
         </header>
         {#if settings.thinking.error}
           <div class="error-box" role="alert">
             <p>{presentError(settings.thinking.error.code).title}: {settings.thinking.error.message}</p>
           </div>
         {:else}
-          <div class="preference-control">
-            <label>
-              Level
-              <select value={selectedThinking} onchange={changeThinking} data-testid="settings-thinking-select">
-                {#each settings.thinking.levels as level (level)}
-                  <option value={level}>{level}</option>
-                {/each}
-              </select>
-            </label>
-            <button
-              type="button"
-              class="primary"
-              onclick={() => setThinkingFromUi(selectedThinking)}
-              disabled={selectedThinking === '' || settings.mutations.thinking !== 'idle'}
-              data-testid="settings-thinking-apply"
-            >
-              {settings.mutations.thinking === 'applying' ? 'Applying…' : 'Apply'}
-            </button>
+          <div class="preference-stack">
+            <div class="preference-control">
+              <label>
+                Level
+                <CustomSelect
+                  value={selectedThinking}
+                  options={thinkingOptions}
+                  dataTestId="settings-thinking-select"
+                  onchange={changeThinking}
+                />
+              </label>
+              <button
+                type="button"
+                class="primary"
+                onclick={() => setThinkingFromUi(selectedThinking)}
+                disabled={selectedThinking === '' || settings.mutations.thinking !== 'idle'}
+                data-testid="settings-thinking-apply"
+              >
+                {settings.mutations.thinking === 'applying' ? 'Applying…' : 'Apply'}
+              </button>
+            </div>
+            <p class="control-note">Current: <strong>{view?.reasoning_effort ?? 'Default'}</strong></p>
           </div>
         {/if}
       </article>
@@ -374,42 +502,56 @@
           </div>
         </header>
         <div class="language-control">
-          <label>
-            {t('settings.languages.interfaceLabel', lang)}
-            <select value={selectedLanguage} onchange={changeLanguage} data-testid="settings-language-select">
-              {#each languageChoices as code (code)}
-                <option value={code}>{LANGUAGE_LABELS[code] ?? code}</option>
-              {/each}
-            </select>
-          </label>
-          <button
-            type="button"
-            class="primary"
-            onclick={() => setLanguageFromUi(selectedLanguage)}
-            disabled={selectedLanguage === '' || settings.mutations.language !== 'idle'}
-            data-testid="settings-language-apply"
-          >
-            {settings.mutations.language === 'applying' ? t('settings.languages.applying', lang) : t('settings.languages.setInterface', lang)}
-          </button>
+          <div class="preference-control">
+            <label>
+              {t('settings.languages.interfaceLabel', lang)}
+              <CustomSelect
+                value={selectedLanguage}
+                options={languageOptions}
+                dataTestId="settings-language-select"
+                onchange={changeLanguage}
+              />
+            </label>
+            <button
+              type="button"
+              class="primary"
+              onclick={() => setLanguageFromUi(selectedLanguage)}
+              disabled={selectedLanguage === '' || settings.mutations.language !== 'idle'}
+              data-testid="settings-language-apply"
+            >
+              {settings.mutations.language === 'applying' ? t('settings.languages.applying', lang) : t('settings.languages.setInterface', lang)}
+            </button>
+          </div>
+          <p class="control-note">
+            {t('settings.languages.current', lang)}:
+            <strong>{LANGUAGE_LABELS[view?.language ?? ''] ?? view?.language ?? t('settings.languages.default', lang)}</strong>
+          </p>
         </div>
         <div class="language-control">
-          <label>
-            {t('settings.languages.storyLabel', lang)}
-            <select value={selectedStoryLanguage} onchange={changeStoryLanguage} data-testid="settings-story-language-select">
-              {#each languageChoices as code (code)}
-                <option value={code}>{LANGUAGE_LABELS[code] ?? code}</option>
-              {/each}
-            </select>
-          </label>
-          <button
-            type="button"
-            class="primary"
-            onclick={() => setStoryLanguageFromUi(selectedStoryLanguage)}
-            disabled={selectedStoryLanguage === '' || settings.mutations.storyLanguage !== 'idle'}
-            data-testid="settings-story-language-apply"
-          >
-            {settings.mutations.storyLanguage === 'applying' ? t('settings.languages.applying', lang) : t('settings.languages.setStory', lang)}
-          </button>
+          <div class="preference-control">
+            <label>
+              {t('settings.languages.storyLabel', lang)}
+              <CustomSelect
+                value={selectedStoryLanguage}
+                options={languageOptions}
+                dataTestId="settings-story-language-select"
+                onchange={changeStoryLanguage}
+              />
+            </label>
+            <button
+              type="button"
+              class="primary"
+              onclick={() => setStoryLanguageFromUi(selectedStoryLanguage)}
+              disabled={selectedStoryLanguage === '' || settings.mutations.storyLanguage !== 'idle'}
+              data-testid="settings-story-language-apply"
+            >
+              {settings.mutations.storyLanguage === 'applying' ? t('settings.languages.applying', lang) : t('settings.languages.setStory', lang)}
+            </button>
+          </div>
+          <p class="control-note">
+            {t('settings.languages.current', lang)}:
+            <strong>{LANGUAGE_LABELS[view?.story_language ?? ''] ?? view?.story_language ?? t('settings.languages.default', lang)}</strong>
+          </p>
         </div>
         <p class="meta card-footer-note">{t('settings.languages.hint', lang)}</p>
       </article>
@@ -698,18 +840,72 @@
   .model-card {
     display: flex;
     flex-direction: column;
-    gap: 0.9rem;
-    margin-bottom: 0.2rem;
-    padding: 1.45rem 1.5rem 1.55rem;
-    background: color-mix(in srgb, var(--surface-1) 92%, var(--accent));
-    border: 1px solid color-mix(in srgb, var(--accent) 19%, var(--border));
+    align-items: stretch;
+    gap: 1.1rem;
+    margin-bottom: 0.35rem;
+    padding: 1.6rem 1.65rem 1.6rem;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--surface-1) 94%, var(--accent) 6%) 0%, var(--surface-1) 100%);
+    border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm), inset 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent);
+    box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
   .model-card > .card-header,
   .model-card > :not(.card-header) {
     grid-column: auto;
     grid-row: auto;
+  }
+  .card-title-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+  }
+  .card-icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
+    border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+    color: var(--accent-hover);
+    box-shadow: 0 0 14px var(--accent-subtle);
+    flex: none;
+    margin-top: 0.1rem;
+  }
+  .card-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.16rem 0.55rem;
+    border-radius: var(--radius-full);
+    letter-spacing: 0.02em;
+    user-select: none;
+  }
+  .status-pill.active {
+    background: var(--ok-subtle);
+    color: var(--ok);
+    border: 1px solid color-mix(in srgb, var(--ok) 32%, transparent);
+  }
+  .status-pill.pending {
+    background: var(--accent-subtle);
+    color: var(--accent-hover);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .status-dot {
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: var(--radius-full);
+    background: currentColor;
+    box-shadow: 0 0 6px currentColor;
   }
   .card-header {
     display: flex;
@@ -720,35 +916,15 @@
   .card-header h3 {
     margin: 0;
     color: var(--text);
-    font-size: 1.02rem;
+    font-size: 1.05rem;
     font-weight: 650;
     letter-spacing: -0.02em;
   }
   .card-header .meta {
     margin-top: 0.38rem;
-    max-width: 30rem;
+    max-width: 32rem;
     line-height: 1.45;
     text-wrap: pretty;
-  }
-  .active-pair {
-    flex: none;
-    margin: 0.08rem 0 0;
-    color: var(--text-dim);
-    font-size: 0.73rem;
-    text-align: right;
-  }
-  .active-pair span {
-    display: block;
-    margin-top: 0.18rem;
-    color: var(--text-secondary);
-    overflow-wrap: anywhere;
-  }
-  .current-value {
-    display: block;
-    margin-top: 0.45rem;
-    color: var(--text-dim);
-    font-size: 0.73rem;
-    font-weight: 600;
   }
   .empty-provider-notice {
     font-size: 0.8rem;
@@ -761,13 +937,130 @@
   }
   .field-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: minmax(13rem, 1fr) minmax(16rem, 1.25fr);
+    gap: 1.15rem;
+  }
+  .model-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    min-width: 0;
+    padding: 1.05rem;
+    border: 1px solid color-mix(in srgb, var(--border) 80%, var(--accent) 20%);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--surface-2) 75%, transparent);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  .field-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 1.65rem;
+  }
+  .field-label-text {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+  .provider-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .action-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 550;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  .action-pill:hover:not(:disabled) {
+    background: var(--surface-3);
+    border-color: var(--border-hover);
+  }
+  .action-pill.primary-ghost {
+    border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
+    color: var(--accent-hover);
+  }
+  .action-pill.primary-ghost:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent) 22%, var(--surface-2));
+    border-color: var(--accent);
+  }
+  .action-pill.danger {
+    border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+    background: color-mix(in srgb, var(--danger) 8%, var(--surface-2));
+    color: var(--danger);
+  }
+  .action-pill.danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--danger) 18%, var(--surface-2));
+    border-color: var(--danger);
+  }
+  .model-count-tag {
+    font-size: 0.72rem;
+    font-weight: 550;
+    color: var(--text-dim);
+    background: var(--surface-3);
+    border: 1px solid var(--border-subtle);
+    padding: 0.14rem 0.45rem;
+    border-radius: var(--radius-xs);
+  }
+  .model-count-tag.loading {
+    color: var(--accent-hover);
+    border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .field-footer-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.73rem;
+    min-height: 1.25rem;
+    color: var(--text-dim);
+  }
+  .provider-type-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.35rem;
+    font-size: 0.67rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    color: var(--text-faint);
+  }
+  .provider-auth-tag {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-faint);
+  }
+  .provider-auth-tag.authed {
+    color: var(--ok);
+  }
+  .target-model-preview {
+    font-size: 0.73rem;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .target-model-preview strong {
+    color: var(--text);
   }
   label {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.42rem;
     font-size: 0.78rem;
     color: var(--text-dim);
     font-weight: 600;
@@ -840,31 +1133,109 @@
     font-size: 0.73rem;
     font-weight: 500;
   }
-  select {
-    font-size: 0.84rem;
-    width: 100%;
-    min-height: 2.25rem;
+  .control-note {
+    margin: 0;
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .control-note strong {
+    color: var(--text-secondary);
+    font-weight: 600;
   }
   .apply-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.85rem;
-    padding-top: 0.15rem;
+    gap: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid color-mix(in srgb, var(--border) 75%, var(--accent) 25%);
   }
-  .apply-row .meta {
-    max-width: 22rem;
-    color: var(--text-dim);
+  .apply-model-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 9.5rem;
+    min-height: 2.75rem;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.86rem;
+    font-weight: 600;
+    box-shadow: 0 2px 10px var(--accent-subtle);
+  }
+  .spinner-inline {
+    display: inline-block;
+    width: 0.85rem;
+    height: 0.85rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #ffffff;
+    border-radius: var(--radius-full);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .selection-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+  .selection-preview-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-faint);
+  }
+  .selection-preview-val {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .selection-preview-val strong {
+    font-size: 0.88rem;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .status-tag {
+    font-size: 0.67rem;
+    font-weight: 600;
+    padding: 0.1rem 0.38rem;
+    border-radius: var(--radius-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .status-tag.active {
+    background: var(--ok-subtle);
+    color: var(--ok);
+    border: 1px solid color-mix(in srgb, var(--ok) 30%, transparent);
+  }
+  .status-tag.pending {
+    background: var(--accent-subtle);
+    color: var(--accent-hover);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   }
   .preference-control {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.65rem;
+    grid-template-columns: minmax(0, 1fr) 8.75rem;
+    gap: 0.7rem;
     align-items: end;
+  }
+  .preference-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
   }
   .preference-control .primary,
   .language-control .primary {
-    min-width: 4.75rem;
+    width: 8.75rem;
+    min-height: 2.75rem;
   }
   .engine-details summary {
     display: flex;
@@ -934,41 +1305,15 @@
     font-family: var(--mono);
     font-size: 0.72rem;
   }
-  button.small {
-    font-size: 0.75rem;
-    padding: 0.24rem 0.55rem;
-    border-radius: var(--radius-sm);
-  }
-  .provider-actions {
-    display: flex;
-    gap: 0.45rem;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-top: -0.1rem;
-  }
-  button.secondary {
-    color: var(--text-secondary);
-    background: var(--surface-2);
-    border-color: var(--border);
-  }
-  button.danger {
-    background: var(--danger-subtle);
-    color: var(--danger);
-    border: 1px solid var(--danger);
-  }
-  button.danger:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--danger) 25%, transparent);
-  }
   .language-control {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.65rem;
-    align-items: end;
-    padding-bottom: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding-bottom: 0.9rem;
     border-bottom: 1px solid var(--border-subtle);
   }
   .language-control + .language-control {
-    padding-top: 0.1rem;
+    padding-top: 0.25rem;
   }
   .engine-details {
     margin-top: 0.15rem;
@@ -1034,6 +1379,7 @@
     .card {
       display: flex;
       flex-direction: column;
+      align-items: stretch;
       gap: 0.85rem;
       padding: 1.25rem 0.1rem;
     }
@@ -1052,9 +1398,6 @@
       align-items: stretch;
       flex-direction: column;
     }
-    .active-pair {
-      text-align: left;
-    }
     .active-summary-data,
     .field-grid,
     .advanced-content {
@@ -1065,13 +1408,16 @@
       border-top: 1px solid color-mix(in srgb, var(--border-hover) 65%, transparent);
       border-left: 0;
     }
-    .language-control,
     .preference-control {
       grid-template-columns: 1fr;
     }
     .language-control .primary,
     .preference-control .primary {
       width: 100%;
+    }
+    .apply-row .primary {
+      width: 100%;
+      min-height: 2.75rem;
     }
   }
 
@@ -1110,6 +1456,7 @@
     .card {
       display: flex;
       flex-direction: column;
+      align-items: stretch;
       gap: 0.85rem;
       padding: 1.25rem 0.1rem;
     }
@@ -1120,7 +1467,6 @@
     .model-card .card-header {
       width: 100%;
     }
-    .language-control,
     .preference-control {
       grid-template-columns: 1fr;
     }

@@ -103,6 +103,8 @@ const en: Record<LocaleKey, string> = {
   'settings.languages.storyLabel': 'story language',
   'settings.languages.setStory': 'Set story language',
   'settings.languages.applying': 'Applying…',
+  'settings.languages.current': 'Current',
+  'settings.languages.default': 'Default',
   'settings.languages.hint':
     'The engine normalizes codes (en / vi / zh) and echoes the applied value. Interface applies now; story applies on next project open.',
   'settings.empty.hint':
@@ -186,6 +188,8 @@ const vi: Record<LocaleKey, string> = {
   'settings.languages.storyLabel': 'ngôn ngữ truyện',
   'settings.languages.setStory': 'Đặt ngôn ngữ truyện',
   'settings.languages.applying': 'Đang áp dụng…',
+  'settings.languages.current': 'Hiện tại',
+  'settings.languages.default': 'Mặc định',
   'settings.languages.hint': 'Engine chuẩn hóa mã (en / vi / zh) và trả về giá trị đã áp dụng. Giao diện áp dụng ngay; truyện áp dụng từ lần mở dự án tới.',
   'settings.empty.hint':
     'Cấu hình gắn với dự án — hãy mở hoặc tạo dự án từ màn hình Tổng quan.',
@@ -261,6 +265,8 @@ const zh: Record<LocaleKey, string> = {
   'settings.languages.storyLabel': '故事语言',
   'settings.languages.setStory': '设置故事语言',
   'settings.languages.applying': '应用中…',
+  'settings.languages.current': '当前',
+  'settings.languages.default': '默认',
   'settings.languages.hint': '引擎会规范化语言代码（en / vi / zh）并回显已应用的值。界面立即生效；故事语言下次打开项目时生效。',
   'settings.empty.hint': '配置与项目绑定——请从"概览"页打开或创建项目。',
   'common.noProject.title': '未打开项目',

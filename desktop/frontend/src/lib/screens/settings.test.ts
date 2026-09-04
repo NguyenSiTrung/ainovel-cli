@@ -25,6 +25,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
 
 import SettingsScreen from '$lib/screens/SettingsScreen.svelte';
+import { setLocale } from '$lib/locale';
 import { resetSettingsState } from '$lib/settings';
 import {
   connectionState,
@@ -129,6 +130,7 @@ beforeEach(async () => {
   await disposeDesktop();
   cleanup();
   installBridgeMarker();
+  setLocale('en');
   connectionState.set('ready');
   projectSnapshot.set({ ...SNAPSHOT });
 });
@@ -208,6 +210,22 @@ describe('settings screen', () => {
     await vi.waitFor(() => expect(screen.getByTestId('settings-applied').textContent).toContain('ollama / gpt-4o-mini'));
   });
 
+  it('shows dropdown changes as a pending model choice before Apply', async () => {
+    scriptEngine();
+    renderSettings();
+    await vi.waitFor(() =>
+      expect((screen.getByTestId('settings-provider-select') as HTMLSelectElement).value).toBe('openai'),
+    );
+
+    await fireEvent.change(screen.getByTestId('settings-provider-select'), { target: { value: 'ollama' } });
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId('settings-model-selection').textContent).toContain('ollama / gpt-4o-mini');
+    });
+    expect(screen.getByTestId('settings-active-summary').textContent).toContain('openai');
+    expect(screen.getByTestId('settings-active-summary').textContent).not.toContain('ollama');
+  });
+
   it('switch_model failures surface the structured error and keep the view', async () => {
     scriptEngine({
       'config.switch_model': () => {
@@ -250,6 +268,20 @@ describe('settings screen', () => {
     await fireEvent.change(screen.getByTestId('settings-story-language-select'), { target: { value: 'zh' } });
     await fireEvent.click(screen.getByTestId('settings-story-language-apply'));
     await vi.waitFor(() => expect(payloadOf('config.set_story_language')).toEqual({ language: 'zh' }));
+  });
+
+  it('localizes the current language notes with the interface locale', async () => {
+    scriptEngine();
+    renderSettings();
+    await vi.waitFor(() =>
+      expect((screen.getByTestId('settings-language-select') as HTMLSelectElement).value).toBe('en'),
+    );
+
+    setLocale('vi');
+
+    await vi.waitFor(() => {
+      expect(screen.getByTestId('settings-languages').textContent).toContain('Hiện tại:');
+    });
   });
 
   it('budget is read-only: value shown, no apply control for it', async () => {
